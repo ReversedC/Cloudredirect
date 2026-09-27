@@ -137,7 +137,27 @@ public static class SunshineSyncService
 
                 var configDir = Path.GetDirectoryName(appsJsonPath)!;
                 var coversDir = Path.Combine(configDir, "covers");
-                Directory.CreateDirectory(coversDir);
+
+                // Check if we have direct write permission to configDir
+                bool canWriteDirectly = false;
+                try
+                {
+                    var testFile = Path.Combine(configDir, $".perm_test_{Guid.NewGuid():N}");
+                    File.WriteAllText(testFile, "test");
+                    File.Delete(testFile);
+                    canWriteDirectly = true;
+                }
+                catch
+                {
+                    canWriteDirectly = false;
+                }
+
+                // If not writable directly, stage in %TEMP%
+                var stagingDir = Path.Combine(Path.GetTempPath(), "CloudRedirect_SunshineSync");
+                var stagingCoversDir = Path.Combine(stagingDir, "covers");
+                var activeCoversDir = canWriteDirectly ? coversDir : stagingCoversDir;
+
+                Directory.CreateDirectory(activeCoversDir);
 
                 // 1. Gather all .lua games
                 var luaGames = await LuaCloudSyncService.LoadLuaGamesAsync(ct);
@@ -240,7 +260,14 @@ public static class SunshineSyncService
                     var gameName = kvp.Value;
 
                     // Download or verify cover art
-                    var coverFile = Path.Combine(coversDir, $"{appId}.jpg");
+                    var coverFile = Path.Combine(activeCoversDir, $"{appId}.jpg");
+                    var existingCoverInConfig = Path.Combine(coversDir, $"{appId}.jpg");
+
+                    if (!File.Exists(coverFile) && !canWriteDirectly && File.Exists(existingCoverInConfig))
+                    {
+                        try { File.Copy(existingCoverInConfig, coverFile, true); } catch { }
+                    }
+
                     if (!File.Exists(coverFile))
                     {
                         try
@@ -255,7 +282,7 @@ public static class SunshineSyncService
                         catch { }
                     }
 
-                    var relativeCover = File.Exists(coverFile) ? $"covers/{appId}.jpg" : "steam.png";
+                    var relativeCover = (File.Exists(coverFile) || File.Exists(existingCoverInConfig)) ? $"covers/{appId}.jpg" : "steam.png";
 
                     // Check if already in appsArray
                     var existing = appsArray.FirstOrDefault(n =>
@@ -290,24 +317,44 @@ public static class SunshineSyncService
                 // 5. Save apps.json with indentation
                 var options = new JsonSerializerOptions { WriteIndented = true };
                 var updatedJson = root.ToJsonString(options);
-                try
+
+                if (canWriteDirectly)
                 {
                     await File.WriteAllTextAsync(appsJsonPath, updatedJson, ct);
                 }
-                catch (UnauthorizedAccessException)
+                else
                 {
-                    var tempFile = Path.Combine(Path.GetTempPath(), "sunshine_apps.json");
-                    await File.WriteAllTextAsync(tempFile, updatedJson, ct);
+                    var stagingAppsJson = Path.Combine(stagingDir, "apps.json");
+                    await File.WriteAllTextAsync(stagingAppsJson, updatedJson, ct);
+
+                    // Copy entire staging directory to configDir with elevated PowerShell,
+                    // and grant Users Modify permissions so subsequent syncs are seamless and instant!
+                    var copyCommand = $"Copy-Item -Path '{stagingDir}\\*' -Destination '{configDir}' -Recurse -Force; icacls '{configDir}' /grant 'Users:(OI)(CI)M' /T /Q";
                     var psi = new ProcessStartInfo
                     {
                         FileName = "powershell.exe",
-                        Arguments = $"-NoProfile -Command \"Copy-Item -Path '{tempFile}' -Destination '{appsJsonPath}' -Force\"",
+                        Arguments = $"-NoProfile -ExecutionPolicy Bypass -Command \"{copyCommand}\"",
                         Verb = "runas",
                         UseShellExecute = true,
                         WindowStyle = ProcessWindowStyle.Hidden
                     };
-                    var proc = Process.Start(psi);
-                    if (proc != null) await proc.WaitForExitAsync(ct);
+
+                    try
+                    {
+                        var proc = Process.Start(psi);
+                        if (proc != null)
+                        {
+                            await proc.WaitForExitAsync(ct);
+                            if (proc.ExitCode != 0)
+                            {
+                                return new SunshineSyncResult(false, 0, $"Elevated permission copy failed with exit code {proc.ExitCode}.");
+                            }
+                        }
+                    }
+                    catch (System.ComponentModel.Win32Exception)
+                    {
+                        return new SunshineSyncResult(false, 0, "Administrator permission was required to update Sunshine configuration. Please accept the UAC prompt to allow CloudRedirect to configure Sunshine.");
+                    }
                 }
 
                 return new SunshineSyncResult(true, syncedCount, $"Successfully synced {syncedCount} game(s) to Sunshine apps.json!");
