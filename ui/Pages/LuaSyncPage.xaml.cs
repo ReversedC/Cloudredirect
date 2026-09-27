@@ -16,19 +16,21 @@ public partial class LuaSyncPage : Page
     private List<LuaGameItem> _filteredGames = new();
     private CancellationTokenSource? _syncCts;
     private bool _allSelectedState;
+    private bool _isInitialized;
 
     public LuaSyncPage()
     {
         InitializeComponent();
+        _isInitialized = true;
         Loaded += async (_, _) => await LoadGamesAsync();
         Unloaded += (_, _) => _syncCts?.Cancel();
     }
 
     private async Task LoadGamesAsync()
     {
-        LoadingPanel.Visibility = Visibility.Visible;
-        GamesList.Visibility = Visibility.Collapsed;
-        EmptyStateBorder.Visibility = Visibility.Collapsed;
+        if (LoadingPanel != null) LoadingPanel.Visibility = Visibility.Visible;
+        if (GamesList != null) GamesList.Visibility = Visibility.Collapsed;
+        if (EmptyStateBorder != null) EmptyStateBorder.Visibility = Visibility.Collapsed;
 
         try
         {
@@ -45,12 +47,14 @@ public partial class LuaSyncPage : Page
         }
         finally
         {
-            LoadingPanel.Visibility = Visibility.Collapsed;
+            if (LoadingPanel != null) LoadingPanel.Visibility = Visibility.Collapsed;
         }
     }
 
     private void ApplyFilter()
     {
+        if (!_isInitialized || SearchBox == null || GamesList == null || EmptyStateBorder == null) return;
+
         var query = SearchBox.Text?.Trim().ToLowerInvariant() ?? "";
 
         var filtered = _allGames.AsEnumerable();
@@ -64,15 +68,15 @@ public partial class LuaSyncPage : Page
         }
 
         // 2. Chip status filter
-        if (FilterLocalRadio.IsChecked == true)
+        if (FilterLocalRadio?.IsChecked == true)
         {
             filtered = filtered.Where(g => g.Status == LuaSyncStatus.LocalOnly);
         }
-        else if (FilterCloudRadio.IsChecked == true)
+        else if (FilterCloudRadio?.IsChecked == true)
         {
             filtered = filtered.Where(g => g.Status == LuaSyncStatus.CloudOnly);
         }
-        else if (FilterSyncedRadio.IsChecked == true)
+        else if (FilterSyncedRadio?.IsChecked == true)
         {
             filtered = filtered.Where(g => g.Status == LuaSyncStatus.Synced);
         }
@@ -87,11 +91,13 @@ public partial class LuaSyncPage : Page
 
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
     {
+        if (!_isInitialized) return;
         ApplyFilter();
     }
 
     private void Filter_Checked(object sender, RoutedEventArgs e)
     {
+        if (!_isInitialized) return;
         ApplyFilter();
     }
 
