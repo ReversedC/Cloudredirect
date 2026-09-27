@@ -52,4 +52,11 @@ public class SuoNativeBridge {
             activity.runOnUiThread(new OpenCameraRunnable(activity));
         }
     }
+
+    @JavascriptInterface
+    public void openGalleryPicker() {
+        if (activity != null) {
+            activity.runOnUiThread(new OpenGalleryRunnable(activity));
+        }
+    }
 }

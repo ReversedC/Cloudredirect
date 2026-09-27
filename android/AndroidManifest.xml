@@ -1,11 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.cloudredirect.suolink"
-    android:versionCode="20924"
-    android:versionName="2.9.24">
+    android:versionCode="20925"
+    android:versionName="2.9.25">
 
     <uses-sdk
-        android:minSdkVersion="24"
+        android:minSdkVersion="21"
         android:targetSdkVersion="34" />
 
     <uses-permission android:name="android.permission.INTERNET" />
@@ -19,6 +19,7 @@
 
     <uses-feature android:name="android.hardware.touchscreen" android:required="true" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
     <uses-feature android:name="android.hardware.gamepad" android:required="false" />
 
     <queries>
@@ -55,7 +56,19 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".ScannerActivity"
+            android:exported="false"
+            android:screenOrientation="sensorLandscape"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:theme="@style/AppTheme" />
+
     </application>
 </manifest>
+
+
+
+
+
 
 

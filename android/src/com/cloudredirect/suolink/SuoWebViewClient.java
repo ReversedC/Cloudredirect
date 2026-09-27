@@ -14,6 +14,29 @@ public class SuoWebViewClient extends WebViewClient {
     }
 
     @Override
+    public boolean shouldOverrideUrlLoading(WebView view, String url) {
+        if (url != null) {
+            if (url.startsWith("suolink://scan")) {
+                activity.runOnUiThread(new OpenCameraRunnable(activity));
+                return true;
+            }
+            if (url.startsWith("suolink://gallery")) {
+                activity.runOnUiThread(new OpenGalleryRunnable(activity));
+                return true;
+            }
+        }
+        return super.shouldOverrideUrlLoading(view, url);
+    }
+
+    @Override
+    public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+        if (request != null && request.getUrl() != null) {
+            return shouldOverrideUrlLoading(view, request.getUrl().toString());
+        }
+        return super.shouldOverrideUrlLoading(view, request);
+    }
+
+    @Override
     public void onPageFinished(WebView view, String url) {
         super.onPageFinished(view, url);
         if (url != null && !url.equals("about:blank") && !url.startsWith("data:") && !url.contains("suolink.local") && !url.contains("localhost")) {

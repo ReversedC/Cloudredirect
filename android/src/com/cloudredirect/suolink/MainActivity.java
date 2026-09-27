@@ -32,8 +32,9 @@ import java.io.InputStream;
 
 public class MainActivity extends Activity {
 
-    public static final int REQUEST_CODE_CAMERA_QR = 201;
+    public static final int REQUEST_CODE_SCANNER = 201;
     public static final int REQUEST_CODE_FILE_CHOOSER = 202;
+    public static final int REQUEST_CODE_GALLERY_QR = 203;
 
     private static final String PREFS_NAME = "suo_link_prefs";
     private static final String PREF_KEY_LAN_URL = "last_lan_url";
@@ -47,7 +48,6 @@ public class MainActivity extends Activity {
     private volatile boolean running = true;
     private DownloadCompleteReceiver downloadReceiver;
     private ValueCallback<Uri[]> filePathCallback;
-    private String jsqrContent = null;
 
     public boolean isConnected() { return connected; }
     public void setConnected(boolean val) { this.connected = val; }
@@ -74,25 +74,6 @@ public class MainActivity extends Activity {
         this.filePathCallback = cb;
     }
 
-    public String getJsQrScript() {
-        if (jsqrContent == null) {
-            try {
-                InputStream is = getAssets().open("jsqr.js");
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                byte[] buffer = new byte[8192];
-                int len;
-                while ((len = is.read(buffer)) != -1) {
-                    baos.write(buffer, 0, len);
-                }
-                is.close();
-                jsqrContent = baos.toString("UTF-8");
-            } catch (Exception ex) {
-                jsqrContent = "";
-            }
-        }
-        return jsqrContent;
-    }
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -107,7 +88,7 @@ public class MainActivity extends Activity {
         prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
 
-        // Request camera permission for instant QR scanning
+        // Pre-request camera permission if needed
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                 requestPermissions(new String[]{Manifest.permission.CAMERA}, 101);
@@ -163,6 +144,10 @@ public class MainActivity extends Activity {
         ws.setCacheMode(WebSettings.LOAD_NO_CACHE);
         ws.setAllowFileAccess(true);
         ws.setAllowContentAccess(true);
+        try {
+            ws.setAllowFileAccessFromFileURLs(true);
+            ws.setAllowUniversalAccessFromFileURLs(true);
+        } catch (Exception ignored) {}
         ws.setUseWideViewPort(true);
         ws.setLoadWithOverviewMode(true);
 
@@ -173,25 +158,17 @@ public class MainActivity extends Activity {
 
     public void showDiscoveryPage() {
         connected = false;
-        String html = DiscoveryHtml.getHtml(getSavedLanUrl(), getSavedTunnelUrl(), getJsQrScript());
-        webView.loadDataWithBaseURL("https://localhost/", html, "text/html", "UTF-8", null);
+        String html = DiscoveryHtml.getHtml(getSavedLanUrl(), getSavedTunnelUrl());
+        webView.loadDataWithBaseURL("file:///android_asset/", html, "text/html", "UTF-8", null);
     }
 
     public void startNativeCameraCapture() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(new String[]{Manifest.permission.CAMERA}, 101);
-                runOnUiThread(new ShowToastRunnable(this, "Camera permission needed to scan PC QR code"));
-                return;
-            }
-        }
-
         try {
-            Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-            startActivityForResult(cameraIntent, REQUEST_CODE_CAMERA_QR);
+            Intent scannerIntent = new Intent(this, ScannerActivity.class);
+            startActivityForResult(scannerIntent, REQUEST_CODE_SCANNER);
             return;
         } catch (Exception ex) {
-            android.util.Log.w("SUO_LINK", "Direct camera launch failed: " + ex.getMessage());
+            android.util.Log.w("SUO_LINK", "Direct ScannerActivity launch failed: " + ex.getMessage());
         }
 
         openGalleryPicker();
@@ -201,7 +178,7 @@ public class MainActivity extends Activity {
         try {
             Intent pickIntent = new Intent(Intent.ACTION_GET_CONTENT);
             pickIntent.setType("image/*");
-            startActivityForResult(Intent.createChooser(pickIntent, "Scan PC QR Code"), REQUEST_CODE_CAMERA_QR);
+            startActivityForResult(Intent.createChooser(pickIntent, "Select QR Image"), REQUEST_CODE_GALLERY_QR);
         } catch (Exception ex) {
             runOnUiThread(new ShowToastRunnable(this, "Cannot open photo picker: " + ex.getMessage()));
         }
@@ -387,7 +364,25 @@ public class MainActivity extends Activity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        // 1. Handle WebChromeClient file chooser (e.g. Gallery / Files button)
+        // 1. Handle in-app ScannerActivity result
+        if (requestCode == REQUEST_CODE_SCANNER && resultCode == Activity.RESULT_OK && data != null) {
+            String scannedUrl = data.getStringExtra(ScannerActivity.EXTRA_SCANNED_URL);
+            if (scannedUrl != null && !scannedUrl.isEmpty()) {
+                connectSmart(scannedUrl);
+            }
+            return;
+        }
+
+        // 2. Handle Gallery QR Image selection
+        if (requestCode == REQUEST_CODE_GALLERY_QR && resultCode == Activity.RESULT_OK && data != null) {
+            Uri uri = data.getData();
+            if (uri != null) {
+                new Thread(new ProcessGalleryQrRunnable(this, uri)).start();
+            }
+            return;
+        }
+
+        // 3. Handle WebChromeClient file chooser (e.g. Gallery / Files button)
         if (requestCode == REQUEST_CODE_FILE_CHOOSER) {
             if (filePathCallback != null) {
                 Uri[] results = null;
@@ -406,41 +401,6 @@ public class MainActivity extends Activity {
                 filePathCallback = null;
             }
             return;
-        }
-
-        // 2. Handle Native Camera / Image Chooser QR capture
-        if (requestCode == REQUEST_CODE_CAMERA_QR && resultCode == Activity.RESULT_OK) {
-            try {
-                Bitmap bmp = null;
-                if (data != null) {
-                    if (data.getData() != null) {
-                        bmp = BitmapFactory.decodeStream(
-                                getContentResolver().openInputStream(data.getData()));
-                    } else if (data.getExtras() != null && data.getExtras().get("data") instanceof Bitmap) {
-                        bmp = (Bitmap) data.getExtras().get("data");
-                    }
-                }
-
-                if (bmp != null) {
-                    int maxDim = 1200;
-                    if (bmp.getWidth() > maxDim || bmp.getHeight() > maxDim) {
-                        float scale = Math.min((float) maxDim / bmp.getWidth(), (float) maxDim / bmp.getHeight());
-                        int w = Math.round(bmp.getWidth() * scale);
-                        int h = Math.round(bmp.getHeight() * scale);
-                        bmp = Bitmap.createScaledBitmap(bmp, w, h, true);
-                    }
-
-                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                    bmp.compress(Bitmap.CompressFormat.JPEG, 85, baos);
-                    byte[] bytes = baos.toByteArray();
-                    String base64 = Base64.encodeToString(bytes, Base64.NO_WRAP);
-
-                    String js = "if(window.handleBase64Image){ window.handleBase64Image('" + base64 + "'); }";
-                    webView.post(new EvalJsRunnable(webView, js));
-                }
-            } catch (Exception ex) {
-                runOnUiThread(new ShowToastRunnable(this, "Could not process image: " + ex.getMessage()));
-            }
         }
     }
 

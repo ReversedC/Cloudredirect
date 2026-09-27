@@ -58,13 +58,15 @@ if ($LASTEXITCODE -ne 0) { throw "aapt2 link failed" }
 # 4. Compile Java sources with javac
 Write-Host "[3/6] Compiling Java sources with javac..." -ForegroundColor Yellow
 $JavaFiles = Get-ChildItem -Recurse -Path "$BuildDir\gen", "$AndroidDir\src" -Filter "*.java" | ForEach-Object { $_.FullName }
-& $Javac --release 8 -cp $AndroidJar -d "$BuildDir\classes" $JavaFiles
+$ZxingJar = "$AndroidDir\libs\zxing-core-3.5.3.jar"
+$Classpath = "$AndroidJar;$ZxingJar"
+& $Javac --release 8 -cp $Classpath -d "$BuildDir\classes" $JavaFiles
 if ($LASTEXITCODE -ne 0) { throw "javac compilation failed" }
 
 # 5. Convert Java bytecodes to classes.dex using D8
 Write-Host "[4/6] Converting classes to DEX with d8..." -ForegroundColor Yellow
 $ClassFiles = Get-ChildItem -Recurse -Path "$BuildDir\classes" -Filter "*.class" | ForEach-Object { $_.FullName }
-& $D8 --lib $AndroidJar --min-api 24 --output "$BuildDir\dex" $ClassFiles
+& $D8 --lib $AndroidJar --min-api 21 --output "$BuildDir\dex" $ClassFiles $ZxingJar
 if ($LASTEXITCODE -ne 0) { throw "d8 compilation failed" }
 
 # 6. Add classes.dex to base.apk using .NET ZipArchive

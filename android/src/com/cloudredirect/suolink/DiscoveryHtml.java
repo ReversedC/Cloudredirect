@@ -2,31 +2,23 @@ package com.cloudredirect.suolink;
 
 public class DiscoveryHtml {
     public static String getHtml(String lastHost) {
-        return getHtml(lastHost, null, null);
+        return getHtml(lastHost, null);
     }
 
     public static String getHtml(String lastHost, String lastTunnel) {
-        return getHtml(lastHost, lastTunnel, null);
-    }
-
-    public static String getHtml(String lastHost, String lastTunnel, String jsqrScript) {
         String safeLastHost = lastHost != null ? lastHost : "";
-        String jsqrTag = (jsqrScript != null && !jsqrScript.isEmpty())
-                ? "  <script>\n" + jsqrScript + "\n  </script>\n"
-                : "  <script src='file:///android_asset/jsqr.js'></script>\n";
         return "<!DOCTYPE html>" +
 "<html>" +
 "<head>" +
 "  <meta charset='utf-8'>" +
 "  <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'>" +
 "  <title>SUO Link</title>" +
-jsqrTag +
 "  <style>" +
 "    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }" +
 "    body {" +
 "      background: #0b0e14;" +
 "      color: #f1f5f9;" +
-"      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;" +
+"      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;" +
 "      display: flex;" +
 "      flex-direction: column;" +
 "      align-items: center;" +
@@ -39,8 +31,7 @@ jsqrTag +
 "    .logo-badge { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }" +
 "    .logo-title { font-size: 26px; font-weight: 800; color: #fff; letter-spacing: 1px; }" +
 "    .logo-title span { color: #00d2ff; }" +
-"    .subtitle { color: #94a3b8; font-size: 13px; max-width: 420px; line-height: 1.4; margin-bottom: 16px; }" +
-"    /* Update Notification Banner */" +
+"    .subtitle { color: #94a3b8; font-size: 13px; max-width: 440px; line-height: 1.4; margin-bottom: 18px; }" +
 "    #update-banner {" +
 "      display: none;" +
 "      width: 100%; max-width: 360px;" +
@@ -51,17 +42,15 @@ jsqrTag +
 "      padding: 10px 14px; border-radius: 10px;" +
 "      margin-bottom: 16px;" +
 "      box-shadow: 0 0 15px rgba(56, 239, 125, 0.2);" +
-"      animation: pulse 1.5s infinite;" +
 "    }" +
-"    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }" +
-"    /* Primary 1-Tap QR Scanner Button */" +
 "    .btn-qr {" +
 "      background: linear-gradient(135deg, #00d2ff, #38ef7d);" +
-"      color: #000;" +
+"      color: #0b0e14;" +
 "      font-weight: 800;" +
-"      font-size: 15px;" +
-"      padding: 14px 28px;" +
-"      border-radius: 30px;" +
+"      font-size: 16px;" +
+"      letter-spacing: 0.5px;" +
+"      padding: 16px 36px;" +
+"      border-radius: 32px;" +
 "      border: none;" +
 "      display: inline-flex;" +
 "      align-items: center;" +
@@ -69,21 +58,22 @@ jsqrTag +
 "      box-shadow: 0 4px 20px rgba(0, 210, 255, 0.4);" +
 "      cursor: pointer;" +
 "      margin-bottom: 14px;" +
-"      transition: transform 0.15s;" +
+"      transition: transform 0.1s, opacity 0.1s;" +
 "    }" +
-"    .btn-qr:active { transform: scale(0.96); }" +
+"    .btn-qr:active { transform: scale(0.96); opacity: 0.9; }" +
 "    .btn-file {" +
-"      background: transparent;" +
+"      background: #151b24;" +
 "      border: 1px solid #334155;" +
 "      color: #94a3b8;" +
-"      font-size: 12px;" +
-"      padding: 6px 14px;" +
-"      border-radius: 16px;" +
+"      font-size: 13px;" +
+"      font-weight: 600;" +
+"      padding: 10px 20px;" +
+"      border-radius: 20px;" +
 "      cursor: pointer;" +
 "      margin-bottom: 16px;" +
 "    }" +
+"    .btn-file:active { background: #1e293b; color: #fff; }" +
 "    .divider { width: 100%; max-width: 360px; height: 1px; background: #1e293b; margin: 12px 0; }" +
-"    /* Detected Host Card (From UDP Beacon) */" +
 "    #detected-host-card {" +
 "      display: none;" +
 "      width: 100%; max-width: 360px;" +
@@ -97,47 +87,10 @@ jsqrTag +
 "    .host-badge { background: rgba(56, 239, 125, 0.15); color: #38ef7d; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; border: 1px solid rgba(56, 239, 125, 0.4); }" +
 "    .host-ip { font-size: 12px; color: #94a3b8; margin-bottom: 10px; }" +
 "    .btn-connect-host { width: 100%; background: #11998e; color: #fff; font-weight: 700; font-size: 13px; border: none; padding: 10px; border-radius: 6px; cursor: pointer; }" +
-"    /* Manual Input */" +
 "    .manual-box { width: 100%; max-width: 360px; display: flex; gap: 8px; }" +
 "    .manual-input { flex: 1; background: #151b24; border: 1px solid #222d3d; border-radius: 8px; padding: 10px 14px; color: #fff; font-size: 13px; outline: none; }" +
 "    .manual-input:focus { border-color: #00d2ff; }" +
 "    .btn-manual { background: #1e293b; border: 1px solid #334155; color: #fff; font-weight: 600; padding: 10px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; }" +
-"    /* Live Camera QR Scanner Modal */" +
-"    #qr-modal {" +
-"      display: none;" +
-"      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;" +
-"      background: #000; z-index: 1000;" +
-"      flex-direction: column; align-items: center; justify-content: space-between;" +
-"      padding: 20px 16px;" +
-"    }" +
-"    #qr-video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }" +
-"    .qr-overlay {" +
-"      position: absolute; top: 0; left: 0; width: 100%; height: 100%;" +
-"      display: flex; flex-direction: column; align-items: center; justify-content: center;" +
-"      pointer-events: none;" +
-"    }" +
-"    .qr-target-box {" +
-"      width: 250px; height: 250px;" +
-"      border: 3px solid #00d2ff;" +
-"      border-radius: 16px;" +
-"      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.68);" +
-"      position: relative;" +
-"      overflow: hidden;" +
-"    }" +
-"    .qr-laser {" +
-"      width: 100%; height: 3px;" +
-"      background: #38ef7d;" +
-"      box-shadow: 0 0 10px #38ef7d;" +
-"      position: absolute; top: 0; left: 0;" +
-"      animation: scanLaser 2s infinite ease-in-out;" +
-"    }" +
-"    @keyframes scanLaser { 0% { top: 0; } 50% { top: 96%; } 100% { top: 0; } }" +
-"    .qr-top-bar { position: relative; z-index: 10; width: 100%; display: flex; justify-content: space-between; align-items: center; }" +
-"    .qr-title { color: #fff; font-size: 15px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }" +
-"    .btn-close-qr { background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: bold; cursor: pointer; }" +
-"    .btn-snap-modal { background: rgba(0,210,255,0.25); border: 1px solid #00d2ff; color: #00d2ff; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; cursor: pointer; }" +
-"    .qr-bottom-hint { position: relative; z-index: 10; color: #fff; font-size: 12px; background: rgba(0,0,0,0.75); padding: 8px 16px; border-radius: 20px; }" +
-"    #qr-canvas { display: none; }" +
 "  </style>" +
 "</head>" +
 "<body>" +
@@ -149,12 +102,11 @@ jsqrTag +
 "  <!-- AUTO UPDATE BANNER -->" +
 "  <div id='update-banner'>⬆️ New SUO Link update downloading...</div>" +
 "  <!-- 1-TAP QR CODE SCANNER BUTTON -->" +
-"  <button class='btn-qr' onclick='startCameraScanner()'>" +
-"    <span style='font-size:20px;'>📷</span> SCAN PC QR CODE" +
+"  <button class='btn-qr' id='btn-scan-qr' onclick='triggerQrScan()'>" +
+"    <span style='font-size:22px;'>📷</span> SCAN PC QR CODE" +
 "  </button>" +
 "  <div>" +
-"    <input type='file' id='qr-file-input' accept='image/*' style='display:none;' onchange='handleFileQr(this.files)'>" +
-"    <button class='btn-file' onclick='document.getElementById(\"qr-file-input\").click()'>📁 Or select QR image from gallery</button>" +
+"    <button class='btn-file' id='btn-gallery' onclick='triggerGallery()'>📁 Or select QR image from gallery</button>" +
 "  </div>" +
 "  <!-- DETECTED HOST CARD (From UDP Beacon) -->" +
 "  <div id='detected-host-card'>" +
@@ -171,182 +123,67 @@ jsqrTag +
 "    <input type='text' id='manual-ip' class='manual-input' placeholder='192.168.1.xxx:8585' value='" + safeLastHost + "'>" +
 "    <button class='btn-manual' onclick='connectManual()'>CONNECT</button>" +
 "  </div>" +
-"  <!-- LIVE CAMERA QR SCANNER MODAL -->" +
-"  <div id='qr-modal'>" +
-"    <video id='qr-video' playsinline autoplay></video>" +
-"    <canvas id='qr-canvas'></canvas>" +
-"    <div class='qr-top-bar'>" +
-"      <div class='qr-title'>Align PC QR Code in Box</div>" +
-"      <div style='display:flex;gap:8px;'>" +
-"        <button class='btn-snap-modal' onclick='stopCameraScanner(); openNativeCamera();'>📸 SNAP PHOTO</button>" +
-"        <button class='btn-close-qr' onclick='stopCameraScanner()'>✕ CLOSE</button>" +
-"      </div>" +
-"    </div>" +
-"    <div class='qr-overlay'>" +
-"      <div class='qr-target-box'>" +
-"        <div class='qr-laser'></div>" +
-"      </div>" +
-"    </div>" +
-"    <div class='qr-bottom-hint' id='qr-hint'>Point camera at CloudRedirect on your PC screen</div>" +
-"  </div>" +
 "  <script>" +
-"    let videoStream = null;" +
-"    let scanning = false;" +
 "    function connectUrl(url) {" +
 "      if (!url) return;" +
 "      url = url.trim();" +
-"      if (window.SuoNative && window.SuoNative.vibrate) window.SuoNative.vibrate(40);" +
-"      if (window.SuoNative && window.SuoNative.connectSmart) {" +
-"        window.SuoNative.connectSmart(url);" +
-"        return;" +
-"      }" +
-"      if (!url.startsWith('http://') && !url.startsWith('https://')) {" +
+"      try {" +
+"        if (window.SuoNative && window.SuoNative.vibrate) window.SuoNative.vibrate(40);" +
+"        if (window.SuoNative && window.SuoNative.connectSmart) {" +
+"          window.SuoNative.connectSmart(url);" +
+"          return;" +
+"        }" +
+"      } catch (e) {}" +
+"      if (url.indexOf('http://') !== 0 && url.indexOf('https://') !== 0) {" +
 "        url = 'http://' + url;" +
 "      }" +
 "      window.location.href = url;" +
 "    }" +
 "    function connectManual() {" +
-"      const val = document.getElementById('manual-ip').value;" +
-"      connectUrl(val);" +
+"      var input = document.getElementById('manual-ip');" +
+"      if (input && input.value) {" +
+"        connectUrl(input.value);" +
+"      }" +
+"    }" +
+"    function triggerQrScan() {" +
+"      try {" +
+"        if (window.SuoNative && window.SuoNative.vibrate) window.SuoNative.vibrate(30);" +
+"        if (window.SuoNative && window.SuoNative.openCameraScanner) {" +
+"          window.SuoNative.openCameraScanner();" +
+"          return;" +
+"        }" +
+"      } catch (e) {}" +
+"      window.location.href = 'suolink://scan';" +
+"    }" +
+"    function triggerGallery() {" +
+"      try {" +
+"        if (window.SuoNative && window.SuoNative.vibrate) window.SuoNative.vibrate(20);" +
+"        if (window.SuoNative && window.SuoNative.openGalleryPicker) {" +
+"          window.SuoNative.openGalleryPicker();" +
+"          return;" +
+"        }" +
+"      } catch (e) {}" +
+"      window.location.href = 'suolink://gallery';" +
 "    }" +
 "    window.onHostDiscovered = function(name, ip, port, auth, tunnel) {" +
-"      let fullUrl = 'http://' + ip + ':' + port + '/?auth=' + auth;" +
+"      var fullUrl = 'http://' + ip + ':' + port + '/?auth=' + auth;" +
 "      if (tunnel) fullUrl += '&tunnel=' + encodeURIComponent(tunnel);" +
-"      document.getElementById('dh-name').innerText = name || 'CloudRedirect PC';" +
-"      document.getElementById('dh-ip').innerText = ip + ':' + port + (tunnel ? ' • Remote Tunnel Ready' : '');" +
-"      document.getElementById('detected-host-card').style.display = 'block';" +
-"      document.getElementById('dh-btn').onclick = function() { connectUrl(fullUrl); };" +
+"      var nameEl = document.getElementById('dh-name');" +
+"      var ipEl = document.getElementById('dh-ip');" +
+"      var cardEl = document.getElementById('detected-host-card');" +
+"      var btnEl = document.getElementById('dh-btn');" +
+"      if (nameEl) nameEl.innerText = name || 'CloudRedirect PC';" +
+"      if (ipEl) ipEl.innerText = ip + ':' + port + (tunnel ? ' • Remote Tunnel Ready' : '');" +
+"      if (cardEl) cardEl.style.display = 'block';" +
+"      if (btnEl) btnEl.onclick = function() { connectUrl(fullUrl); };" +
 "    };" +
 "    window.showUpdateNotice = function(msg) {" +
-"      const banner = document.getElementById('update-banner');" +
-"      banner.innerText = msg || '⬆️ Updating SUO Link... Check notifications to install.';" +
-"      banner.style.display = 'block';" +
+"      var banner = document.getElementById('update-banner');" +
+"      if (banner) {" +
+"        banner.innerText = msg || '⬆️ Updating SUO Link... Check notifications to install.';" +
+"        banner.style.display = 'block';" +
+"      }" +
 "    };" +
-"    // Live Camera QR Scanner" +
-"    async function startCameraScanner() {" +
-"      if (window.SuoNative && window.SuoNative.openCameraScanner) {" +
-"        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {" +
-"          const modal = document.getElementById('qr-modal');" +
-"          modal.style.display = 'flex';" +
-"          scanning = true;" +
-"          try {" +
-"            videoStream = await navigator.mediaDevices.getUserMedia({" +
-"              video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }" +
-"            });" +
-"            const video = document.getElementById('qr-video');" +
-"            video.srcObject = videoStream;" +
-"            await video.play();" +
-"            requestAnimationFrame(tickScan);" +
-"            return;" +
-"          } catch (err) {" +
-"            console.warn('getUserMedia failed, falling back to native capture', err);" +
-"            stopCameraScanner();" +
-"            window.SuoNative.openCameraScanner();" +
-"            return;" +
-"          }" +
-"        }" +
-"        window.SuoNative.openCameraScanner();" +
-"        return;" +
-"      }" +
-"      const fi = document.getElementById('qr-file-input');" +
-"      if (fi) fi.click();" +
-"    }" +
-"    function openNativeCamera() {" +
-"      if (window.SuoNative && window.SuoNative.openCameraScanner) {" +
-"        window.SuoNative.openCameraScanner();" +
-"      } else {" +
-"        const fi = document.getElementById('qr-file-input');" +
-"        if (fi) fi.click();" +
-"      }" +
-"    }" +
-"    function stopCameraScanner() {" +
-"      scanning = false;" +
-"      if (videoStream) {" +
-"        videoStream.getTracks().forEach(t => t.stop());" +
-"        videoStream = null;" +
-"      }" +
-"      document.getElementById('qr-modal').style.display = 'none';" +
-"    }" +
-"    function tickScan() {" +
-"      if (!scanning) return;" +
-"      const video = document.getElementById('qr-video');" +
-"      if (video.readyState === video.HAVE_ENOUGH_DATA) {" +
-"        const canvas = document.getElementById('qr-canvas');" +
-"        const ctx = canvas.getContext('2d');" +
-"        canvas.width = video.videoWidth;" +
-"        canvas.height = video.videoHeight;" +
-"        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);" +
-"        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);" +
-"        if (window.jsQR) {" +
-"          let code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'dontInvert' });" +
-"          if (!code || !code.data) {" +
-"            code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'attemptBoth' });" +
-"          }" +
-"          if (code && code.data && code.data.length > 5) {" +
-"            document.getElementById('qr-hint').innerText = '✓ QR Code Recognized! Connecting...';" +
-"            stopCameraScanner();" +
-"            connectUrl(code.data);" +
-"            return;" +
-"          }" +
-"        }" +
-"      }" +
-"      if (scanning) requestAnimationFrame(tickScan);" +
-"    }" +
-"    // Base64 snapshot scan handler (from native camera capture)" +
-"    window.handleBase64Image = function(b64) {" +
-"      if (!b64) return;" +
-"      const img = new Image();" +
-"      img.onload = function() {" +
-"        const canvas = document.getElementById('qr-canvas');" +
-"        const ctx = canvas.getContext('2d');" +
-"        canvas.width = img.width;" +
-"        canvas.height = img.height;" +
-"        ctx.drawImage(img, 0, 0);" +
-"        const imgData = ctx.getImageData(0, 0, img.width, img.height);" +
-"        if (window.jsQR) {" +
-"          let code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'dontInvert' });" +
-"          if (!code || !code.data) {" +
-"            code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'attemptBoth' });" +
-"          }" +
-"          if (code && code.data && code.data.length > 5) {" +
-"            connectUrl(code.data);" +
-"            return;" +
-"          }" +
-"        }" +
-"        alert('Could not find QR code in captured photo. Ensure the QR code on your PC screen is sharp and try again.');" +
-"      };" +
-"      img.src = 'data:image/jpeg;base64,' + b64;" +
-"    };" +
-"    // File image scan fallback" +
-"    function handleFileQr(files) {" +
-"      if (!files || files.length === 0) return;" +
-"      const file = files[0];" +
-"      const reader = new FileReader();" +
-"      reader.onload = function(e) {" +
-"        const img = new Image();" +
-"        img.onload = function() {" +
-"          const canvas = document.getElementById('qr-canvas');" +
-"          const ctx = canvas.getContext('2d');" +
-"          canvas.width = img.width;" +
-"          canvas.height = img.height;" +
-"          ctx.drawImage(img, 0, 0);" +
-"          const imgData = ctx.getImageData(0, 0, img.width, img.height);" +
-"          if (window.jsQR) {" +
-"            let code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'dontInvert' });" +
-"            if (!code || !code.data) {" +
-"              code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'attemptBoth' });" +
-"            }" +
-"            if (code && code.data) {" +
-"              connectUrl(code.data);" +
-"              return;" +
-"            }" +
-"          }" +
-"          alert('Could not find QR code in this image. Please try another or snap a photo.');" +
-"        };" +
-"        img.src = e.target.result;" +
-"      };" +
-"      reader.readAsDataURL(file);" +
-"    }" +
 "  </script>" +
 "</body>" +
 "</html>";
@@ -369,7 +206,7 @@ jsqrTag +
 "<div class='url-badge'>" + safeUrl + "</div>" +
 "<div>" +
 "  <button class='btn' onclick='window.location.reload()'>🔄 RETRY</button>" +
-"  <button class='btn btn-sec' onclick='if(window.SuoNative && window.SuoNative.showDiscovery) window.SuoNative.showDiscovery(); else window.location.href=\"about:blank\";'>📷 SCAN QR CODE</button>" +
+"  <button class='btn btn-sec' onclick='if(window.SuoNative && window.SuoNative.showDiscovery) window.SuoNative.showDiscovery(); else window.location.href=\"suolink://scan\";'>📷 SCAN QR CODE</button>" +
 "</div>" +
 "</body></html>";
     }
