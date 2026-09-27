@@ -45,4 +45,11 @@ public class SuoNativeBridge {
             activity.connectSmart(url);
         }
     }
+
+    @JavascriptInterface
+    public void openCameraScanner() {
+        if (activity != null) {
+            activity.runOnUiThread(new OpenCameraRunnable(activity));
+        }
+    }
 }

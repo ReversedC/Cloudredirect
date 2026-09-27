@@ -27,6 +27,24 @@ Write-Host "=== Building SUO Link Android APK ===" -ForegroundColor Cyan
 if (Test-Path $BuildDir) { Remove-Item -Recurse -Force $BuildDir }
 New-Item -ItemType Directory -Force -Path "$BuildDir\compiled_res", "$BuildDir\gen", "$BuildDir\classes", "$BuildDir\dex" | Out-Null
 
+# 1b. Sync version from Version.props to AndroidManifest.xml
+$VersionPropsPath = "$ProjectRoot\Version.props"
+[xml]$versionXml = Get-Content $VersionPropsPath
+$ReleaseVersion = $versionXml.Project.PropertyGroup.ReleaseVersion.Trim()
+$vParts = $ReleaseVersion.Split('.')
+$Major = [int]$vParts[0]
+$Minor = [int]$vParts[1]
+$Patch = [int]$vParts[2]
+$VersionCode = ($Major * 10000) + ($Minor * 100) + $Patch
+
+Write-Host "SUO Link Version: v$ReleaseVersion (Code: $VersionCode)" -ForegroundColor Green
+
+$ManifestPath = "$AndroidDir\AndroidManifest.xml"
+$manifestContent = Get-Content $ManifestPath -Raw
+$manifestContent = $manifestContent -replace 'android:versionCode="\d+"', "android:versionCode=""$VersionCode"""
+$manifestContent = $manifestContent -replace 'android:versionName="[^"]+"', "android:versionName=""$ReleaseVersion"""
+Set-Content -Path $ManifestPath -Value $manifestContent -Encoding UTF8
+
 # 2. Compile Android Resources with AAPT2
 Write-Host "[1/6] Compiling resources with aapt2..." -ForegroundColor Yellow
 & $Aapt2 compile --dir "$AndroidDir\res" -o "$BuildDir\compiled_res\res.zip"
@@ -34,7 +52,7 @@ if ($LASTEXITCODE -ne 0) { throw "aapt2 compile failed" }
 
 # 3. Link resources and generate R.java
 Write-Host "[2/6] Linking resources..." -ForegroundColor Yellow
-& $Aapt2 link -I $AndroidJar -A "$AndroidDir\assets" --manifest "$AndroidDir\AndroidManifest.xml" -o "$BuildDir\base.apk" --java "$BuildDir\gen" "$BuildDir\compiled_res\res.zip"
+& $Aapt2 link -I $AndroidJar -A "$AndroidDir\assets" --manifest "$AndroidDir\AndroidManifest.xml" --version-code $VersionCode --version-name "$ReleaseVersion" -o "$BuildDir\base.apk" --java "$BuildDir\gen" "$BuildDir\compiled_res\res.zip"
 if ($LASTEXITCODE -ne 0) { throw "aapt2 link failed" }
 
 # 4. Compile Java sources with javac

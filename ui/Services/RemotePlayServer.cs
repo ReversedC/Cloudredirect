@@ -153,6 +153,7 @@ public sealed class RemotePlayServer : IDisposable
 
             while (!cancel.IsCancellationRequested)
             {
+                var (appVer, appVerCode) = GetCurrentAppVersion();
                 var beacon = new
                 {
                     service = "SUO_LINK_HOST",
@@ -162,8 +163,8 @@ public sealed class RemotePlayServer : IDisposable
                     auth = PairingToken,
                     game = ActiveGameTrackerService.CurrentGame?.Name ?? "",
                     tunnel = RemoteTunnelService.Instance.TunnelUrl ?? "",
-                    version = "1.1.1",
-                    versionCode = 3
+                    version = appVer,
+                    versionCode = appVerCode
                 };
 
                 byte[] bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(beacon));
@@ -181,6 +182,17 @@ public sealed class RemotePlayServer : IDisposable
         {
             Log($"Beacon warning: {ex.Message}");
         }
+    }
+
+    public static (string version, int versionCode) GetCurrentAppVersion()
+    {
+        var asmVer = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+        if (asmVer != null)
+        {
+            int code = (asmVer.Major * 10000) + (asmVer.Minor * 100) + (asmVer.Build > 0 ? asmVer.Build : 0);
+            return ($"{asmVer.Major}.{asmVer.Minor}.{(asmVer.Build > 0 ? asmVer.Build : 0)}", code);
+        }
+        return ("2.9.23", 20923);
     }
 
     private async Task HandleClientAsync(TcpClient client, CancellationToken cancel)
@@ -267,10 +279,11 @@ public sealed class RemotePlayServer : IDisposable
                 // Route: APK Version Check (for SUO Link APK auto-update on launch)
                 if (method == "GET" && path == "/api/version")
                 {
+                    var (appVer, appVerCode) = GetCurrentAppVersion();
                     var ver = new
                     {
-                        version = "1.1.1",
-                        versionCode = 3,
+                        version = appVer,
+                        versionCode = appVerCode,
                         apkUrl = "/download/suo-link.apk",
                         tunnelUrl = RemoteTunnelService.Instance.TunnelUrl ?? ""
                     };

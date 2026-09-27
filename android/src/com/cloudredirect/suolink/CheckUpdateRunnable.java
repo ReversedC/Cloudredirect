@@ -21,13 +21,44 @@ public class CheckUpdateRunnable implements Runnable {
         this.optionalHost = optionalHost;
     }
 
+    public static int parseVersionCode(String ver) {
+        if (ver == null) return 0;
+        ver = ver.trim();
+        while (ver.startsWith("v") || ver.startsWith("V")) ver = ver.substring(1);
+        String[] parts = ver.split("\\.");
+        try {
+            int major = parts.length > 0 ? Integer.parseInt(parts[0].replaceAll("[^0-9]", "")) : 0;
+            int minor = parts.length > 1 ? Integer.parseInt(parts[1].replaceAll("[^0-9]", "")) : 0;
+            int patch = parts.length > 2 ? Integer.parseInt(parts[2].replaceAll("[^0-9]", "")) : 0;
+            return major * 10000 + minor * 100 + patch;
+        } catch (Exception ex) {
+            return 0;
+        }
+    }
+
+    public static String cleanVersion(String ver) {
+        if (ver == null) return "";
+        ver = ver.trim();
+        while (ver.startsWith("v") || ver.startsWith("V")) ver = ver.substring(1);
+        return ver;
+    }
+
     @Override
     public void run() {
         int localVersionCode = 1;
+        String localVersionName = "1.0.0";
         try {
             localVersionCode = activity.getPackageManager()
                     .getPackageInfo(activity.getPackageName(), 0).versionCode;
+            localVersionName = activity.getPackageManager()
+                    .getPackageInfo(activity.getPackageName(), 0).versionName;
         } catch (Exception ignored) { }
+
+        // If localVersionCode was small (e.g. legacy 1, 2, 3), parse from versionName
+        int parsedLocalCode = parseVersionCode(localVersionName);
+        if (parsedLocalCode > localVersionCode) {
+            localVersionCode = parsedLocalCode;
+        }
 
         // 1. Try checking specified host or saved hosts
         String[] hostCandidates = getHostCandidates();
@@ -76,10 +107,14 @@ public class CheckUpdateRunnable implements Runnable {
 
                 JSONObject json = new JSONObject(sb.toString());
                 int remoteVersionCode = json.optInt("versionCode", 1);
-                String remoteVersion = json.optString("version", "Latest");
+                String remoteVersion = cleanVersion(json.optString("version", "Latest"));
+                int parsedRemoteCode = parseVersionCode(remoteVersion);
+                if (parsedRemoteCode > remoteVersionCode) remoteVersionCode = parsedRemoteCode;
+
                 String apkPath = json.optString("apkUrl", "/download/suo-link.apk");
                 String fullApkUrl = baseUrl + apkPath;
 
+                // ONLY trigger update if strictly greater than local version!
                 if (remoteVersionCode > localVersionCode) {
                     activity.runOnUiThread(new OnUpdateFoundRunnable(activity, remoteVersion, fullApkUrl));
                 }
@@ -112,7 +147,15 @@ public class CheckUpdateRunnable implements Runnable {
                 reader.close();
 
                 JSONObject release = new JSONObject(sb.toString());
-                String tagName = release.optString("tag_name", ""); // e.g. "v2.9.21"
+                String tagName = release.optString("tag_name", ""); // e.g. "v2.9.22"
+                String cleanRemoteVer = cleanVersion(tagName);
+                int remoteCode = parseVersionCode(cleanRemoteVer);
+
+                // If remote is NOT newer than local, DO NOTHING!
+                if (remoteCode <= localVersionCode) {
+                    return;
+                }
+
                 JSONArray assets = release.optJSONArray("assets");
                 if (assets != null) {
                     for (int i = 0; i < assets.length(); i++) {
@@ -121,8 +164,7 @@ public class CheckUpdateRunnable implements Runnable {
                         if ("SUO-Link.apk".equalsIgnoreCase(name)) {
                             String downloadUrl = asset.optString("browser_download_url", "");
                             if (!downloadUrl.isEmpty()) {
-                                // Extract integer from tag if possible or trigger update
-                                activity.runOnUiThread(new OnUpdateFoundRunnable(activity, tagName, downloadUrl));
+                                activity.runOnUiThread(new OnUpdateFoundRunnable(activity, cleanRemoteVer, downloadUrl));
                                 return;
                             }
                         }
