@@ -307,7 +307,25 @@ public partial class RemotePlayPage : Page
             Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bin", "publish", "SUO-Link.apk"),
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CloudRedirect", "SUO-Link.apk")
         };
-        return candidates.FirstOrDefault(File.Exists) ?? candidates[0];
+        string? found = candidates.FirstOrDefault(File.Exists);
+        if (found != null) return found;
+
+        try
+        {
+            using var resStream = typeof(RemotePlayPage).Assembly.GetManifestResourceStream("SUO-Link.apk");
+            if (resStream != null)
+            {
+                string localApp = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CloudRedirect");
+                Directory.CreateDirectory(localApp);
+                string outPath = Path.Combine(localApp, "SUO-Link.apk");
+                using var fs = File.Create(outPath);
+                resStream.CopyTo(fs);
+                return outPath;
+            }
+        }
+        catch { }
+
+        return candidates[0];
     }
 
     private void Fps_SelectionChanged(object sender, SelectionChangedEventArgs e)

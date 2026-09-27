@@ -498,15 +498,30 @@ public sealed class RemotePlayServer : IDisposable
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CloudRedirect", "SUO-Link.apk")
         };
 
+        byte[]? apkBytes = null;
         string? found = candidatePaths.FirstOrDefault(File.Exists);
-        if (found == null)
+        if (found != null)
+        {
+            apkBytes = await File.ReadAllBytesAsync(found, cancel);
+        }
+        else
+        {
+            using var resStream = typeof(RemotePlayServer).Assembly.GetManifestResourceStream("SUO-Link.apk");
+            if (resStream != null)
+            {
+                using var ms = new MemoryStream();
+                await resStream.CopyToAsync(ms, cancel);
+                apkBytes = ms.ToArray();
+            }
+        }
+
+        if (apkBytes == null || apkBytes.Length == 0)
         {
             string notFound = "HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nContent-Length: 35\r\n\r\nSUO-Link.apk is being generated...";
             await stream.WriteAsync(Encoding.ASCII.GetBytes(notFound), cancel);
             return;
         }
 
-        byte[] apkBytes = await File.ReadAllBytesAsync(found, cancel);
         string resp = $"HTTP/1.1 200 OK\r\nContent-Type: application/vnd.android.package-archive\r\nContent-Disposition: attachment; filename=\"SUO-Link.apk\"\r\nContent-Length: {apkBytes.Length}\r\nAccess-Control-Allow-Origin: *\r\nConnection: close\r\n\r\n";
         await stream.WriteAsync(Encoding.ASCII.GetBytes(resp), cancel);
         await stream.WriteAsync(apkBytes, cancel);

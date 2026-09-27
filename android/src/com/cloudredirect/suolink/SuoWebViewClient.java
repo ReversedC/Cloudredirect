@@ -1,13 +1,17 @@
 package com.cloudredirect.suolink;
 
+import android.net.http.SslError;
 import android.os.Build;
+import android.webkit.SslErrorHandler;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
 public class SuoWebViewClient extends WebViewClient {
     private final MainActivity activity;
+    private boolean hasTriedTunnelFallback = false;
 
     public SuoWebViewClient(MainActivity activity) {
         this.activity = activity;
@@ -49,7 +53,24 @@ public class SuoWebViewClient extends WebViewClient {
                 && !url.contains("suolink.local") 
                 && !url.contains("localhost")) {
             activity.setConnected(true);
+            hasTriedTunnelFallback = false; // Reset on successful connection
         }
+    }
+
+    @Override
+    public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
+        // For trycloudflare.com tunnel URLs, proceed through SSL
+        String url = error.getUrl();
+        if (url != null && url.contains("trycloudflare.com")) {
+            handler.proceed();
+            return;
+        }
+        // For local network connections, proceed
+        if (url != null && (url.contains("192.168.") || url.contains("10.") || url.contains("172."))) {
+            handler.proceed();
+            return;
+        }
+        super.onReceivedSslError(view, handler, error);
     }
 
     @Override
@@ -69,13 +90,30 @@ public class SuoWebViewClient extends WebViewClient {
         }
     }
 
+    @Override
+    public void onReceivedHttpError(WebView view, WebResourceRequest request, WebResourceResponse errorResponse) {
+        super.onReceivedHttpError(view, request, errorResponse);
+        if (request != null && request.isForMainFrame() && errorResponse != null) {
+            int statusCode = errorResponse.getStatusCode();
+            if (statusCode == 502 || statusCode == 503 || statusCode == 504) {
+                String url = request.getUrl() != null ? request.getUrl().toString() : "";
+                handleConnectionFailure(url, "HTTP " + statusCode + " - Tunnel gateway error");
+            }
+        }
+    }
+
     private void handleConnectionFailure(String failingUrl, String desc) {
         // If LAN failed, check if we have a remote tunnel available to auto-switch!
-        String tunnel = activity.getSavedTunnelUrl();
-        if (tunnel != null && !tunnel.isEmpty() && failingUrl != null && !failingUrl.startsWith("http://127.0.0.1") && !failingUrl.contains("trycloudflare")) {
-            activity.runOnUiThread(new LoadUrlRunnable(activity, tunnel));
-            activity.runOnUiThread(new ShowToastRunnable(activity, "LAN unreachable. Auto-switched to Remote Tunnel!"));
-            return;
+        if (!hasTriedTunnelFallback) {
+            String tunnel = activity.getSavedTunnelUrl();
+            if (tunnel != null && !tunnel.isEmpty() && failingUrl != null 
+                    && !failingUrl.startsWith("http://127.0.0.1") 
+                    && !failingUrl.contains("trycloudflare")) {
+                hasTriedTunnelFallback = true;
+                activity.runOnUiThread(new LoadUrlRunnable(activity, tunnel));
+                activity.runOnUiThread(new ShowToastRunnable(activity, "LAN unreachable. Auto-switched to Remote Tunnel!"));
+                return;
+            }
         }
         activity.showError(failingUrl, desc);
     }

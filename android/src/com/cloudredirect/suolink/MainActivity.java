@@ -151,6 +151,11 @@ public class MainActivity extends Activity {
         ws.setUseWideViewPort(true);
         ws.setLoadWithOverviewMode(true);
 
+        // Allow mixed content for HTTPS tunnel URLs loading HTTP sub-resources
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            ws.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        }
+
         wv.setWebChromeClient(new SuoWebChromeClient(this));
         wv.setWebViewClient(new SuoWebViewClient(this));
         wv.addJavascriptInterface(new SuoNativeBridge(this, vibrator), "SuoNative");
@@ -237,12 +242,23 @@ public class MainActivity extends Activity {
         if (!url.startsWith("http://") && !url.startsWith("https://")) {
             url = "http://" + url;
         }
-        if (url.contains("tunnel=") || url.contains("trycloudflare.com")) {
+
+        // If this is a smart URL with both LAN+tunnel params, parse and do smart connect
+        // But if it's a plain tunnel URL (from SmartConnectRunnable fallback), load it directly
+        if (url.contains("tunnel=") && !url.contains("trycloudflare.com")) {
+            // Smart URL like http://192.168.1.19:8585/?auth=abc&tunnel=https%3A%2F%2F...
             connectSmart(url);
             return;
         }
+
         connected = false;
-        saveUrls(url, null);
+
+        // Save tunnel URL if this is a trycloudflare link
+        if (url.contains("trycloudflare.com")) {
+            saveUrls(null, url);
+        } else {
+            saveUrls(url, null);
+        }
 
         String js = "var input = document.getElementById('manual-ip'); if(input){ input.value = '" 
                 + url.replace("'", "\\'") + "'; }";
