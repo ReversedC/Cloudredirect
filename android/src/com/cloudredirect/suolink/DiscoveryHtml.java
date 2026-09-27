@@ -224,51 +224,95 @@ public class DiscoveryHtml {
     }
 
     public static String getErrorHtml(String failedUrl, String description) {
-        return getErrorHtml(failedUrl, description, null);
+        return getErrorHtml(failedUrl, description, null, null);
     }
 
     public static String getErrorHtml(String failedUrl, String description, String savedTunnelUrl) {
+        return getErrorHtml(failedUrl, description, savedTunnelUrl, null);
+    }
+
+    public static String getErrorHtml(String failedUrl, String description, String savedTunnelUrl, String savedLanUrl) {
         String safeUrl = failedUrl != null ? failedUrl : "";
         if (safeUrl.isEmpty() || safeUrl.startsWith("file://") || safeUrl.contains("suolink.local") || safeUrl.startsWith("data:") || safeUrl.startsWith("about:")) {
             safeUrl = "Unable to reach PC host";
         }
         String safeTunnel = savedTunnelUrl != null ? savedTunnelUrl : "";
+        String safeLan = savedLanUrl != null ? savedLanUrl : "";
         boolean hasTunnel = !safeTunnel.isEmpty();
+        boolean hasLan = !safeLan.isEmpty();
+
+        String descLower = description != null ? description.toLowerCase() : "";
+        boolean isTunnelError = (failedUrl != null && (failedUrl.contains("trycloudflare.com") || failedUrl.startsWith("https://")))
+                || descLower.contains("name_not_resolved") || descLower.contains("resolve") || descLower.contains("gateway") || descLower.contains("tunnel");
 
         StringBuilder sb = new StringBuilder();
         sb.append("<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width, initial-scale=1.0'>");
         sb.append("<style>");
         sb.append("body { background: #0b0e14; color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; text-align: center; }");
-        sb.append("h1 { color: #ef4444; font-size: 22px; margin-bottom: 8px; font-weight: 800; }");
+        sb.append("h1 { color: #ef4444; font-size: 20px; margin-bottom: 8px; font-weight: 800; }");
         sb.append("p { color: #94a3b8; font-size: 13px; line-height: 1.5; max-width: 440px; margin-bottom: 12px; }");
         sb.append(".url-badge { background: #151b24; border: 1px solid #334155; padding: 6px 14px; border-radius: 6px; font-family: monospace; font-size: 12px; color: #66c0f4; margin-bottom: 16px; word-break: break-all; max-width: 90%; }");
-        sb.append(".guide-card { width: 100%; max-width: 440px; background: rgba(0, 210, 255, 0.06); border: 1px solid rgba(0, 210, 255, 0.25); border-radius: 10px; padding: 14px; margin-bottom: 18px; text-align: left; font-size: 12px; line-height: 1.5; color: #cbd5e1; }");
+        sb.append(".guide-card { width: 100%; max-width: 440px; background: rgba(0, 210, 255, 0.06); border: 1px solid rgba(0, 210, 255, 0.25); border-radius: 10px; padding: 14px; margin-bottom: 14px; text-align: left; font-size: 12px; line-height: 1.5; color: #cbd5e1; }");
+        sb.append(".guide-card-warn { background: rgba(239, 68, 68, 0.06); border-color: rgba(239, 68, 68, 0.3); }");
         sb.append(".guide-title { font-weight: 700; color: #00d2ff; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }");
+        sb.append(".guide-title-warn { color: #f87171; }");
         sb.append(".btn-row { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 380px; align-items: center; }");
         sb.append(".btn { width: 100%; background: #00d2ff; color: #0b0e14; font-weight: 800; border: none; padding: 13px 20px; border-radius: 24px; cursor: pointer; font-size: 14px; letter-spacing: 0.3px; box-shadow: 0 4px 14px rgba(0, 210, 255, 0.3); }");
+        sb.append(".btn-wifi { background: linear-gradient(135deg, #00d2ff, #0077ff); color: #ffffff; box-shadow: 0 4px 14px rgba(0, 210, 255, 0.35); }");
         sb.append(".btn-tunnel { background: linear-gradient(135deg, #38ef7d, #11998e); color: #0b0e14; box-shadow: 0 4px 14px rgba(56, 239, 125, 0.35); }");
+        sb.append(".btn-dns { background: #8b5cf6; color: #ffffff; box-shadow: 0 4px 14px rgba(139, 92, 246, 0.35); }");
         sb.append(".btn-sec { background: #1e293b; color: #f1f5f9; border: 1px solid #334155; font-weight: 600; box-shadow: none; }");
         sb.append(".btn:active { transform: scale(0.98); opacity: 0.9; }");
         sb.append("</style></head><body>");
-        sb.append("<h1>⚠️ Connection Refused</h1>");
-        sb.append("<p>Could not connect to host PC. Verify CloudRedirect is running on PC.</p>");
-        sb.append("<div class='url-badge'>").append(safeUrl).append("</div>");
-        sb.append("<div class='guide-card'>");
-        sb.append("<div class='guide-title'>🌐 Using a Different Network (Cellular 4G/5G or Outside Home)?</div>");
-        sb.append("Private IP (192.168.x.x) only works on the <b>exact same Wi-Fi router</b>.<br>");
-        sb.append("To connect from mobile data or another network:<br>");
-        sb.append("1. On PC, open CloudRedirect &gt; <b>Remote Play</b>.<br>");
-        sb.append("2. Select <b>Remote (4G/5G)</b> or <b>Smart Auto</b> tab.<br>");
-        sb.append("3. Tap <b>SCAN PC QR CODE</b> below to scan and connect instantly!");
-        sb.append("</div>");
-        sb.append("<div class='btn-row'>");
-        if (hasTunnel) {
-            sb.append("<button class='btn btn-tunnel' onclick='connectTunnel()'>🌐 CONNECT VIA REMOTE TUNNEL</button>");
+
+        if (isTunnelError) {
+            sb.append("<h1>⚠️ Remote Tunnel Blocked (DNS Error)</h1>");
+            sb.append("<p>Could not find host domain (<code>ERR_NAME_NOT_RESOLVED</code>). Many mobile carriers / ISPs in Indonesia (IndiHome, Telkomsel, XL, etc.) filter <b>trycloudflare.com</b> by default.</p>");
+            sb.append("<div class='url-badge'>").append(safeUrl).append("</div>");
+
+            if (hasLan) {
+                sb.append("<div class='guide-card'>");
+                sb.append("<div class='guide-title'>📶 At Home on the Same Wi-Fi? (Recommended)</div>");
+                sb.append("Local Wi-Fi connects directly to your PC with <b>zero lag (&lt;1ms)</b> and 0 data usage. It does not use the internet or Cloudflare!");
+                sb.append("</div>");
+                sb.append("<div class='btn-row' style='margin-bottom:12px;'>");
+                sb.append("<button class='btn btn-wifi' onclick='connectLan()'>📶 CONNECT VIA LOCAL WI-FI (OFFLINE)</button>");
+                sb.append("</div>");
+            }
+
+            sb.append("<div class='guide-card guide-card-warn'>");
+            sb.append("<div class='guide-title guide-title-warn'>🌐 On 4G/5G Cellular or Outside Home?</div>");
+            sb.append("To bypass the ISP block in 10 seconds:<br>");
+            sb.append("1. Tap <b>OPEN PRIVATE DNS SETTINGS</b> below.<br>");
+            sb.append("2. Select <b>Private DNS</b> ➔ Provider Hostname.<br>");
+            sb.append("3. Enter <code style='color:#38ef7d;font-weight:bold;'>dns.google</code> or <code style='color:#38ef7d;font-weight:bold;'>one.one.one.one</code> and Save.");
+            sb.append("</div>");
+            sb.append("<div class='btn-row' style='margin-bottom:12px;'>");
+            sb.append("<button class='btn btn-dns' onclick='openDnsSettings()'>⚙️ OPEN PRIVATE DNS SETTINGS</button>");
+            sb.append("</div>");
+        } else {
+            sb.append("<h1>⚠️ Connection Refused</h1>");
+            sb.append("<p>Could not connect to host PC on local Wi-Fi. Verify CloudRedirect is running on PC.</p>");
+            sb.append("<div class='url-badge'>").append(safeUrl).append("</div>");
+
+            if (hasTunnel) {
+                sb.append("<div class='guide-card'>");
+                sb.append("<div class='guide-title'>🌐 Using a Different Network (Cellular 4G/5G or Outside Home)?</div>");
+                sb.append("Private IP (192.168.x.x) only works on the <b>exact same Wi-Fi router</b>.<br>");
+                sb.append("To connect from mobile data or another network, use the Remote Tunnel:");
+                sb.append("</div>");
+                sb.append("<div class='btn-row' style='margin-bottom:12px;'>");
+                sb.append("<button class='btn btn-tunnel' onclick='connectTunnel()'>🌐 CONNECT VIA REMOTE TUNNEL</button>");
+                sb.append("</div>");
+            }
         }
+
+        sb.append("<div class='btn-row'>");
         sb.append("<button class='btn' onclick='triggerQrScan()'>📷 SCAN PC QR CODE</button>");
         sb.append("<button class='btn btn-sec' onclick='window.location.reload()'>🔄 RETRY CONNECTION</button>");
         sb.append("<button class='btn btn-sec' onclick='showDiscovery()'>🏠 BACK TO DISCOVERY</button>");
         sb.append("</div>");
+
         sb.append("<script>");
         sb.append("function triggerQrScan() {");
         sb.append("  try { if (window.SuoNative && window.SuoNative.openCameraScanner) { window.SuoNative.openCameraScanner(); return; } } catch(e){}");
@@ -282,6 +326,16 @@ public class DiscoveryHtml {
         sb.append("  var tUrl = '").append(safeTunnel.replace("'", "\\'")).append("';");
         sb.append("  try { if (window.SuoNative && window.SuoNative.connectSmart) { window.SuoNative.connectSmart(tUrl); return; } } catch(e){}");
         sb.append("  window.location.href = tUrl;");
+        sb.append("}");
+        sb.append("function connectLan() {");
+        sb.append("  var lUrl = '").append(safeLan.replace("'", "\\'")).append("';");
+        sb.append("  try { if (window.SuoNative && window.SuoNative.connectLan) { window.SuoNative.connectLan(lUrl); return; } } catch(e){}");
+        sb.append("  try { if (window.SuoNative && window.SuoNative.saveAndLoadHost) { window.SuoNative.saveAndLoadHost(lUrl); return; } } catch(e){}");
+        sb.append("  window.location.href = lUrl;");
+        sb.append("}");
+        sb.append("function openDnsSettings() {");
+        sb.append("  try { if (window.SuoNative && window.SuoNative.openDnsSettings) { window.SuoNative.openDnsSettings(); return; } } catch(e){}");
+        sb.append("  alert('Open Android Settings > Network & internet > Private DNS and set to dns.google or one.one.one.one');");
         sb.append("}");
         sb.append("</script></body></html>");
         return sb.toString();

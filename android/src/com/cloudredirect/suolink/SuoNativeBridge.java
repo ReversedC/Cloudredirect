@@ -59,4 +59,18 @@ public class SuoNativeBridge {
             activity.runOnUiThread(new OpenGalleryRunnable(activity));
         }
     }
+
+    @JavascriptInterface
+    public void openDnsSettings() {
+        if (activity != null) {
+            activity.openDnsSettings();
+        }
+    }
+
+    @JavascriptInterface
+    public void connectLan(final String lanUrl) {
+        if (activity != null) {
+            activity.connectLan(lanUrl);
+        }
+    }
 }

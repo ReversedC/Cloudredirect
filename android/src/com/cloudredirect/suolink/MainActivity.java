@@ -48,6 +48,7 @@ public class MainActivity extends Activity {
     private volatile boolean running = true;
     private DownloadCompleteReceiver downloadReceiver;
     private ValueCallback<Uri[]> filePathCallback;
+    private SuoWebViewClient webViewClient;
 
     public boolean isConnected() { return connected; }
     public void setConnected(boolean val) { this.connected = val; }
@@ -157,7 +158,8 @@ public class MainActivity extends Activity {
         }
 
         wv.setWebChromeClient(new SuoWebChromeClient(this));
-        wv.setWebViewClient(new SuoWebViewClient(this));
+        webViewClient = new SuoWebViewClient(this);
+        wv.setWebViewClient(webViewClient);
         wv.addJavascriptInterface(new SuoNativeBridge(this, vibrator), "SuoNative");
     }
 
@@ -191,7 +193,7 @@ public class MainActivity extends Activity {
 
     public void showError(String failingUrl, String desc) {
         connected = false;
-        String html = DiscoveryHtml.getErrorHtml(failingUrl, desc, getSavedTunnelUrl());
+        String html = DiscoveryHtml.getErrorHtml(failingUrl, desc, getSavedTunnelUrl(), getSavedLanUrl());
         webView.loadDataWithBaseURL("https://suolink.local/", html, "text/html", "UTF-8", null);
     }
 
@@ -233,6 +235,10 @@ public class MainActivity extends Activity {
             webView.post(new EvalJsRunnable(webView, js));
         }
 
+        if (webViewClient != null) {
+            webViewClient.resetFallbacks();
+        }
+
         new Thread(new SmartConnectRunnable(this, lanUrl, tunnelUrl)).start();
     }
 
@@ -258,11 +264,40 @@ public class MainActivity extends Activity {
             saveUrls(url, null);
         }
 
+        if (webViewClient != null) {
+            webViewClient.resetFallbacks();
+        }
+
         String js = "var input = document.getElementById('manual-ip'); if(input){ input.value = '" 
                 + url.replace("'", "\\'") + "'; }";
         webView.post(new EvalJsRunnable(webView, js));
 
         webView.loadUrl(url);
+    }
+
+    public void openDnsSettings() {
+        runOnUiThread(() -> {
+            try {
+                Intent intent = new Intent(android.provider.Settings.ACTION_WIRELESS_SETTINGS);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+            } catch (Exception e1) {
+                try {
+                    Intent intent = new Intent(android.provider.Settings.ACTION_SETTINGS);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(intent);
+                } catch (Exception ignored) { }
+            }
+        });
+    }
+
+    public void connectLan(String lanUrl) {
+        String target = (lanUrl != null && !lanUrl.isEmpty()) ? lanUrl : getSavedLanUrl();
+        if (target != null && !target.isEmpty()) {
+            runOnUiThread(() -> loadHostUrl(target));
+        } else {
+            showDiscoveryPage();
+        }
     }
 
     public void onBeaconReceived(String name, String ip, int port, String auth, String tunnel, int verCode, String ver) {

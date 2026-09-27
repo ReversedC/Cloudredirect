@@ -44,8 +44,8 @@ public class SmartConnectRunnable implements Runnable {
 
             URL url = new URL(probeUrl);
             conn = (HttpURLConnection) url.openConnection();
-            conn.setConnectTimeout(800);
-            conn.setReadTimeout(800);
+            conn.setConnectTimeout(2000);
+            conn.setReadTimeout(2000);
             conn.setRequestMethod("GET");
 
             if (conn.getResponseCode() == 200) {

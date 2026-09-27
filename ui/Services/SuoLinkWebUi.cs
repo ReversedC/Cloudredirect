@@ -505,7 +505,8 @@ public static class SuoLinkWebUi
 
     // --- WebSocket Input Relay ---
     function connectInputWs() {
-      const wsUrl = `ws://${window.location.host}/ws/input?auth=${CONFIG.token}`;
+      const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${wsProto}//${window.location.host}/ws/input?auth=${CONFIG.token}`;
       ws = new WebSocket(wsUrl);
       ws.onopen = () => console.log("[SUO Link] Input WebSocket connected");
       ws.onclose = () => setTimeout(connectInputWs, 2000);

@@ -19,7 +19,7 @@ public partial class RemotePlayPage : Page
         LocalWifi
     }
 
-    private ConnectionMode _mode = ConnectionMode.SmartAuto;
+    private ConnectionMode _mode = ConnectionMode.LocalWifi;
 
     public RemotePlayPage()
     {
@@ -160,7 +160,7 @@ public partial class RemotePlayPage : Page
                     ModeHintText.Text = "Direct Cloudflare Tunnel link. Works anywhere in the world on mobile data or any network:";
                     if (ModeExplainerText != null)
                     {
-                        ModeExplainerText.Text = "🌐 Remote Mode: Connects across the Internet via Cloudflare Tunnel. Scan with SUO Link or open link in Chrome/Safari.";
+                        ModeExplainerText.Text = "🌐 Remote Mode: Connects across the Internet via Cloudflare Tunnel. (Tip: If your mobile provider blocks trycloudflare.com, set Android Private DNS to dns.google or use Local Wi-Fi at home).";
                         ModeExplainerText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#38EF7D"));
                     }
                 }

@@ -12,9 +12,15 @@ import android.webkit.WebViewClient;
 public class SuoWebViewClient extends WebViewClient {
     private final MainActivity activity;
     private boolean hasTriedTunnelFallback = false;
+    private boolean hasTriedLanFallback = false;
 
     public SuoWebViewClient(MainActivity activity) {
         this.activity = activity;
+    }
+
+    public void resetFallbacks() {
+        hasTriedTunnelFallback = false;
+        hasTriedLanFallback = false;
     }
 
     @Override
@@ -53,7 +59,8 @@ public class SuoWebViewClient extends WebViewClient {
                 && !url.contains("suolink.local") 
                 && !url.contains("localhost")) {
             activity.setConnected(true);
-            hasTriedTunnelFallback = false; // Reset on successful connection
+            hasTriedTunnelFallback = false;
+            hasTriedLanFallback = false;
         }
     }
 
@@ -135,7 +142,8 @@ public class SuoWebViewClient extends WebViewClient {
 
     private void handleConnectionFailure(String failingUrl, String desc) {
         if (!isHostUrl(failingUrl)) return;
-        // If LAN failed, check if we have a remote tunnel available to auto-switch!
+
+        // 1. If LAN failed, check if we have a remote tunnel available to auto-switch!
         if (!hasTriedTunnelFallback) {
             String tunnel = activity.getSavedTunnelUrl();
             if (tunnel != null && !tunnel.isEmpty() && failingUrl != null 
@@ -147,6 +155,19 @@ public class SuoWebViewClient extends WebViewClient {
                 return;
             }
         }
+
+        // 2. If Remote Tunnel failed (e.g. trycloudflare DNS blocked by ISP), check if we have LAN available!
+        if (!hasTriedLanFallback) {
+            String lan = activity.getSavedLanUrl();
+            if (lan != null && !lan.isEmpty() && failingUrl != null 
+                    && (failingUrl.contains("trycloudflare") || failingUrl.startsWith("https://"))) {
+                hasTriedLanFallback = true;
+                activity.runOnUiThread(new LoadUrlRunnable(activity, lan));
+                activity.runOnUiThread(new ShowToastRunnable(activity, "Remote tunnel unreachable. Auto-switched to Local Wi-Fi!"));
+                return;
+            }
+        }
+
         activity.showError(failingUrl, desc);
     }
 }
