@@ -82,7 +82,7 @@ public static class AppSettings
 
     public static bool EnableSuoLink
     {
-        get => ReadBool("enable_suo_link", true);
+        get => ReadBool("enable_suo_link", false);
         set
         {
             WriteBool("enable_suo_link", value);
