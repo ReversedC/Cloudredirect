@@ -229,6 +229,9 @@ public class DiscoveryHtml {
 
     public static String getErrorHtml(String failedUrl, String description, String savedTunnelUrl) {
         String safeUrl = failedUrl != null ? failedUrl : "";
+        if (safeUrl.isEmpty() || safeUrl.startsWith("file://") || safeUrl.contains("suolink.local") || safeUrl.startsWith("data:") || safeUrl.startsWith("about:")) {
+            safeUrl = "Unable to reach PC host";
+        }
         String safeTunnel = savedTunnelUrl != null ? savedTunnelUrl : "";
         boolean hasTunnel = !safeTunnel.isEmpty();
 

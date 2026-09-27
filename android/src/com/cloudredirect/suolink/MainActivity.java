@@ -164,7 +164,7 @@ public class MainActivity extends Activity {
     public void showDiscoveryPage() {
         connected = false;
         String html = DiscoveryHtml.getHtml(getSavedLanUrl(), getSavedTunnelUrl());
-        webView.loadDataWithBaseURL("file:///android_asset/", html, "text/html", "UTF-8", null);
+        webView.loadDataWithBaseURL("https://suolink.local/", html, "text/html", "UTF-8", null);
     }
 
     public void startNativeCameraCapture() {
@@ -192,7 +192,7 @@ public class MainActivity extends Activity {
     public void showError(String failingUrl, String desc) {
         connected = false;
         String html = DiscoveryHtml.getErrorHtml(failingUrl, desc, getSavedTunnelUrl());
-        webView.loadDataWithBaseURL("file:///android_asset/", html, "text/html", "UTF-8", null);
+        webView.loadDataWithBaseURL("https://suolink.local/", html, "text/html", "UTF-8", null);
     }
 
     public WebView getWebView() { return webView; }
@@ -244,9 +244,7 @@ public class MainActivity extends Activity {
         }
 
         // If this is a smart URL with both LAN+tunnel params, parse and do smart connect
-        // But if it's a plain tunnel URL (from SmartConnectRunnable fallback), load it directly
-        if (url.contains("tunnel=") && !url.contains("trycloudflare.com")) {
-            // Smart URL like http://192.168.1.19:8585/?auth=abc&tunnel=https%3A%2F%2F...
+        if (url.contains("tunnel=")) {
             connectSmart(url);
             return;
         }

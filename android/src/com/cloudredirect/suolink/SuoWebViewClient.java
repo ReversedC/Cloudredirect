@@ -58,6 +58,34 @@ public class SuoWebViewClient extends WebViewClient {
     }
 
     @Override
+    public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+        if (request != null && request.getUrl() != null) {
+            String host = request.getUrl().getHost();
+            if ("suolink.local".equalsIgnoreCase(host)) {
+                return new WebResourceResponse("text/plain", "UTF-8", new java.io.ByteArrayInputStream(new byte[0]));
+            }
+        }
+        return super.shouldInterceptRequest(view, request);
+    }
+
+    @Override
+    public WebResourceResponse shouldInterceptRequest(WebView view, String url) {
+        if (url != null && url.contains("suolink.local")) {
+            return new WebResourceResponse("text/plain", "UTF-8", new java.io.ByteArrayInputStream(new byte[0]));
+        }
+        return super.shouldInterceptRequest(view, url);
+    }
+
+    private boolean isHostUrl(String url) {
+        if (url == null || url.trim().isEmpty()) return false;
+        String lower = url.trim().toLowerCase();
+        if (lower.startsWith("file://") || lower.startsWith("data:") || lower.startsWith("about:") || lower.contains("suolink.local")) {
+            return false;
+        }
+        return lower.startsWith("http://") || lower.startsWith("https://");
+    }
+
+    @Override
     public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
         // For trycloudflare.com tunnel URLs, proceed through SSL
         String url = error.getUrl();
@@ -76,6 +104,7 @@ public class SuoWebViewClient extends WebViewClient {
     @Override
     public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
         super.onReceivedError(view, errorCode, description, failingUrl);
+        if (!isHostUrl(failingUrl)) return;
         handleConnectionFailure(failingUrl, description);
     }
 
@@ -84,6 +113,7 @@ public class SuoWebViewClient extends WebViewClient {
         super.onReceivedError(view, request, error);
         if (request != null && request.isForMainFrame()) {
             String url = request.getUrl() != null ? request.getUrl().toString() : "";
+            if (!isHostUrl(url)) return;
             String desc = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && error != null) 
                 ? String.valueOf(error.getDescription()) : "Connection failed";
             handleConnectionFailure(url, desc);
@@ -97,12 +127,14 @@ public class SuoWebViewClient extends WebViewClient {
             int statusCode = errorResponse.getStatusCode();
             if (statusCode == 502 || statusCode == 503 || statusCode == 504) {
                 String url = request.getUrl() != null ? request.getUrl().toString() : "";
+                if (!isHostUrl(url)) return;
                 handleConnectionFailure(url, "HTTP " + statusCode + " - Tunnel gateway error");
             }
         }
     }
 
     private void handleConnectionFailure(String failingUrl, String desc) {
+        if (!isHostUrl(failingUrl)) return;
         // If LAN failed, check if we have a remote tunnel available to auto-switch!
         if (!hasTriedTunnelFallback) {
             String tunnel = activity.getSavedTunnelUrl();
