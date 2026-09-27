@@ -1,4 +1,7 @@
 using System;
+using System.Diagnostics;
+using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
 using CloudRedirect.Services;
 using Wpf.Ui.Controls;
@@ -7,10 +10,15 @@ namespace CloudRedirect.Dialogs;
 
 public partial class MobileStreamingGuideDialog : FluentWindow
 {
+    private bool _isPasswordRevealed = true;
+    private bool _qrModeApk = true;
+
     public MobileStreamingGuideDialog()
     {
         InitializeComponent();
         RefreshStatus();
+        UpdateQrCode();
+        _ = InitializeCredentialsAsync();
     }
 
     private void RefreshStatus()
@@ -20,7 +28,7 @@ public partial class MobileStreamingGuideDialog : FluentWindow
 
         if (SunshineSyncService.IsSunshineRunning)
         {
-            SunshineStatusBadge.Text = "Active & Running";
+            SunshineStatusBadge.Text = "Active & Ready";
             SunshineStatusBadge.Foreground = System.Windows.Media.Brushes.LightGreen;
         }
         else if (SunshineSyncService.IsSunshineInstalled)
@@ -33,6 +41,192 @@ public partial class MobileStreamingGuideDialog : FluentWindow
             SunshineStatusBadge.Text = "Not Installed";
             SunshineStatusBadge.Foreground = System.Windows.Media.Brushes.IndianRed;
         }
+    }
+
+    private void UpdateQrCode()
+    {
+        try
+        {
+            var lanIp = SunshineSyncService.GetLocalLanIp() ?? "127.0.0.1";
+            string payload = _qrModeApk
+                ? "https://github.com/mirzaarsyad74-cmyk/Cloudredirect/releases/latest/download/CloudRedirect-Stream.apk"
+                : $"https://{lanIp}:47990/pin";
+
+            QrCodeImage.Source = QrCodeHelper.GenerateQrCode(payload, 5);
+        }
+        catch
+        {
+            QrCodeImage.Source = null;
+        }
+    }
+
+    private void QrModeApk_Click(object sender, RoutedEventArgs e)
+    {
+        _qrModeApk = true;
+        QrModeApkBtn.Appearance = ControlAppearance.Primary;
+        QrModePinBtn.Appearance = ControlAppearance.Secondary;
+        QrModeDescription.Text = "Scan with phone camera to download CloudRedirect-Stream.apk directly.";
+        UpdateQrCode();
+    }
+
+    private void QrModePin_Click(object sender, RoutedEventArgs e)
+    {
+        _qrModeApk = false;
+        QrModeApkBtn.Appearance = ControlAppearance.Secondary;
+        QrModePinBtn.Appearance = ControlAppearance.Primary;
+        QrModeDescription.Text = "Scan to open the Sunshine PIN pairing web page on your phone.";
+        UpdateQrCode();
+    }
+
+    private void CopyIp_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var ip = LanIpText.Text;
+            if (!string.IsNullOrEmpty(ip))
+            {
+                Clipboard.SetText(ip);
+                CopyIpBtn.Content = "Copied!";
+                var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+                timer.Tick += (s, ev) =>
+                {
+                    timer.Stop();
+                    CopyIpBtn.Content = "Copy IP";
+                };
+                timer.Start();
+            }
+        }
+        catch { }
+    }
+
+    private async Task InitializeCredentialsAsync()
+    {
+        try
+        {
+            var pass = await SunshineSyncService.EnsureCredentialsAsync();
+            UpdatePasswordDisplay(pass);
+        }
+        catch { }
+    }
+
+    private void UpdatePasswordDisplay(string pass)
+    {
+        SunshineUsernameText.Text = AppSettings.SunshineUsername;
+        SunshinePasswordText.Text = pass;
+        SunshinePasswordBox.Password = pass;
+    }
+
+    private void CopyUsername_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Clipboard.SetText(SunshineUsernameText.Text);
+        }
+        catch { }
+    }
+
+    private void CopyPassword_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var pass = SunshinePasswordText.Text;
+            if (!string.IsNullOrEmpty(pass))
+            {
+                Clipboard.SetText(pass);
+            }
+        }
+        catch { }
+    }
+
+    private void TogglePassword_Click(object sender, RoutedEventArgs e)
+    {
+        _isPasswordRevealed = !_isPasswordRevealed;
+        if (_isPasswordRevealed)
+        {
+            SunshinePasswordText.Visibility = Visibility.Visible;
+            SunshinePasswordBox.Visibility = Visibility.Collapsed;
+            TogglePasswordBtn.Icon = new SymbolIcon(SymbolRegular.Eye24);
+        }
+        else
+        {
+            SunshinePasswordText.Visibility = Visibility.Collapsed;
+            SunshinePasswordBox.Visibility = Visibility.Visible;
+            TogglePasswordBtn.Icon = new SymbolIcon(SymbolRegular.EyeOff24);
+        }
+    }
+
+    private async void AutoGeneratePassword_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var newPass = SunshineSyncService.GenerateStrongPassword();
+            var res = await SunshineSyncService.SetCredentialsAsync("admin", newPass);
+            if (res.Success)
+            {
+                UpdatePasswordDisplay(newPass);
+                await Dialog.ShowInfoAsync("Password Generated", $"Sunshine password has been updated to:\n\n{newPass}\n\nYou can now log into Sunshine using username 'admin'.");
+            }
+            else
+            {
+                await Dialog.ShowWarningAsync("Password Update Warning", res.Message);
+            }
+        }
+        catch (Exception ex)
+        {
+            await Dialog.ShowErrorAsync("Password Error", ex.Message);
+        }
+    }
+
+    private void SetCustomPassword_Click(object sender, RoutedEventArgs e)
+    {
+        CustomPasswordPanel.Visibility = CustomPasswordPanel.Visibility == Visibility.Visible
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+        if (CustomPasswordPanel.Visibility == Visibility.Visible)
+        {
+            NewCustomPasswordBox.Focus();
+        }
+    }
+
+    private async void SaveCustomPassword_Click(object sender, RoutedEventArgs e)
+    {
+        var custom = NewCustomPasswordBox.Text?.Trim();
+        if (string.IsNullOrEmpty(custom) || custom.Length < 8)
+        {
+            await Dialog.ShowWarningAsync("Invalid Password", "Password must be at least 8 characters long.");
+            return;
+        }
+
+        try
+        {
+            var res = await SunshineSyncService.SetCredentialsAsync("admin", custom);
+            if (res.Success)
+            {
+                UpdatePasswordDisplay(custom);
+                CustomPasswordPanel.Visibility = Visibility.Collapsed;
+                NewCustomPasswordBox.Clear();
+                await Dialog.ShowInfoAsync("Password Saved", "Sunshine credentials successfully updated.");
+            }
+            else
+            {
+                await Dialog.ShowWarningAsync("Password Update Warning", res.Message);
+            }
+        }
+        catch (Exception ex)
+        {
+            await Dialog.ShowErrorAsync("Password Error", ex.Message);
+        }
+    }
+
+    private void CancelCustomPassword_Click(object sender, RoutedEventArgs e)
+    {
+        CustomPasswordPanel.Visibility = Visibility.Collapsed;
+        NewCustomPasswordBox.Clear();
+    }
+
+    private void ResetPassword_Click(object sender, RoutedEventArgs e)
+    {
+        AutoGeneratePassword_Click(sender, e);
     }
 
     private void EnterPin_Click(object sender, RoutedEventArgs e)
@@ -70,20 +264,25 @@ public partial class MobileStreamingGuideDialog : FluentWindow
         try
         {
             var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            var localApk = System.IO.Path.Combine(baseDir, "CloudRedirect-Stream.apk");
-            if (!System.IO.File.Exists(localApk))
+            var localApk = Path.Combine(baseDir, "CloudRedirect-Stream.apk");
+            if (!File.Exists(localApk))
             {
-                var pubPath = System.IO.Path.GetFullPath(System.IO.Path.Combine(baseDir, @"..\..\..\ui\bin\publish\CloudRedirect-Stream.apk"));
-                if (System.IO.File.Exists(pubPath)) localApk = pubPath;
+                var pubPath = Path.GetFullPath(Path.Combine(baseDir, @"..\..\..\ui\bin\publish\CloudRedirect-Stream.apk"));
+                if (File.Exists(pubPath)) localApk = pubPath;
+            }
+            if (!File.Exists(localApk))
+            {
+                var resPath = Path.GetFullPath(Path.Combine(baseDir, @"..\..\..\resources\mobile\CloudRedirect-Stream.apk"));
+                if (File.Exists(resPath)) localApk = resPath;
             }
 
-            if (System.IO.File.Exists(localApk))
+            if (File.Exists(localApk))
             {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", $"/select,\"{localApk}\"") { UseShellExecute = true });
+                Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{localApk}\"") { UseShellExecute = true });
             }
             else
             {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://github.com/mirzaarsyad74-cmyk/Cloudredirect/releases/latest") { UseShellExecute = true });
+                Process.Start(new ProcessStartInfo("https://github.com/mirzaarsyad74-cmyk/Cloudredirect/releases/latest") { UseShellExecute = true });
             }
         }
         catch (Exception ex)

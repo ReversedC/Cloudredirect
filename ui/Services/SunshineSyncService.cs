@@ -10,6 +10,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace CloudRedirect.Services;
 
@@ -103,6 +104,14 @@ public static class SunshineSyncService
     {
         try
         {
+            if (Application.Current?.Dispatcher != null)
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    CloudRedirect.Windows.SunshineMiniWindow.ShowWindow("https://localhost:47990");
+                });
+                return;
+            }
             Process.Start(new ProcessStartInfo("https://localhost:47990") { UseShellExecute = true });
         }
         catch { }
@@ -112,6 +121,14 @@ public static class SunshineSyncService
     {
         try
         {
+            if (Application.Current?.Dispatcher != null)
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    CloudRedirect.Windows.SunshineMiniWindow.ShowWindow("https://localhost:47990/pin");
+                });
+                return;
+            }
             Process.Start(new ProcessStartInfo("https://localhost:47990/pin") { UseShellExecute = true });
         }
         catch { }
@@ -364,5 +381,124 @@ public static class SunshineSyncService
                 return new SunshineSyncResult(false, 0, $"Sync failed: {ex.Message}");
             }
         });
+    }
+
+    /// <summary>
+    /// Generates a secure, human-readable Sunshine password conforming to security guidelines.
+    /// Format: Steam-XXXX-XXXX!
+    /// </summary>
+    public static string GenerateStrongPassword()
+    {
+        const string upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+        const string lower = "abcdefghijkmnpqrstuvwxyz";
+        const string digits = "23456789";
+        var rng = new Random();
+
+        string Part(string chars, int len) =>
+            new string(Enumerable.Range(0, len).Select(_ => chars[rng.Next(chars.Length)]).ToArray());
+
+        return $"Steam-{Part(upper, 2)}{Part(digits, 2)}-{Part(lower, 2)}{Part(digits, 2)}!";
+    }
+
+    /// <summary>
+    /// Updates Sunshine's Web UI credentials using sunshine.exe --creds <username> <password>.
+    /// </summary>
+    public static async Task<(bool Success, string Message)> SetCredentialsAsync(string username, string password, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(username)) username = "admin";
+        if (string.IsNullOrWhiteSpace(password)) return (false, "Password cannot be empty.");
+
+        var sunshineExe = FindSunshineExePath();
+        if (string.IsNullOrEmpty(sunshineExe) || !File.Exists(sunshineExe))
+        {
+            return (false, "Sunshine executable not found.");
+        }
+
+        return await Task.Run(async () =>
+        {
+            try
+            {
+                // 1. Try running directly first
+                var psi = new ProcessStartInfo
+                {
+                    FileName = sunshineExe,
+                    Arguments = $"--creds \"{username}\" \"{password}\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                };
+
+                using (var proc = Process.Start(psi))
+                {
+                    if (proc != null)
+                    {
+                        var stdout = await proc.StandardOutput.ReadToEndAsync(ct);
+                        var stderr = await proc.StandardError.ReadToEndAsync(ct);
+                        await proc.WaitForExitAsync(ct);
+
+                        if (proc.ExitCode == 0 || stdout.Contains("New credentials have been created"))
+                        {
+                            AppSettings.SunshineUsername = username;
+                            AppSettings.SunshinePassword = password;
+                            return (true, "Sunshine credentials successfully updated.");
+                        }
+                    }
+                }
+
+                // 2. If direct run failed (permission denied), retry with elevated PowerShell
+                var elevatedCmd = $"& '{sunshineExe}' --creds \"{username}\" \"{password}\"";
+                var elevPsi = new ProcessStartInfo
+                {
+                    FileName = "powershell.exe",
+                    Arguments = $"-NoProfile -ExecutionPolicy Bypass -Command \"{elevatedCmd}\"",
+                    Verb = "runas",
+                    UseShellExecute = true,
+                    WindowStyle = ProcessWindowStyle.Hidden
+                };
+
+                using (var elevProc = Process.Start(elevPsi))
+                {
+                    if (elevProc != null)
+                    {
+                        await elevProc.WaitForExitAsync(ct);
+                        if (elevProc.ExitCode == 0)
+                        {
+                            AppSettings.SunshineUsername = username;
+                            AppSettings.SunshinePassword = password;
+                            return (true, "Sunshine credentials successfully updated with administrator permissions.");
+                        }
+                    }
+                }
+
+                return (false, "Failed to apply credentials to Sunshine.");
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Error setting credentials: {ex.Message}");
+            }
+        });
+    }
+
+    /// <summary>
+    /// Ensures Sunshine has a generated or configured password. If none is stored,
+    /// generates one automatically and applies it to Sunshine.
+    /// </summary>
+    public static async Task<string> EnsureCredentialsAsync(CancellationToken ct = default)
+    {
+        var currentPass = AppSettings.SunshinePassword;
+        if (!string.IsNullOrEmpty(currentPass))
+        {
+            return currentPass;
+        }
+
+        var newPass = GenerateStrongPassword();
+        var res = await SetCredentialsAsync("admin", newPass, ct);
+        if (res.Success)
+        {
+            return newPass;
+        }
+
+        return currentPass;
     }
 }

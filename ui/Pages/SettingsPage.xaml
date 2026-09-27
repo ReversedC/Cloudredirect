@@ -112,6 +112,13 @@
                                                        Click="SyncSunshine_Click"
                                                        Margin="0,0,8,0"
                                                        Cursor="Hand" />
+                                            <ui:Button x:Name="SunshineCredsBtn"
+                                                       Appearance="Secondary"
+                                                       Content="Web Credentials"
+                                                       Icon="{ui:SymbolIcon ShieldKeyhole24}"
+                                                       Click="OpenSunshineGuide_Click"
+                                                       Margin="0,0,8,0"
+                                                       Cursor="Hand" />
                                             <ui:Button x:Name="OpenSunshineGuideBtn"
                                                        Appearance="Primary"
                                                        Content="Mobile Setup Guide"
