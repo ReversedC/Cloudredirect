@@ -162,8 +162,8 @@ public sealed class RemotePlayServer : IDisposable
                     auth = PairingToken,
                     game = ActiveGameTrackerService.CurrentGame?.Name ?? "",
                     tunnel = RemoteTunnelService.Instance.TunnelUrl ?? "",
-                    version = "1.1.0",
-                    versionCode = 2
+                    version = "1.1.1",
+                    versionCode = 3
                 };
 
                 byte[] bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(beacon));
@@ -269,8 +269,8 @@ public sealed class RemotePlayServer : IDisposable
                 {
                     var ver = new
                     {
-                        version = "1.1.0",
-                        versionCode = 2,
+                        version = "1.1.1",
+                        versionCode = 3,
                         apkUrl = "/download/suo-link.apk",
                         tunnelUrl = RemoteTunnelService.Instance.TunnelUrl ?? ""
                     };

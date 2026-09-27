@@ -12,6 +12,8 @@ namespace CloudRedirect.Pages;
 
 public partial class RemotePlayPage : Page
 {
+    private bool _isRemoteMode = false;
+
     public RemotePlayPage()
     {
         InitializeComponent();
@@ -21,7 +23,6 @@ public partial class RemotePlayPage : Page
 
     private void RemotePlayPage_Loaded(object sender, RoutedEventArgs e)
     {
-        // Auto-start server if not running
         if (!RemotePlayServer.Instance.IsRunning)
         {
             RemotePlayServer.Instance.Start();
@@ -41,6 +42,12 @@ public partial class RemotePlayPage : Page
         Dispatcher.Invoke(RefreshUi);
     }
 
+    private void NetworkMode_Checked(object sender, RoutedEventArgs e)
+    {
+        _isRemoteMode = (RemoteModeRadio?.IsChecked == true);
+        RefreshConnectionDisplay();
+    }
+
     private void RefreshUi()
     {
         var server = RemotePlayServer.Instance;
@@ -55,32 +62,27 @@ public partial class RemotePlayPage : Page
             ServerStatusPill.BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#3B6B22"));
             ToggleServerBtn.Content = "Stop Host";
 
-            string smartUrl = server.SmartConnectUrl;
-            ServerUrlBox.Text = smartUrl;
+            RefreshConnectionDisplay();
 
-            // Update endpoints badges
-            LanEndpointText.Text = $"Wi-Fi: {server.LanIp}:{server.Port}";
+            // Multi-Network telemetry labels
+            WifiStatusLabel.Text = $"Active ({server.LanIp}:{server.Port})";
+            WifiStatusLabel.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#A4D007"));
+
+            bool upnp = RemoteTunnelService.Instance.IsUpnpMapped;
+            UpnpStatusLabel.Text = upnp ? "Mapped (Port 8585)" : "Active (Direct)";
+            UpnpStatusLabel.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#A4D007"));
+
             string? tunnel = server.TunnelUrl;
             if (!string.IsNullOrEmpty(tunnel))
             {
-                TunnelDot.Fill = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#A4D007"));
-                TunnelEndpointText.Text = "Remote / 4G / 5G: Active";
-                TunnelEndpointText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#A4D007"));
+                TunnelStatusLabel.Text = "Online (4G/5G Ready)";
+                TunnelStatusLabel.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#66C0F4"));
             }
             else
             {
-                TunnelDot.Fill = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#66C0F4"));
-                TunnelEndpointText.Text = "Remote Tunnel: Connecting...";
-                TunnelEndpointText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#66C0F4"));
+                TunnelStatusLabel.Text = "Connecting...";
+                TunnelStatusLabel.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#8F98A0"));
             }
-
-            // Generate high-resolution QR Code
-            try
-            {
-                var qrBmp = QrCodeHelper.GenerateQrCode(smartUrl, pixelsPerModule: 8);
-                QrCodeImage.Source = qrBmp;
-            }
-            catch { }
 
             int clients = server.ConnectedClientsCount;
             ConnectedDevicesText.Text = clients == 1 ? "1 Device Connected" : $"{clients} Devices Connected";
@@ -97,6 +99,13 @@ public partial class RemotePlayPage : Page
             ServerUrlBox.Text = "Server is stopped";
             QrCodeImage.Source = null;
             ConnectedDevicesText.Text = "0 Devices Connected";
+
+            WifiStatusLabel.Text = "Stopped";
+            WifiStatusLabel.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#8F98A0"));
+            UpnpStatusLabel.Text = "Inactive";
+            UpnpStatusLabel.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#8F98A0"));
+            TunnelStatusLabel.Text = "Inactive";
+            TunnelStatusLabel.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#8F98A0"));
         }
 
         // Check if APK exists
@@ -112,6 +121,38 @@ public partial class RemotePlayPage : Page
             ApkStatusText.Text = "APK not found";
             ApkStatusText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#8F98A0"));
         }
+    }
+
+    private void RefreshConnectionDisplay()
+    {
+        var server = RemotePlayServer.Instance;
+        if (!server.IsRunning) return;
+
+        string activeUrl;
+        if (_isRemoteMode)
+        {
+            string? tunnel = server.TunnelUrl;
+            activeUrl = !string.IsNullOrEmpty(tunnel) ? tunnel : server.ServerUrl;
+            QrBadgeText.Text = "🌐 REMOTE (4G / 5G / ANY)";
+            QrBadgeText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#38EF7D"));
+            ModeHintText.Text = "Connect from outside home via secure Cloudflare Tunnel (zero router setup needed):";
+        }
+        else
+        {
+            activeUrl = server.ServerUrl;
+            QrBadgeText.Text = "📶 WI-FI (LOCAL LAN)";
+            QrBadgeText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#66C0F4"));
+            ModeHintText.Text = "Connect from home on the same Wi-Fi network (<1ms ultra-low latency):";
+        }
+
+        ServerUrlBox.Text = activeUrl;
+
+        try
+        {
+            var qrBmp = QrCodeHelper.GenerateQrCode(activeUrl, pixelsPerModule: 8);
+            QrCodeImage.Source = qrBmp;
+        }
+        catch { }
     }
 
     private void ToggleServer_Click(object sender, RoutedEventArgs e)
@@ -175,6 +216,8 @@ public partial class RemotePlayPage : Page
             }
         }
     }
+
+
 
     private static string GetApkPath()
     {

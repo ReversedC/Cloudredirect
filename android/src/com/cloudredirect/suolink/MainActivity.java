@@ -80,8 +80,15 @@ public class MainActivity extends Activity {
         }
 
         // Register download receiver for auto-update
-        downloadReceiver = new DownloadCompleteReceiver();
-        registerReceiver(downloadReceiver, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+        try {
+            downloadReceiver = new DownloadCompleteReceiver();
+            IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
+            if (Build.VERSION.SDK_INT >= 33) {
+                registerReceiver(downloadReceiver, filter, Context.RECEIVER_EXPORTED);
+            } else {
+                registerReceiver(downloadReceiver, filter);
+            }
+        } catch (Exception ignored) { }
 
         FrameLayout rootLayout = new FrameLayout(this);
         rootLayout.setBackgroundColor(0xFF0B0E14);
@@ -201,23 +208,24 @@ public class MainActivity extends Activity {
     }
 
     public void onUpdateAvailable(String version, String apkDownloadUrl) {
-        // Show in-app banner
-        String js = "if(window.showUpdateNotice){ window.showUpdateNotice('⬆️ Downloading SUO Link v" + version + "...'); }";
-        webView.post(new EvalJsRunnable(webView, js));
-
-        // Download APK via system DownloadManager
+        if (apkDownloadUrl == null || apkDownloadUrl.isEmpty()) return;
         try {
+            // Show in-app banner
+            String js = "if(window.showUpdateNotice){ window.showUpdateNotice('⬆️ Downloading SUO Link v" + version + "...'); }";
+            webView.post(new EvalJsRunnable(webView, js));
+
+            // Download APK via system DownloadManager
             DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
-            DownloadManager.Request req = new DownloadManager.Request(Uri.parse(apkDownloadUrl));
-            req.setTitle("SUO Link Update (" + version + ")");
-            req.setDescription("Downloading latest SUO Link...");
-            req.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-            req.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "SUO-Link.apk");
-            req.setMimeType("application/vnd.android.package-archive");
-            dm.enqueue(req);
-        } catch (Exception ex) {
-            // Handle download exception
-        }
+            if (dm != null) {
+                DownloadManager.Request req = new DownloadManager.Request(Uri.parse(apkDownloadUrl));
+                req.setTitle("SUO Link Update (" + version + ")");
+                req.setDescription("Downloading latest SUO Link...");
+                req.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+                req.setDestinationInExternalFilesDir(this, Environment.DIRECTORY_DOWNLOADS, "SUO-Link.apk");
+                req.setMimeType("application/vnd.android.package-archive");
+                dm.enqueue(req);
+            }
+        } catch (Exception ignored) { }
     }
 
     private void startBeaconDiscovery() {

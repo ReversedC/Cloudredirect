@@ -5,8 +5,8 @@
       xmlns:res="clr-namespace:CloudRedirect.Resources"
       ScrollViewer.CanContentScroll="False">
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="24,12">
-        <StackPanel MaxWidth="880" HorizontalAlignment="Stretch">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="24,14">
+        <StackPanel MaxWidth="920" HorizontalAlignment="Stretch">
 
             <!-- Hero Header -->
             <Grid Margin="0,0,0,16">
@@ -50,108 +50,108 @@
                 </StackPanel>
             </Grid>
 
-            <!-- MAIN FEATURE CARD: 1-Scan QR Setup (Centerpiece) -->
+            <!-- MAIN CONNECTION CARD -->
             <Border Background="#121A24" BorderBrush="#22364A" BorderThickness="1" CornerRadius="12" Padding="20" Margin="0,0,0,16">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="220" />
-                        <ColumnDefinition Width="20" />
+                        <ColumnDefinition Width="24" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
 
-                    <!-- QR Code Canvas -->
-                    <Border Grid.Column="0" Background="#0B0E14" BorderBrush="#1E2E3E" BorderThickness="1" CornerRadius="10" Padding="12" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <!-- Left: QR Code Canvas with Mode Label -->
+                    <Border Grid.Column="0" Background="#0B0E14" BorderBrush="#1E2E3E" BorderThickness="1" CornerRadius="10" Padding="14" HorizontalAlignment="Center" VerticalAlignment="Center">
                         <StackPanel HorizontalAlignment="Center">
                             <Image x:Name="QrCodeImage" Width="180" Height="180" RenderOptions.BitmapScalingMode="NearestNeighbor" />
-                            <TextBlock Text="SCAN WITH PHONE CAMERA"
-                                       FontSize="9" FontWeight="Bold"
-                                       Foreground="#8F98A0"
-                                       HorizontalAlignment="Center" Margin="0,8,0,0" />
+                            <Border Background="#132338" BorderBrush="#24374A" BorderThickness="1" CornerRadius="6" Padding="8,4" Margin="0,8,0,0">
+                                <TextBlock x:Name="QrBadgeText" Text="📶 WI-FI (LOCAL LAN)" FontSize="10" FontWeight="Bold" Foreground="#66C0F4" HorizontalAlignment="Center" />
+                            </Border>
                         </StackPanel>
                     </Border>
 
-                    <!-- Instructions & Connection Info -->
+                    <!-- Right: Network Mode Selector, Quick Steps, Full-Width URL & Actions -->
                     <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                        <TextBlock Text="1-Scan Instant Connect (Zero Setup)"
-                                   FontSize="17" FontWeight="Bold"
-                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                        <!-- Mode Tabs (Wi-Fi vs Remote Internet) -->
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="Instant Connect (Auto-Setup)" FontSize="17" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                <TextBlock x:Name="ModeHintText" Text="Scan QR with your phone camera or the SUO Link app to connect instantly:" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0" />
+                            </StackPanel>
 
-                        <TextBlock Text="Connect your phone or tablet in seconds over Wi-Fi without manual IP or port configuration:"
-                                   FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,4,0,12" />
+                            <!-- Network Mode Switcher -->
+                            <Border Grid.Column="1" Background="#0E1620" BorderBrush="#1E2E3E" BorderThickness="1" CornerRadius="8" Padding="2">
+                                <StackPanel Orientation="Horizontal">
+                                    <RadioButton x:Name="WifiModeRadio" Content="Wi-Fi (LAN)" Style="{DynamicResource DefaultRadioButtonStyle}" IsChecked="True" Checked="NetworkMode_Checked" Margin="2,0" Padding="10,4" FontSize="11" FontWeight="SemiBold" Cursor="Hand" />
+                                    <RadioButton x:Name="RemoteModeRadio" Content="Remote (4G/5G)" Style="{DynamicResource DefaultRadioButtonStyle}" Checked="NetworkMode_Checked" Margin="2,0" Padding="10,4" FontSize="11" FontWeight="SemiBold" Cursor="Hand" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
 
-                        <!-- Step 1 -->
-                        <Border Background="#162230" BorderBrush="#263A4E" BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="0,0,0,8">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <Border Width="24" Height="24" CornerRadius="12" Background="#1C354A" Margin="0,0,10,0" VerticalAlignment="Center">
-                                    <TextBlock Text="1" FontWeight="Bold" FontSize="12" Foreground="#66C0F4" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                </Border>
-                                <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="12" TextWrapping="Wrap"
-                                           Text="Open SUO Link on your phone. It auto-discovers this PC over local Wi-Fi automatically." />
-                            </Grid>
-                        </Border>
-
-                        <!-- Step 2 -->
+                        <!-- Quick 2-Step Compact Banner -->
                         <Border Background="#162230" BorderBrush="#263A4E" BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="0,0,0,12">
                             <Grid>
                                 <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
-                                <Border Width="24" Height="24" CornerRadius="12" Background="#1C354A" Margin="0,0,10,0" VerticalAlignment="Center">
-                                    <TextBlock Text="2" FontWeight="Bold" FontSize="12" Foreground="#66C0F4" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                </Border>
-                                <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="12" TextWrapping="Wrap"
-                                           Text="Scan QR with SUO Link app. It automatically auto-configures whether you are on local Wi-Fi, 4G/5G, or a different network!" />
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Border Width="20" Height="20" CornerRadius="10" Background="#1C354A" Margin="0,0,8,0">
+                                        <TextBlock Text="1" FontWeight="Bold" FontSize="11" Foreground="#66C0F4" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <TextBlock Text="Open SUO Link on phone" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <TextBlock Grid.Column="1" Text="➔" FontSize="12" Foreground="#4A657D" VerticalAlignment="Center" Margin="8,0" />
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Border Width="20" Height="20" CornerRadius="10" Background="#1C354A" Margin="0,0,8,0">
+                                        <TextBlock Text="2" FontWeight="Bold" FontSize="11" Foreground="#66C0F4" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <TextBlock Text="Scan QR code on screen" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                                </StackPanel>
                             </Grid>
                         </Border>
 
-                        <!-- Network Endpoints Badges -->
-                        <WrapPanel Margin="0,0,0,8">
-                            <Border Background="#10251B" BorderBrush="#2B5B3E" BorderThickness="1" CornerRadius="6" Padding="8,4" Margin="0,0,6,4">
-                                <StackPanel Orientation="Horizontal">
-                                    <Ellipse Width="7" Height="7" Fill="#A4D007" VerticalAlignment="Center" Margin="0,0,6,0" />
-                                    <TextBlock x:Name="LanEndpointText" Text="Wi-Fi: 192.168.1.xxx:8585" FontSize="11" Foreground="#A4D007" FontWeight="SemiBold" />
-                                </StackPanel>
-                            </Border>
-                            <Border Background="#132338" BorderBrush="#1F4770" BorderThickness="1" CornerRadius="6" Padding="8,4" Margin="0,0,6,4">
-                                <StackPanel Orientation="Horizontal">
-                                    <Ellipse x:Name="TunnelDot" Width="7" Height="7" Fill="#66C0F4" VerticalAlignment="Center" Margin="0,0,6,0" />
-                                    <TextBlock x:Name="TunnelEndpointText" Text="Remote Tunnel: Initializing..." FontSize="11" Foreground="#66C0F4" FontWeight="SemiBold" />
-                                </StackPanel>
-                            </Border>
-                        </WrapPanel>
-
-                        <!-- URL & Action Buttons -->
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <!-- Full-Width URL Box & Action Buttons -->
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
                             <TextBox x:Name="ServerUrlBox"
                                      IsReadOnly="True"
-                                     Width="320"
-                                     Height="34"
+                                     Height="36"
                                      VerticalContentAlignment="Center"
                                      Background="#0E1620"
                                      Foreground="#66C0F4"
                                      BorderBrush="#253A4E"
-                                     Margin="0,0,8,0" />
+                                     FontFamily="Consolas, monospace"
+                                     FontSize="12"
+                                     Padding="8,0" />
 
-                            <ui:Button Content="Copy Link"
+                            <ui:Button Grid.Column="1"
+                                       Content="Copy Link"
                                        Icon="{ui:SymbolIcon Copy24}"
                                        Appearance="Secondary"
                                        Click="CopyUrl_Click"
-                                       Margin="0,0,8,0" />
+                                       Height="36"
+                                       Margin="8,0,0,0" />
 
-                            <ui:Button Content="Open Browser"
+                            <ui:Button Grid.Column="2"
+                                       Content="Open Browser"
                                        Icon="{ui:SymbolIcon Globe24}"
                                        Appearance="Secondary"
                                        Click="OpenBrowser_Click"
-                                       Margin="0,0,8,0" />
-                        </StackPanel>
+                                       Height="36"
+                                       Margin="8,0,0,0" />
+                        </Grid>
 
-                        <!-- APK Download Button -->
-                        <StackPanel Orientation="Horizontal">
+                        <!-- APK Download & Mobile Install Info -->
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <ui:Button x:Name="DownloadApkBtn"
                                        Content="Get SUO-Link.apk (For Android)"
                                        Icon="{ui:SymbolIcon ArrowDownload24}"
@@ -160,10 +160,11 @@
                                        Foreground="#FFFFFFFF"
                                        FontWeight="SemiBold"
                                        Click="DownloadApk_Click"
-                                       Margin="0,0,8,0" />
+                                       Height="34"
+                                       Margin="0,0,12,0" />
 
                             <TextBlock x:Name="ApkStatusText"
-                                       Text="APK ready to install"
+                                       Text="APK ready (72 KB) • Also downloadable on phone by scanning QR"
                                        FontSize="11"
                                        Foreground="#A4D007"
                                        VerticalAlignment="Center" />
@@ -172,7 +173,7 @@
                 </Grid>
             </Border>
 
-            <!-- 2-COLUMN SETTINGS: Quality & Telemetry -->
+            <!-- 2-COLUMN SETTINGS: Quality & Live Network Engine -->
             <Grid Margin="0,0,0,16">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -180,7 +181,7 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <!-- Quality & Performance Panel -->
+                <!-- Left Column: Stream Quality & Performance -->
                 <Border Grid.Column="0" Background="#141E2B" BorderBrush="#24374A" BorderThickness="1" CornerRadius="10" Padding="16">
                     <StackPanel>
                         <TextBlock Text="STREAM QUALITY &amp; PERFORMANCE"
@@ -233,7 +234,7 @@
                     </StackPanel>
                 </Border>
 
-                <!-- Multi-Network / Outside Wi-Fi (WAN) Panel -->
+                <!-- Right Column: Live Multi-Network Engine & Sessions -->
                 <Border Grid.Column="2" Background="#141E2B" BorderBrush="#24374A" BorderThickness="1" CornerRadius="10" Padding="16">
                     <StackPanel>
                         <TextBlock Text="MULTI-NETWORK &amp; REMOTE SESSIONS"
@@ -258,16 +259,23 @@
                             </Grid>
                         </Border>
 
-                        <!-- UDP Discovery Beacon Info -->
-                        <TextBlock Text="Wi-Fi Auto-Discovery: Active (UDP port 8586)"
-                                   FontSize="11" Foreground="#A4D007" Margin="0,0,0,6" />
-                        <TextBlock Text="Your phone app detects this PC automatically when connected to the same home Wi-Fi network."
-                                   FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,12" />
+                        <!-- Live Status Items -->
+                        <Grid Margin="0,0,0,6">
+                            <TextBlock Text="Wi-Fi Discovery (UDP 8586):" FontSize="11" Foreground="#8F98A0" />
+                            <TextBlock x:Name="WifiStatusLabel" Text="Active (Broadcasting)" FontSize="11" FontWeight="SemiBold" Foreground="#A4D007" HorizontalAlignment="Right" />
+                        </Grid>
 
-                        <!-- WAN / Tailscale Info -->
-                        <TextBlock Text="Playing Outside Home (4G/5G or Remote Wi-Fi):"
-                                   FontSize="11" FontWeight="SemiBold" Foreground="#8F98A0" Margin="0,0,0,4" />
-                        <TextBlock Text="If using Tailscale or VPN mesh, enter your Tailscale IP into the SUO Link mobile app to connect securely across any network without port forwarding."
+                        <Grid Margin="0,0,0,6">
+                            <TextBlock Text="UPnP NAT Port Mapping:" FontSize="11" Foreground="#8F98A0" />
+                            <TextBlock x:Name="UpnpStatusLabel" Text="Mapped (Port 8585)" FontSize="11" FontWeight="SemiBold" Foreground="#A4D007" HorizontalAlignment="Right" />
+                        </Grid>
+
+                        <Grid Margin="0,0,0,10">
+                            <TextBlock Text="Cloudflare Remote Tunnel:" FontSize="11" Foreground="#8F98A0" />
+                            <TextBlock x:Name="TunnelStatusLabel" Text="Online (4G/5G Ready)" FontSize="11" FontWeight="SemiBold" Foreground="#66C0F4" HorizontalAlignment="Right" />
+                        </Grid>
+
+                        <TextBlock Text="Zero Setup: SUO Link automatically switches between local Wi-Fi and remote tunnel based on your phone network."
                                    FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
                     </StackPanel>
                 </Border>
