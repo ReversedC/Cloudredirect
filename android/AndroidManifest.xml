@@ -1,8 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.cloudredirect.suolink"
-    android:versionCode="20923"
-    android:versionName="2.9.23">
+    android:versionCode="20924"
+    android:versionName="2.9.24">
 
     <uses-sdk
         android:minSdkVersion="24"
@@ -21,8 +21,24 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.gamepad" android:required="false" />
 
+    <queries>
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.GET_CONTENT" />
+            <data android:mimeType="image/*" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.PICK" />
+            <data android:mimeType="image/*" />
+        </intent>
+    </queries>
+
     <application
         android:label="@string/app_name"
+        android:icon="@drawable/ic_launcher"
+        android:roundIcon="@drawable/ic_launcher"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true"
         android:hardwareAccelerated="true">
@@ -41,4 +57,5 @@
 
     </application>
 </manifest>
+
 

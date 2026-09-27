@@ -78,10 +78,14 @@ public class MainActivity extends Activity {
         if (jsqrContent == null) {
             try {
                 InputStream is = getAssets().open("jsqr.js");
-                byte[] buf = new byte[is.available()];
-                is.read(buf);
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                byte[] buffer = new byte[8192];
+                int len;
+                while ((len = is.read(buffer)) != -1) {
+                    baos.write(buffer, 0, len);
+                }
                 is.close();
-                jsqrContent = new String(buf, "UTF-8");
+                jsqrContent = baos.toString("UTF-8");
             } catch (Exception ex) {
                 jsqrContent = "";
             }
@@ -170,34 +174,36 @@ public class MainActivity extends Activity {
     public void showDiscoveryPage() {
         connected = false;
         String html = DiscoveryHtml.getHtml(getSavedLanUrl(), getSavedTunnelUrl(), getJsQrScript());
-        webView.loadDataWithBaseURL("https://suolink.local/", html, "text/html", "UTF-8", null);
+        webView.loadDataWithBaseURL("https://localhost/", html, "text/html", "UTF-8", null);
     }
 
     public void startNativeCameraCapture() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                 requestPermissions(new String[]{Manifest.permission.CAMERA}, 101);
+                runOnUiThread(new ShowToastRunnable(this, "Camera permission needed to scan PC QR code"));
                 return;
             }
         }
 
         try {
-            Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            startActivityForResult(cameraIntent, REQUEST_CODE_CAMERA_QR);
+            return;
+        } catch (Exception ex) {
+            android.util.Log.w("SUO_LINK", "Direct camera launch failed: " + ex.getMessage());
+        }
+
+        openGalleryPicker();
+    }
+
+    public void openGalleryPicker() {
+        try {
             Intent pickIntent = new Intent(Intent.ACTION_GET_CONTENT);
             pickIntent.setType("image/*");
-
-            Intent chooserIntent = Intent.createChooser(pickIntent, "Scan PC QR Code");
-            chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{ takePictureIntent });
-
-            startActivityForResult(chooserIntent, REQUEST_CODE_CAMERA_QR);
+            startActivityForResult(Intent.createChooser(pickIntent, "Scan PC QR Code"), REQUEST_CODE_CAMERA_QR);
         } catch (Exception ex) {
-            try {
-                Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                startActivityForResult(takePictureIntent, REQUEST_CODE_CAMERA_QR);
-            } catch (Exception ex2) {
-                webView.post(new EvalJsRunnable(webView,
-                        "var fi = document.getElementById('qr-file-input'); if(fi) fi.click();"));
-            }
+            runOnUiThread(new ShowToastRunnable(this, "Cannot open photo picker: " + ex.getMessage()));
         }
     }
 
@@ -367,8 +373,13 @@ public class MainActivity extends Activity {
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == 101 && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            startNativeCameraCapture();
+        if (requestCode == 101) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                startNativeCameraCapture();
+            } else {
+                runOnUiThread(new ShowToastRunnable(this, "Camera permission denied. Select QR from Gallery."));
+                openGalleryPicker();
+            }
         }
     }
 

@@ -30,8 +30,35 @@ public class SuoWebChromeClient extends WebChromeClient {
                 activity.startActivityForResult(intent, MainActivity.REQUEST_CODE_FILE_CHOOSER);
                 return true;
             } catch (Exception ex) {
-                activity.setFilePathCallback(null);
+                try {
+                    Intent pickIntent = new Intent(Intent.ACTION_GET_CONTENT);
+                    pickIntent.setType("image/*");
+                    activity.startActivityForResult(Intent.createChooser(pickIntent, "Select QR Image"), MainActivity.REQUEST_CODE_FILE_CHOOSER);
+                    return true;
+                } catch (Exception ex2) {
+                    activity.setFilePathCallback(null);
+                }
             }
+        }
+        return false;
+    }
+
+    @Override
+    public boolean onConsoleMessage(android.webkit.ConsoleMessage consoleMessage) {
+        android.util.Log.d("SUO_LINK_JS", consoleMessage.message() + " (" + consoleMessage.sourceId() + ":" + consoleMessage.lineNumber() + ")");
+        return true;
+    }
+
+    @Override
+    public boolean onJsAlert(WebView view, String url, String message, android.webkit.JsResult result) {
+        if (activity != null) {
+            new android.app.AlertDialog.Builder(activity)
+                    .setTitle("SUO Link")
+                    .setMessage(message)
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show();
+            result.confirm();
+            return true;
         }
         return false;
     }

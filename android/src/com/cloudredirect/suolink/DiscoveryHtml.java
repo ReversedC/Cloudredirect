@@ -224,26 +224,32 @@ jsqrTag +
 "    };" +
 "    // Live Camera QR Scanner" +
 "    async function startCameraScanner() {" +
-"      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {" +
-"        openNativeCamera();" +
+"      if (window.SuoNative && window.SuoNative.openCameraScanner) {" +
+"        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {" +
+"          const modal = document.getElementById('qr-modal');" +
+"          modal.style.display = 'flex';" +
+"          scanning = true;" +
+"          try {" +
+"            videoStream = await navigator.mediaDevices.getUserMedia({" +
+"              video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }" +
+"            });" +
+"            const video = document.getElementById('qr-video');" +
+"            video.srcObject = videoStream;" +
+"            await video.play();" +
+"            requestAnimationFrame(tickScan);" +
+"            return;" +
+"          } catch (err) {" +
+"            console.warn('getUserMedia failed, falling back to native capture', err);" +
+"            stopCameraScanner();" +
+"            window.SuoNative.openCameraScanner();" +
+"            return;" +
+"          }" +
+"        }" +
+"        window.SuoNative.openCameraScanner();" +
 "        return;" +
 "      }" +
-"      const modal = document.getElementById('qr-modal');" +
-"      modal.style.display = 'flex';" +
-"      scanning = true;" +
-"      try {" +
-"        videoStream = await navigator.mediaDevices.getUserMedia({" +
-"          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }" +
-"        });" +
-"        const video = document.getElementById('qr-video');" +
-"        video.srcObject = videoStream;" +
-"        await video.play();" +
-"        requestAnimationFrame(tickScan);" +
-"      } catch (err) {" +
-"        console.warn('getUserMedia failed, falling back to native capture', err);" +
-"        stopCameraScanner();" +
-"        openNativeCamera();" +
-"      }" +
+"      const fi = document.getElementById('qr-file-input');" +
+"      if (fi) fi.click();" +
 "    }" +
 "    function openNativeCamera() {" +
 "      if (window.SuoNative && window.SuoNative.openCameraScanner) {" +
