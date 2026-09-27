@@ -22,9 +22,12 @@ public partial class RemotePlayPage : Page
 
     private ConnectionMode _mode = ConnectionMode.LocalWifi;
 
+    private bool _isInitialized;
+
     public RemotePlayPage()
     {
         InitializeComponent();
+        _isInitialized = true;
         Loaded += RemotePlayPage_Loaded;
         Unloaded += RemotePlayPage_Unloaded;
     }
@@ -52,6 +55,8 @@ public partial class RemotePlayPage : Page
 
     private void NetworkMode_Checked(object sender, RoutedEventArgs e)
     {
+        if (!_isInitialized) return;
+
         if (WifiModeRadio?.IsChecked == true)
         {
             _mode = ConnectionMode.LocalWifi;
@@ -73,6 +78,8 @@ public partial class RemotePlayPage : Page
 
     private void RefreshUi()
     {
+        if (!_isInitialized || ServerStatusDot == null) return;
+
         var server = RemotePlayServer.Instance;
         bool running = server.IsRunning;
 
@@ -169,6 +176,7 @@ public partial class RemotePlayPage : Page
 
     private void RefreshConnectionDisplay()
     {
+        if (!_isInitialized || ServerUrlBox == null) return;
         var server = RemotePlayServer.Instance;
         if (!server.IsRunning) return;
 

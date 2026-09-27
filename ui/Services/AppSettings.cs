@@ -78,6 +78,18 @@ public static class AppSettings
         set => WriteBool("auto_fit_zoom", value);
     }
 
+    public static event Action<bool>? OnSuoLinkToggled;
+
+    public static bool EnableSuoLink
+    {
+        get => ReadBool("enable_suo_link", true);
+        set
+        {
+            WriteBool("enable_suo_link", value);
+            OnSuoLinkToggled?.Invoke(value);
+        }
+    }
+
     public static bool AutoProtectNonCloudGames
     {
         get => ReadBool("auto_protect_non_cloud_games", true);

@@ -26,6 +26,10 @@ public partial class DashboardPage : Page
         Loaded += async (_, _) =>
         {
             InitializeLanguageSelector();
+            UpdateSuoLinkVisibility();
+            Services.AppSettings.OnSuoLinkToggled -= HandleSuoLinkToggled;
+            Services.AppSettings.OnSuoLinkToggled += HandleSuoLinkToggled;
+
             Services.SaveUploadWatcherService.Start();
             Services.SaveUploadWatcherService.OnSaveActivity += HandleSaveActivity;
             Services.ActiveGameTrackerService.OnActiveGameChanged += HandleActiveGameChanged;
@@ -48,11 +52,25 @@ public partial class DashboardPage : Page
 
         Unloaded += (_, _) =>
         {
+            Services.AppSettings.OnSuoLinkToggled -= HandleSuoLinkToggled;
             Services.SaveUploadWatcherService.OnSaveActivity -= HandleSaveActivity;
             Services.ActiveGameTrackerService.OnActiveGameChanged -= HandleActiveGameChanged;
             _autoRefreshTimer?.Stop();
             _autoRefreshTimer = null;
         };
+    }
+
+    private void UpdateSuoLinkVisibility()
+    {
+        if (SuoLinkQuickActionBtn != null)
+        {
+            SuoLinkQuickActionBtn.Visibility = Services.AppSettings.EnableSuoLink ? Visibility.Visible : Visibility.Collapsed;
+        }
+    }
+
+    private void HandleSuoLinkToggled(bool enabled)
+    {
+        Dispatcher.Invoke(UpdateSuoLinkVisibility);
     }
 
     private void HandleSaveActivity(Services.SaveUploadEvent ev)

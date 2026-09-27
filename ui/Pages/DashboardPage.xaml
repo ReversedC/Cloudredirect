@@ -485,7 +485,8 @@
 
                 <WrapPanel>
                     <!-- SUO Link Remote Play Button -->
-                    <ui:Button Content="SUO Link (Remote Play)"
+                    <ui:Button x:Name="SuoLinkQuickActionBtn"
+                               Content="SUO Link (Remote Play)"
                                Icon="{ui:SymbolIcon PhoneLaptop24}"
                                Background="#162B3D"
                                BorderBrush="#00D2FF"
