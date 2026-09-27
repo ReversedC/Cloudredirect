@@ -24,27 +24,19 @@ public sealed class GlobalHotkeyService : IDisposable
     private const uint MOD_WIN = 0x0008;
     private const uint MOD_NOREPEAT = 0x4000;
 
-    // ShowWindow commands
-    private const int SW_RESTORE = 9;
-
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool SetForegroundWindow(IntPtr hWnd);
-
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-
     private MainWindow? _mainWindow;
     private IntPtr _hwnd;
+    private HwndSource? _hwndSource;
     private bool _isRegistered;
     private string _currentShortcut = "Ctrl+Shift+C";
+    private long _lastHotkeyTicks;
+    private bool _isHooked;
 
     public string CurrentShortcut => _currentShortcut;
     public bool IsRegistered => _isRegistered;
@@ -57,13 +49,47 @@ public sealed class GlobalHotkeyService : IDisposable
         var helper = new WindowInteropHelper(mainWindow);
         _hwnd = helper.EnsureHandle();
 
-        var source = HwndSource.FromHwnd(_hwnd);
-        source?.AddHook(WndProc);
+        if (!_isHooked)
+        {
+            _hwndSource = HwndSource.FromHwnd(_hwnd);
+            _hwndSource?.AddHook(WndProc);
+
+            // Hook the Dispatcher thread pump directly to catch WM_HOTKEY even when MainWindow is hidden/in tray
+            ComponentDispatcher.ThreadFilterMessage += ComponentDispatcher_ThreadFilterMessage;
+            _isHooked = true;
+        }
 
         if (AppSettings.GlobalHotkeyEnabled)
         {
-            Register(AppSettings.GlobalHotkey);
+            RegisterWithFallback(AppSettings.GlobalHotkey, out var actual);
+            if (!string.Equals(actual, AppSettings.GlobalHotkey, StringComparison.OrdinalIgnoreCase))
+            {
+                AppSettings.GlobalHotkey = actual;
+            }
         }
+    }
+
+    public bool RegisterWithFallback(string requestedShortcut, out string actualShortcut)
+    {
+        actualShortcut = requestedShortcut;
+        if (Register(requestedShortcut))
+        {
+            return true;
+        }
+
+        // Try standard fallbacks if primary is registered by another program
+        var fallbacks = new[] { "Ctrl+Alt+C", "Ctrl+Shift+R", "Ctrl+Shift+S", "Alt+Shift+C", "Ctrl+~" };
+        foreach (var fb in fallbacks)
+        {
+            if (fb.Equals(requestedShortcut, StringComparison.OrdinalIgnoreCase)) continue;
+            if (Register(fb))
+            {
+                actualShortcut = fb;
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public bool Register(string shortcut)
@@ -79,6 +105,7 @@ public sealed class GlobalHotkeyService : IDisposable
 
         if (!ParseShortcut(shortcut, out uint modifiers, out uint vk))
         {
+            App.LogStartup($"GlobalHotkeyService.Register: Failed to parse shortcut '{shortcut}'");
             return false;
         }
 
@@ -89,6 +116,9 @@ public sealed class GlobalHotkeyService : IDisposable
             // Fallback without MOD_NOREPEAT if unsupported
             success = RegisterHotKey(_hwnd, HOTKEY_ID, modifiers, vk);
         }
+
+        var err = success ? 0 : Marshal.GetLastWin32Error();
+        App.LogStartup($"GlobalHotkeyService.Register: shortcut='{shortcut}', success={success}, win32Error={err}");
 
         if (success)
         {
@@ -116,6 +146,15 @@ public sealed class GlobalHotkeyService : IDisposable
         }
     }
 
+    private void ComponentDispatcher_ThreadFilterMessage(ref MSG msg, ref bool handled)
+    {
+        if (msg.message == WM_HOTKEY && (int)msg.wParam == HOTKEY_ID)
+        {
+            HandleHotkeyPressed();
+            handled = true;
+        }
+    }
+
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
         if (msg == WM_HOTKEY && wParam.ToInt32() == HOTKEY_ID)
@@ -128,6 +167,12 @@ public sealed class GlobalHotkeyService : IDisposable
 
     public void HandleHotkeyPressed()
     {
+        var nowTicks = Environment.TickCount64;
+        if (nowTicks - _lastHotkeyTicks < 350) return; // 350ms debounce
+        _lastHotkeyTicks = nowTicks;
+
+        App.LogStartup("GlobalHotkeyService.HandleHotkeyPressed triggered.");
+
         if (_mainWindow == null) return;
 
         _mainWindow.Dispatcher.Invoke(() =>
@@ -139,23 +184,8 @@ public sealed class GlobalHotkeyService : IDisposable
                 return;
             }
 
-            // Otherwise summon and restore to foreground
-            if (!_mainWindow.IsVisible)
-            {
-                _mainWindow.Show();
-            }
-
-            _mainWindow.ShowInTaskbar = true;
-
-            if (_mainWindow.WindowState == WindowState.Minimized)
-            {
-                _mainWindow.WindowState = WindowState.Normal;
-            }
-
-            ShowWindow(_hwnd, SW_RESTORE);
-            SetForegroundWindow(_hwnd);
-            _mainWindow.Activate();
-            _mainWindow.Focus();
+            // Otherwise summon and restore to foreground with robust focus stealing
+            App.BringToForeground();
         });
     }
 
@@ -237,5 +267,15 @@ public sealed class GlobalHotkeyService : IDisposable
     public void Dispose()
     {
         Unregister();
+        if (_isHooked)
+        {
+            try
+            {
+                ComponentDispatcher.ThreadFilterMessage -= ComponentDispatcher_ThreadFilterMessage;
+                _hwndSource?.RemoveHook(WndProc);
+            }
+            catch { }
+            _isHooked = false;
+        }
     }
 }

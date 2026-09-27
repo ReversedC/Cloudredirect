@@ -2417,4 +2417,10 @@ Esto puede causar pérdida de datos en algunos casos.
   <data name="Settings_AutoCommunityDbHint" xml:space="preserve">
     <value>Detecta automáticamente las rutas de guardado de miles de juegos en Steam, Epic, GOG, Game Pass y emuladores.</value>
   </data>
+  <data name="Settings_GlobalHotkey" xml:space="preserve">
+    <value>Atajo de Teclado Global</value>
+  </data>
+  <data name="Settings_GlobalHotkeyHint" xml:space="preserve">
+    <value>Atajo en todo el sistema para invocar, abrir o alternar CloudRedirect en cualquier momento, incluso dentro del juego o minimizado en la bandeja.</value>
+  </data>
 </root>

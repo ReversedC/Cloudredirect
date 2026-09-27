@@ -2467,4 +2467,10 @@ Steam 클라우드가 활성화된 경우 Steam이 복원된 파일을 덮어쓸
   <data name="Settings_AutoCommunityDbHint" xml:space="preserve">
     <value>Steam, Epic, GOG, Game Pass 및 에뮬레이터 전반의 수천 가지 게임 저장 경로를 자동으로 감지합니다.</value>
   </data>
+  <data name="Settings_GlobalHotkey" xml:space="preserve">
+    <value>전역 키보드 단축키</value>
+  </data>
+  <data name="Settings_GlobalHotkeyHint" xml:space="preserve">
+    <value>게임 중이거나 시스템 트레이에 최소화되어 있을 때도 언제든지 CloudRedirect를 불러오거나 토글할 수 있는 전역 단축키입니다.</value>
+  </data>
 </root>

@@ -75,6 +75,7 @@ public partial class SettingsPage : Page
             MinimizeToTrayToggle.IsChecked = AppSettings.MinimizeToTrayOnClose;
             ShowNotificationsToggle.IsChecked = AppSettings.ShowSyncNotifications;
             GlobalHotkeyToggle.IsChecked = AppSettings.GlobalHotkeyEnabled;
+            PopulateHotkeyPresets();
             AutoProtectNonCloudToggle.IsChecked = AppSettings.AutoProtectNonCloudGames;
             AutoFitZoomToggle.IsChecked = AppSettings.AutoFitZoom;
 
@@ -117,7 +118,17 @@ public partial class SettingsPage : Page
             HotkeyBadgeText.Text = selected;
             if (GlobalHotkeyToggle.IsChecked == true)
             {
-                GlobalHotkeyService.Instance.Register(selected);
+                bool ok = GlobalHotkeyService.Instance.RegisterWithFallback(selected, out var actual);
+                if (ok && !string.Equals(actual, selected, StringComparison.OrdinalIgnoreCase))
+                {
+                    _syncLoading = true;
+                    try
+                    {
+                        HotkeyPresetCombo.SelectedItem = actual;
+                        HotkeyBadgeText.Text = actual;
+                    }
+                    finally { _syncLoading = false; }
+                }
             }
             else
             {
@@ -134,7 +145,17 @@ public partial class SettingsPage : Page
         if (isEnabled)
         {
             var shortcut = HotkeyPresetCombo.SelectedItem as string ?? AppSettings.GlobalHotkey;
-            GlobalHotkeyService.Instance.Register(shortcut);
+            bool ok = GlobalHotkeyService.Instance.RegisterWithFallback(shortcut, out var actual);
+            if (ok && !string.Equals(actual, shortcut, StringComparison.OrdinalIgnoreCase))
+            {
+                _syncLoading = true;
+                try
+                {
+                    HotkeyPresetCombo.SelectedItem = actual;
+                    HotkeyBadgeText.Text = actual;
+                }
+                finally { _syncLoading = false; }
+            }
         }
         else
         {

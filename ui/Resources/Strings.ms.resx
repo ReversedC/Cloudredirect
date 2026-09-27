@@ -2338,4 +2338,10 @@ Fail can be restored from the Pulihkan tab. Continue?</value>
   <data name="Settings_AutoCommunityDbHint" xml:space="preserve">
     <value>Mengesan laluan simpanan ribuan permainan secara automatik merentasi Steam, Epic, GOG, Game Pass, dan emulator.</value>
   </data>
+  <data name="Settings_GlobalHotkey" xml:space="preserve">
+    <value>Pintasan Papan Kekunci Global</value>
+  </data>
+  <data name="Settings_GlobalHotkeyHint" xml:space="preserve">
+    <value>Pintasan seluruh sistem untuk memanggil, membuka, atau menogol CloudRedirect pada bila-bila masa, walaupun semasa bermain permainan atau diminimumkan ke dulang sistem.</value>
+  </data>
 </root>

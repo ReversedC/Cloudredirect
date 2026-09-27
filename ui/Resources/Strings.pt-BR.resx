@@ -2422,4 +2422,10 @@ Tem certeza?</value>
   <data name="Settings_AutoCommunityDbHint" xml:space="preserve">
     <value>Detecta automaticamente pastas de salvamento para milhares de jogos na Steam, Epic, GOG, Game Pass e emuladores.</value>
   </data>
+  <data name="Settings_GlobalHotkey" xml:space="preserve">
+    <value>Atalho de Teclado Global</value>
+  </data>
+  <data name="Settings_GlobalHotkeyHint" xml:space="preserve">
+    <value>Atalho em todo o sistema para invocar, abrir ou alternar o CloudRedirect a qualquer momento, mesmo durante o jogo ou minimizado na bandeja.</value>
+  </data>
 </root>

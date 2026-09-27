@@ -2443,6 +2443,12 @@
   <data name="Settings_AutoCommunityDbHint" xml:space="preserve">
     <value>自动识别数千款游戏的存档路径，涵盖 Steam、Epic、GOG、Game Pass 及各主流模拟器。</value>
   </data>
+  <data name="Settings_GlobalHotkey" xml:space="preserve">
+    <value>全局键盘快捷键</value>
+  </data>
+  <data name="Settings_GlobalHotkeyHint" xml:space="preserve">
+    <value>随时呼出、打开或切换 CloudRedirect 的全局快捷键，即使在游戏中或最小化到系统托盘时也能立即唤醒。</value>
+  </data>
 </root>
 
 

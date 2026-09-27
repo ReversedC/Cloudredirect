@@ -2470,4 +2470,10 @@ Are you sure?</value>
   <data name="Settings_AutoCommunityDbHint" xml:space="preserve">
     <value>Automatically discovers save folders for thousands of titles across Steam, Epic, GOG, Game Pass, and emulators.</value>
   </data>
+  <data name="Settings_GlobalHotkey" xml:space="preserve">
+    <value>Global Keyboard Shortcut</value>
+  </data>
+  <data name="Settings_GlobalHotkeyHint" xml:space="preserve">
+    <value>System-wide shortcut to summon, open, or toggle CloudRedirect anytime, even while in-game or minimized to tray.</value>
+  </data>
 </root>
