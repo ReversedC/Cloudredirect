@@ -72,7 +72,6 @@ public partial class SettingsPage : Page
             if (customCloudIcon != false) SteamCloudIconToggle.IsChecked = true;
 
             StartWithWindowsToggle.IsChecked = AppSettings.StartWithWindows;
-            EnableSuoLinkToggle.IsChecked = AppSettings.EnableSuoLink;
             MinimizeToTrayToggle.IsChecked = AppSettings.MinimizeToTrayOnClose;
             ShowNotificationsToggle.IsChecked = AppSettings.ShowSyncNotifications;
             GlobalHotkeyToggle.IsChecked = AppSettings.GlobalHotkeyEnabled;
@@ -168,22 +167,6 @@ public partial class SettingsPage : Page
     {
         if (_syncLoading) return;
         AppSettings.StartWithWindows = StartWithWindowsToggle.IsChecked == true;
-        if (EnableSuoLinkToggle != null)
-        {
-            bool suoEnabled = EnableSuoLinkToggle.IsChecked == true;
-            if (AppSettings.EnableSuoLink != suoEnabled)
-            {
-                AppSettings.EnableSuoLink = suoEnabled;
-                if (suoEnabled)
-                {
-                    Services.RemotePlayServer.Instance.Start();
-                }
-                else
-                {
-                    Services.RemotePlayServer.Instance.Stop();
-                }
-            }
-        }
         AppSettings.MinimizeToTrayOnClose = MinimizeToTrayToggle.IsChecked == true;
         AppSettings.ShowSyncNotifications = ShowNotificationsToggle.IsChecked == true;
         AppSettings.AutoProtectNonCloudGames = AutoProtectNonCloudToggle.IsChecked == true;

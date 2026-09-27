@@ -117,11 +117,6 @@ public partial class MainWindow : FluentWindow
                 var mode = await Task.Run(() => MigrateLegacyMode());
                 ApplyMode(mode);
 
-                if (Services.AppSettings.EnableSuoLink)
-                {
-                    App.LogStartup("Loaded: RemotePlayServer.Instance.Start");
-                    Services.RemotePlayServer.Instance.Start();
-                }
 
                 App.LogStartup("Loaded: NavigateTo DashboardPage");
                 NavigateTo(typeof(Pages.DashboardPage));
@@ -446,7 +441,6 @@ public partial class MainWindow : FluentWindow
                     nameof(Pages.MigrationPage) => S.Get("Nav_Migration"),
                     nameof(Pages.SettingsPage) => S.Get("Nav_Settings"),
                     nameof(Pages.UniversalSavesPage) => S.Get("Nav_UniversalSaves"),
-                    nameof(Pages.RemotePlayPage) => "SUO Link (Remote Play)",
                     nameof(Pages.LuaSyncPage) => S.Get("Nav_LuaSync"),
                     _ => ""
                 };

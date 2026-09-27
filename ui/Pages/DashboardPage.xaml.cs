@@ -26,9 +26,6 @@ public partial class DashboardPage : Page
         Loaded += async (_, _) =>
         {
             InitializeLanguageSelector();
-            UpdateSuoLinkVisibility();
-            Services.AppSettings.OnSuoLinkToggled -= HandleSuoLinkToggled;
-            Services.AppSettings.OnSuoLinkToggled += HandleSuoLinkToggled;
 
             Services.SaveUploadWatcherService.Start();
             Services.SaveUploadWatcherService.OnSaveActivity += HandleSaveActivity;
@@ -52,7 +49,6 @@ public partial class DashboardPage : Page
 
         Unloaded += (_, _) =>
         {
-            Services.AppSettings.OnSuoLinkToggled -= HandleSuoLinkToggled;
             Services.SaveUploadWatcherService.OnSaveActivity -= HandleSaveActivity;
             Services.ActiveGameTrackerService.OnActiveGameChanged -= HandleActiveGameChanged;
             _autoRefreshTimer?.Stop();
@@ -60,18 +56,6 @@ public partial class DashboardPage : Page
         };
     }
 
-    private void UpdateSuoLinkVisibility()
-    {
-        if (SuoLinkQuickActionBtn != null)
-        {
-            SuoLinkQuickActionBtn.Visibility = Services.AppSettings.EnableSuoLink ? Visibility.Visible : Visibility.Collapsed;
-        }
-    }
-
-    private void HandleSuoLinkToggled(bool enabled)
-    {
-        Dispatcher.Invoke(UpdateSuoLinkVisibility);
-    }
 
     private void HandleSaveActivity(Services.SaveUploadEvent ev)
     {
@@ -707,11 +691,6 @@ public partial class DashboardPage : Page
     private void SettingsAction_Click(object sender, RoutedEventArgs e)
     {
         (Application.Current.MainWindow as MainWindow)?.NavigateTo(typeof(Pages.SettingsPage));
-    }
-
-    private void SuoLinkAction_Click(object sender, RoutedEventArgs e)
-    {
-        (Application.Current.MainWindow as MainWindow)?.NavigateTo(typeof(Pages.RemotePlayPage));
     }
 
     private void LuaFilesCard_Click(object sender, RoutedEventArgs e)

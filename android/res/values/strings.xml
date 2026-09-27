@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="app_name">SUO Link</string>
-    <string name="connecting">Connecting to Host PC...</string>
-    <string name="scan_qr">Scan PC QR Code</string>
-    <string name="enter_ip">Enter Host IP</string>
-</resources>

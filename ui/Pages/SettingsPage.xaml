@@ -80,22 +80,6 @@
                                                  Unchecked="SyncToggle_Changed" />
                             </ui:CardControl>
 
-                            <!-- SUO Link (Remote Play) -->
-                            <ui:CardControl Margin="0,8,0,0">
-                                <ui:CardControl.Header>
-                                    <StackPanel>
-                                        <TextBlock Text="SUO Link (Remote Play)"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                        <TextBlock Text="Enable SUO Link remote screen streaming, input relay, and mobile game hub. When turned off, SUO Link is hidden from Dashboard and background server is stopped."
-                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                   TextWrapping="Wrap" />
-                                    </StackPanel>
-                                </ui:CardControl.Header>
-                                <ui:ToggleSwitch x:Name="EnableSuoLinkToggle"
-                                                 Checked="AppSettingsToggle_Changed"
-                                                 Unchecked="AppSettingsToggle_Changed" />
-                            </ui:CardControl>
 
 
                             <!-- Start with Windows -->
