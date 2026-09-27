@@ -484,6 +484,18 @@
                            Margin="0,0,0,6" />
 
                 <WrapPanel>
+                    <!-- SUO Link Remote Play Button -->
+                    <ui:Button Content="SUO Link (Remote Play)"
+                               Icon="{ui:SymbolIcon PhoneLaptop24}"
+                               Background="#162B3D"
+                               BorderBrush="#00D2FF"
+                               Foreground="#00D2FF"
+                               FontWeight="Bold"
+                               Padding="14,6"
+                               Margin="0,0,8,6"
+                               Cursor="Hand"
+                               Click="SuoLinkAction_Click" />
+
                     <!-- Steam Play Green Button -->
                     <ui:Button Content="{res:Loc Dashboard_RestartSteam}"
                                Icon="{ui:SymbolIcon ArrowSync24}"

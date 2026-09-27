@@ -691,6 +691,11 @@ public partial class DashboardPage : Page
         (Application.Current.MainWindow as MainWindow)?.NavigateTo(typeof(Pages.SettingsPage));
     }
 
+    private void SuoLinkAction_Click(object sender, RoutedEventArgs e)
+    {
+        (Application.Current.MainWindow as MainWindow)?.NavigateTo(typeof(Pages.RemotePlayPage));
+    }
+
     private void InitializeLanguageSelector()
     {
         _languageLoading = true;

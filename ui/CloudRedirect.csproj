@@ -41,6 +41,9 @@
   <ItemGroup>
     <EmbeddedResource Include="Resources\cloud_redirect.dll" LogicalName="cloud_redirect.dll" Condition="Exists('Resources\cloud_redirect.dll')" />
     <EmbeddedResource Include="Resources\cloud_redirect_cli.exe" LogicalName="cloud_redirect_cli.exe" Condition="Exists('Resources\cloud_redirect_cli.exe')" />
+    <None Include="Resources\SUO-Link.apk" Condition="Exists('Resources\SUO-Link.apk')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <!-- Copy the C++ DLL into Resources/ and add it as an embedded resource after the

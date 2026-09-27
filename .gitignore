@@ -15,3 +15,5 @@ tools/
 ui/native/
 release-*/
 scratch/
+android/build/
+android/debug.keystore
