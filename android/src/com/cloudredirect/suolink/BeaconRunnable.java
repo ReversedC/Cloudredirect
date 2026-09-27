@@ -34,10 +34,11 @@ public class BeaconRunnable implements Runnable {
                         int port = json.optInt("port", 8585);
                         String auth = json.optString("auth");
                         String tunnel = json.optString("tunnel", "");
+                        String tailscale = json.optString("tailscale", "");
                         int verCode = json.optInt("versionCode", 1);
                         String ver = json.optString("version", "1.0.0");
 
-                        activity.runOnUiThread(new OnBeaconDiscoveredRunnable(activity, name, ip, port, auth, tunnel, verCode, ver));
+                        activity.runOnUiThread(new OnBeaconDiscoveredRunnable(activity, name, ip, port, auth, tunnel, tailscale, verCode, ver));
                     }
                 } catch (Exception ignored) { }
             }

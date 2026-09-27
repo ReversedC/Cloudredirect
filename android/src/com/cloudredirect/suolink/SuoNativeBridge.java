@@ -73,4 +73,18 @@ public class SuoNativeBridge {
             activity.connectLan(lanUrl);
         }
     }
+
+    @JavascriptInterface
+    public void connectTailscale(final String tsUrl) {
+        if (activity != null) {
+            activity.connectTailscale(tsUrl);
+        }
+    }
+
+    @JavascriptInterface
+    public void openTailscaleApp() {
+        if (activity != null) {
+            activity.openTailscaleApp();
+        }
+    }
 }

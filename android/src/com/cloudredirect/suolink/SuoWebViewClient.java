@@ -11,16 +11,18 @@ import android.webkit.WebViewClient;
 
 public class SuoWebViewClient extends WebViewClient {
     private final MainActivity activity;
-    private boolean hasTriedTunnelFallback = false;
     private boolean hasTriedLanFallback = false;
+    private boolean hasTriedTailscaleFallback = false;
+    private boolean hasTriedTunnelFallback = false;
 
     public SuoWebViewClient(MainActivity activity) {
         this.activity = activity;
     }
 
     public void resetFallbacks() {
-        hasTriedTunnelFallback = false;
         hasTriedLanFallback = false;
+        hasTriedTailscaleFallback = false;
+        hasTriedTunnelFallback = false;
     }
 
     @Override
@@ -36,6 +38,10 @@ public class SuoWebViewClient extends WebViewClient {
             }
             if (url.startsWith("suolink://discovery")) {
                 activity.runOnUiThread(new ShowDiscoveryRunnable(activity));
+                return true;
+            }
+            if (url.startsWith("suolink://tailscale")) {
+                activity.openTailscaleApp();
                 return true;
             }
         }
@@ -59,8 +65,7 @@ public class SuoWebViewClient extends WebViewClient {
                 && !url.contains("suolink.local") 
                 && !url.contains("localhost")) {
             activity.setConnected(true);
-            hasTriedTunnelFallback = false;
-            hasTriedLanFallback = false;
+            resetFallbacks();
         }
     }
 
@@ -92,6 +97,16 @@ public class SuoWebViewClient extends WebViewClient {
         return lower.startsWith("http://") || lower.startsWith("https://");
     }
 
+    private boolean isTailscaleUrl(String url) {
+        if (url == null) return false;
+        return url.contains("100.") || url.contains(".ts.net");
+    }
+
+    private boolean isTunnelUrl(String url) {
+        if (url == null) return false;
+        return url.contains("trycloudflare.com") || url.startsWith("https://");
+    }
+
     @Override
     public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
         // For trycloudflare.com tunnel URLs, proceed through SSL
@@ -100,8 +115,8 @@ public class SuoWebViewClient extends WebViewClient {
             handler.proceed();
             return;
         }
-        // For local network connections, proceed
-        if (url != null && (url.contains("192.168.") || url.contains("10.") || url.contains("172."))) {
+        // For local network and Tailscale connections, proceed
+        if (url != null && (url.contains("192.168.") || url.contains("10.") || url.contains("172.") || url.contains("100."))) {
             handler.proceed();
             return;
         }
@@ -143,28 +158,72 @@ public class SuoWebViewClient extends WebViewClient {
     private void handleConnectionFailure(String failingUrl, String desc) {
         if (!isHostUrl(failingUrl)) return;
 
-        // 1. If LAN failed, check if we have a remote tunnel available to auto-switch!
-        if (!hasTriedTunnelFallback) {
-            String tunnel = activity.getSavedTunnelUrl();
-            if (tunnel != null && !tunnel.isEmpty() && failingUrl != null 
-                    && !failingUrl.startsWith("http://127.0.0.1") 
-                    && !failingUrl.contains("trycloudflare")) {
-                hasTriedTunnelFallback = true;
-                activity.runOnUiThread(new LoadUrlRunnable(activity, tunnel));
-                activity.runOnUiThread(new ShowToastRunnable(activity, "LAN unreachable. Auto-switched to Remote Tunnel!"));
-                return;
+        // 1. If LAN failed (or loopback):
+        // Try Tailscale first, then Remote Tunnel
+        if (!isTailscaleUrl(failingUrl) && !isTunnelUrl(failingUrl)) {
+            if (!hasTriedTailscaleFallback) {
+                String ts = activity.getSavedTailscaleUrl();
+                if (ts != null && !ts.isEmpty()) {
+                    hasTriedTailscaleFallback = true;
+                    activity.runOnUiThread(new LoadUrlRunnable(activity, ts));
+                    activity.runOnUiThread(new ShowToastRunnable(activity, "LAN unreachable. Auto-switching to Tailscale WireGuard..."));
+                    return;
+                }
+            }
+            if (!hasTriedTunnelFallback) {
+                String tunnel = activity.getSavedTunnelUrl();
+                if (tunnel != null && !tunnel.isEmpty()) {
+                    hasTriedTunnelFallback = true;
+                    activity.runOnUiThread(new LoadUrlRunnable(activity, tunnel));
+                    activity.runOnUiThread(new ShowToastRunnable(activity, "LAN unreachable. Auto-switching to Remote Tunnel..."));
+                    return;
+                }
             }
         }
 
-        // 2. If Remote Tunnel failed (e.g. trycloudflare DNS blocked by ISP), check if we have LAN available!
-        if (!hasTriedLanFallback) {
-            String lan = activity.getSavedLanUrl();
-            if (lan != null && !lan.isEmpty() && failingUrl != null 
-                    && (failingUrl.contains("trycloudflare") || failingUrl.startsWith("https://"))) {
-                hasTriedLanFallback = true;
-                activity.runOnUiThread(new LoadUrlRunnable(activity, lan));
-                activity.runOnUiThread(new ShowToastRunnable(activity, "Remote tunnel unreachable. Auto-switched to Local Wi-Fi!"));
-                return;
+        // 2. If Tailscale failed:
+        // Try Local Wi-Fi (if at home), then Remote Tunnel
+        if (isTailscaleUrl(failingUrl)) {
+            if (!hasTriedLanFallback) {
+                String lan = activity.getSavedLanUrl();
+                if (lan != null && !lan.isEmpty()) {
+                    hasTriedLanFallback = true;
+                    activity.runOnUiThread(new LoadUrlRunnable(activity, lan));
+                    activity.runOnUiThread(new ShowToastRunnable(activity, "Tailscale unreachable. Switching to Local Wi-Fi..."));
+                    return;
+                }
+            }
+            if (!hasTriedTunnelFallback) {
+                String tunnel = activity.getSavedTunnelUrl();
+                if (tunnel != null && !tunnel.isEmpty()) {
+                    hasTriedTunnelFallback = true;
+                    activity.runOnUiThread(new LoadUrlRunnable(activity, tunnel));
+                    activity.runOnUiThread(new ShowToastRunnable(activity, "Tailscale unreachable. Switching to Remote Tunnel..."));
+                    return;
+                }
+            }
+        }
+
+        // 3. If Remote Tunnel failed (e.g. trycloudflare DNS blocked by ISP or tunnel offline):
+        // Try Local Wi-Fi first, then Tailscale WireGuard
+        if (isTunnelUrl(failingUrl)) {
+            if (!hasTriedLanFallback) {
+                String lan = activity.getSavedLanUrl();
+                if (lan != null && !lan.isEmpty()) {
+                    hasTriedLanFallback = true;
+                    activity.runOnUiThread(new LoadUrlRunnable(activity, lan));
+                    activity.runOnUiThread(new ShowToastRunnable(activity, "Remote tunnel failed. Switching to Local Wi-Fi..."));
+                    return;
+                }
+            }
+            if (!hasTriedTailscaleFallback) {
+                String ts = activity.getSavedTailscaleUrl();
+                if (ts != null && !ts.isEmpty()) {
+                    hasTriedTailscaleFallback = true;
+                    activity.runOnUiThread(new LoadUrlRunnable(activity, ts));
+                    activity.runOnUiThread(new ShowToastRunnable(activity, "Remote tunnel failed. Switching to Tailscale WireGuard..."));
+                    return;
+                }
             }
         }
 

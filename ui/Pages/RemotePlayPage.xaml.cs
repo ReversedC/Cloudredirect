@@ -14,9 +14,10 @@ public partial class RemotePlayPage : Page
 {
     private enum ConnectionMode
     {
+        LocalWifi,
+        TailscaleVirtualLan,
         SmartAuto,
-        RemoteOnly,
-        LocalWifi
+        RemoteOnly
     }
 
     private ConnectionMode _mode = ConnectionMode.LocalWifi;
@@ -51,13 +52,17 @@ public partial class RemotePlayPage : Page
 
     private void NetworkMode_Checked(object sender, RoutedEventArgs e)
     {
-        if (RemoteModeRadio?.IsChecked == true)
-        {
-            _mode = ConnectionMode.RemoteOnly;
-        }
-        else if (WifiModeRadio?.IsChecked == true)
+        if (WifiModeRadio?.IsChecked == true)
         {
             _mode = ConnectionMode.LocalWifi;
+        }
+        else if (TailscaleModeRadio?.IsChecked == true)
+        {
+            _mode = ConnectionMode.TailscaleVirtualLan;
+        }
+        else if (RemoteModeRadio?.IsChecked == true)
+        {
+            _mode = ConnectionMode.RemoteOnly;
         }
         else
         {
@@ -89,6 +94,27 @@ public partial class RemotePlayPage : Page
             bool upnp = RemoteTunnelService.Instance.IsUpnpMapped;
             UpnpStatusLabel.Text = upnp ? "Mapped (Port 8585)" : "Active (Direct)";
             UpnpStatusLabel.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#A4D007"));
+
+            // Tailscale status
+            string? tsIp = server.TailscaleIp;
+            if (!string.IsNullOrEmpty(tsIp))
+            {
+                TailscaleStatusLabel.Text = $"Online ({tsIp})";
+                TailscaleStatusLabel.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#38EF7D"));
+                TailscaleActionBtn.Content = "🛡️ Tailscale (Online)";
+            }
+            else if (TailscaleService.Instance.IsInstalled)
+            {
+                TailscaleStatusLabel.Text = "Needs Login";
+                TailscaleStatusLabel.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E5A93C"));
+                TailscaleActionBtn.Content = "🔑 Log In to Tailscale";
+            }
+            else
+            {
+                TailscaleStatusLabel.Text = "Not Installed";
+                TailscaleStatusLabel.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#8F98A0"));
+                TailscaleActionBtn.Content = "⚡ 1-Click Install Tailscale";
+            }
 
             string? tunnel = server.TunnelUrl;
             if (!string.IsNullOrEmpty(tunnel))
@@ -187,6 +213,46 @@ public partial class RemotePlayPage : Page
                 {
                     ModeExplainerText.Text = "📶 Local Wi-Fi Mode: Requires both PC and phone to be connected to the exact same Wi-Fi router.";
                     ModeExplainerText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#8F98A0"));
+                }
+                break;
+
+            case ConnectionMode.TailscaleVirtualLan:
+                string? tsUrl = server.TailscaleUrl;
+                if (!string.IsNullOrEmpty(tsUrl))
+                {
+                    activeUrl = tsUrl;
+                    QrBadgeText.Text = "🛡️ VIRTUAL LAN (TAILSCALE)";
+                    QrBadgeText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#38EF7D"));
+                    ModeHintText.Text = "Direct WireGuard Virtual LAN. Permanent static IP on cellular & all networks:";
+                    if (ModeExplainerText != null)
+                    {
+                        ModeExplainerText.Text = $"🛡️ Tailscale Online ({server.TailscaleIp}:8585). Direct WireGuard Virtual LAN across all cellular/Wi-Fi networks. Make sure Tailscale app is active on your phone!";
+                        ModeExplainerText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#38EF7D"));
+                    }
+                }
+                else if (TailscaleService.Instance.IsInstalled)
+                {
+                    activeUrl = "Tailscale needs login. Click 'Tailscale PC Setup' below to log in.";
+                    QrBadgeText.Text = "🛡️ TAILSCALE LOGIN NEEDED";
+                    QrBadgeText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E5A93C"));
+                    ModeHintText.Text = "Tailscale is installed. Sign in with your free Google/Apple/Microsoft account to get your permanent IP:";
+                    if (ModeExplainerText != null)
+                    {
+                        ModeExplainerText.Text = "⚠️ Tailscale is installed but logged out. Log in to activate your permanent 100.x.x.x WireGuard IP!";
+                        ModeExplainerText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E5A93C"));
+                    }
+                }
+                else
+                {
+                    activeUrl = "Tailscale not installed. Click 'Tailscale PC Setup' below to set up in 1 click.";
+                    QrBadgeText.Text = "🛡️ TAILSCALE NOT INSTALLED";
+                    QrBadgeText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#8F98A0"));
+                    ModeHintText.Text = "Set up Tailscale for permanent zero-config WireGuard Virtual LAN across all networks:";
+                    if (ModeExplainerText != null)
+                    {
+                        ModeExplainerText.Text = "💡 Tailscale provides a permanent static IP that never expires across PC reboots and is immune to ISP DNS blocks.";
+                        ModeExplainerText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#66C0F4"));
+                    }
                 }
                 break;
 
@@ -352,5 +418,34 @@ public partial class RemotePlayPage : Page
             QualityPercentText.Text = $"{q}%";
             ScreenCaptureService.Instance.JpegQuality = q;
         }
+    }
+
+    private async void TailscaleAction_Click(object sender, RoutedEventArgs e)
+    {
+        if (TailscaleService.Instance.IsConnected)
+        {
+            TailscaleService.Instance.StartTailscaleApp();
+        }
+        else if (TailscaleService.Instance.IsInstalled)
+        {
+            TailscaleService.Instance.OpenLogin();
+        }
+        else
+        {
+            TailscaleActionBtn.IsEnabled = false;
+            TailscaleActionBtn.Content = "Installing Tailscale...";
+            bool ok = await TailscaleService.Instance.InstallAsync();
+            TailscaleActionBtn.IsEnabled = true;
+            RefreshUi();
+        }
+    }
+
+    private void TailscaleAndroid_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo("https://github.com/tailscale/tailscale-android/releases") { UseShellExecute = true });
+        }
+        catch { }
     }
 }

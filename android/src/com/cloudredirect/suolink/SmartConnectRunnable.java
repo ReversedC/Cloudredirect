@@ -6,37 +6,25 @@ import java.net.URL;
 public class SmartConnectRunnable implements Runnable {
     private final MainActivity activity;
     private final String lanUrl;
+    private final String tailscaleUrl;
     private final String tunnelUrl;
 
-    public SmartConnectRunnable(MainActivity activity, String lanUrl, String tunnelUrl) {
+    public SmartConnectRunnable(MainActivity activity, String lanUrl, String tailscaleUrl, String tunnelUrl) {
         this.activity = activity;
         this.lanUrl = lanUrl;
+        this.tailscaleUrl = tailscaleUrl;
         this.tunnelUrl = tunnelUrl;
     }
 
-    @Override
-    public void run() {
-        if (activity == null) return;
+    public SmartConnectRunnable(MainActivity activity, String lanUrl, String tunnelUrl) {
+        this(activity, lanUrl, null, tunnelUrl);
+    }
 
-        // If only LAN URL exists, load it immediately without delaying
-        if (tunnelUrl == null || tunnelUrl.isEmpty()) {
-            if (lanUrl != null && !lanUrl.isEmpty()) {
-                activity.runOnUiThread(new LoadUrlRunnable(activity, lanUrl));
-            }
-            return;
-        }
-
-        // If only tunnel exists, load it immediately
-        if (lanUrl == null || lanUrl.isEmpty()) {
-            activity.runOnUiThread(new LoadUrlRunnable(activity, tunnelUrl));
-            return;
-        }
-
-        // Both exist: fast probe LAN (800ms)
-        boolean lanSuccess = false;
+    private boolean probe(String endpointUrl, int timeoutMs) {
+        if (endpointUrl == null || endpointUrl.trim().isEmpty()) return false;
         HttpURLConnection conn = null;
         try {
-            String probeUrl = lanUrl;
+            String probeUrl = endpointUrl.trim();
             int qIdx = probeUrl.indexOf('?');
             if (qIdx > 0) probeUrl = probeUrl.substring(0, qIdx);
             if (probeUrl.endsWith("/")) probeUrl = probeUrl.substring(0, probeUrl.length() - 1);
@@ -44,27 +32,60 @@ public class SmartConnectRunnable implements Runnable {
 
             URL url = new URL(probeUrl);
             conn = (HttpURLConnection) url.openConnection();
-            conn.setConnectTimeout(2000);
-            conn.setReadTimeout(2000);
+            conn.setConnectTimeout(timeoutMs);
+            conn.setReadTimeout(timeoutMs);
             conn.setRequestMethod("GET");
-
-            if (conn.getResponseCode() == 200) {
-                lanSuccess = true;
-            }
+            return (conn.getResponseCode() == 200);
         } catch (Exception ignored) {
-            lanSuccess = false;
+            return false;
         } finally {
             if (conn != null) {
                 try { conn.disconnect(); } catch (Exception ignored) {}
             }
         }
+    }
 
-        if (lanSuccess) {
-            activity.runOnUiThread(new LoadUrlRunnable(activity, lanUrl));
-            activity.runOnUiThread(new ShowToastRunnable(activity, "Connected via Local Wi-Fi"));
-        } else {
-            activity.runOnUiThread(new LoadUrlRunnable(activity, tunnelUrl));
-            activity.runOnUiThread(new ShowToastRunnable(activity, "Connected via Remote Tunnel (Different Network)"));
+    @Override
+    public void run() {
+        if (activity == null) return;
+
+        // 1. If LAN URL is provided, probe it (1200ms timeout for ultra-low latency Wi-Fi)
+        if (lanUrl != null && !lanUrl.isEmpty()) {
+            if (probe(lanUrl, 1200)) {
+                activity.runOnUiThread(new LoadUrlRunnable(activity, lanUrl));
+                activity.runOnUiThread(new ShowToastRunnable(activity, "⚡ Connected via Local Wi-Fi (<1ms)"));
+                return;
+            }
         }
+
+        // 2. If Tailscale WireGuard is provided, probe it (1500ms timeout for direct P2P VPN)
+        if (tailscaleUrl != null && !tailscaleUrl.isEmpty()) {
+            if (probe(tailscaleUrl, 1500)) {
+                activity.runOnUiThread(new LoadUrlRunnable(activity, tailscaleUrl));
+                activity.runOnUiThread(new ShowToastRunnable(activity, "🛡️ Connected via Tailscale WireGuard (Direct P2P)"));
+                return;
+            }
+        }
+
+        // 3. If neither LAN nor Tailscale connected, fall back to Remote Tunnel (Cloudflare)
+        if (tunnelUrl != null && !tunnelUrl.isEmpty()) {
+            activity.runOnUiThread(new LoadUrlRunnable(activity, tunnelUrl));
+            activity.runOnUiThread(new ShowToastRunnable(activity, "🌐 Connected via Remote Tunnel"));
+            return;
+        }
+
+        // 4. If only Tailscale was configured but probe failed (load anyway so WebView/WebViewClient can show diagnostic)
+        if (tailscaleUrl != null && !tailscaleUrl.isEmpty()) {
+            activity.runOnUiThread(new LoadUrlRunnable(activity, tailscaleUrl));
+            return;
+        }
+
+        // 5. If only LAN was configured but probe failed
+        if (lanUrl != null && !lanUrl.isEmpty()) {
+            activity.runOnUiThread(new LoadUrlRunnable(activity, lanUrl));
+            return;
+        }
+
+        activity.runOnUiThread(new ShowDiscoveryRunnable(activity));
     }
 }

@@ -38,6 +38,7 @@ public class MainActivity extends Activity {
 
     private static final String PREFS_NAME = "suo_link_prefs";
     private static final String PREF_KEY_LAN_URL = "last_lan_url";
+    private static final String PREF_KEY_TAILSCALE_URL = "last_tailscale_url";
     private static final String PREF_KEY_TUNNEL_URL = "last_tunnel_url";
 
     private WebView webView;
@@ -58,17 +59,26 @@ public class MainActivity extends Activity {
         return prefs != null ? prefs.getString(PREF_KEY_LAN_URL, null) : null;
     }
 
+    public String getSavedTailscaleUrl() {
+        return prefs != null ? prefs.getString(PREF_KEY_TAILSCALE_URL, null) : null;
+    }
+
     public String getSavedTunnelUrl() {
         return prefs != null ? prefs.getString(PREF_KEY_TUNNEL_URL, null) : null;
     }
 
-    public void saveUrls(String lan, String tunnel) {
+    public void saveUrls(String lan, String tailscale, String tunnel) {
         if (prefs != null) {
             SharedPreferences.Editor ed = prefs.edit();
             if (lan != null && !lan.isEmpty()) ed.putString(PREF_KEY_LAN_URL, lan);
+            if (tailscale != null && !tailscale.isEmpty()) ed.putString(PREF_KEY_TAILSCALE_URL, tailscale);
             if (tunnel != null && !tunnel.isEmpty()) ed.putString(PREF_KEY_TUNNEL_URL, tunnel);
             ed.apply();
         }
+    }
+
+    public void saveUrls(String lan, String tunnel) {
+        saveUrls(lan, null, tunnel);
     }
 
     public void setFilePathCallback(ValueCallback<Uri[]> cb) {
@@ -125,10 +135,11 @@ public class MainActivity extends Activity {
 
         // Check if we have saved connection endpoints
         String savedLan = getSavedLanUrl();
+        String savedTailscale = getSavedTailscaleUrl();
         String savedTunnel = getSavedTunnelUrl();
 
-        if ((savedLan != null && !savedLan.isEmpty()) || (savedTunnel != null && !savedTunnel.isEmpty())) {
-            new Thread(new SmartConnectRunnable(this, savedLan, savedTunnel)).start();
+        if ((savedLan != null && !savedLan.isEmpty()) || (savedTailscale != null && !savedTailscale.isEmpty()) || (savedTunnel != null && !savedTunnel.isEmpty())) {
+            new Thread(new SmartConnectRunnable(this, savedLan, savedTailscale, savedTunnel)).start();
         } else {
             showDiscoveryPage();
         }
@@ -165,7 +176,7 @@ public class MainActivity extends Activity {
 
     public void showDiscoveryPage() {
         connected = false;
-        String html = DiscoveryHtml.getHtml(getSavedLanUrl(), getSavedTunnelUrl());
+        String html = DiscoveryHtml.getHtml(getSavedLanUrl(), getSavedTailscaleUrl(), getSavedTunnelUrl());
         webView.loadDataWithBaseURL("https://suolink.local/", html, "text/html", "UTF-8", null);
     }
 
@@ -193,7 +204,7 @@ public class MainActivity extends Activity {
 
     public void showError(String failingUrl, String desc) {
         connected = false;
-        String html = DiscoveryHtml.getErrorHtml(failingUrl, desc, getSavedTunnelUrl(), getSavedLanUrl());
+        String html = DiscoveryHtml.getErrorHtml(failingUrl, desc, getSavedTunnelUrl(), getSavedTailscaleUrl(), getSavedLanUrl());
         webView.loadDataWithBaseURL("https://suolink.local/", html, "text/html", "UTF-8", null);
     }
 
@@ -207,28 +218,43 @@ public class MainActivity extends Activity {
             inputUrl = "http://" + inputUrl;
         }
 
-        String lanUrl = inputUrl;
+        String lanUrl = null;
+        String tailscaleUrl = null;
         String tunnelUrl = null;
 
-        // Parse smart URL: e.g. http://192.168.1.19:8585/?auth=abc&tunnel=https%3A%2F%2Fxxx.trycloudflare.com
-        if (inputUrl.contains("tunnel=")) {
-            try {
-                Uri parsed = Uri.parse(inputUrl);
-                String extractedTunnel = parsed.getQueryParameter("tunnel");
-                if (extractedTunnel != null && !extractedTunnel.isEmpty()) {
-                    tunnelUrl = extractedTunnel;
-                }
-                // Strip the tunnel query param from the direct LAN URL
-                lanUrl = inputUrl.replaceAll("[?&]tunnel=[^&]*", "");
-            } catch (Exception ignored) { }
-        } else if (inputUrl.contains("trycloudflare.com")) {
-            tunnelUrl = inputUrl;
-            lanUrl = null;
+        Uri parsed = null;
+        try {
+            parsed = Uri.parse(inputUrl);
+            String extractedTailscale = parsed.getQueryParameter("tailscale");
+            if (extractedTailscale != null && !extractedTailscale.isEmpty()) {
+                tailscaleUrl = extractedTailscale;
+            }
+            String extractedTunnel = parsed.getQueryParameter("tunnel");
+            if (extractedTunnel != null && !extractedTunnel.isEmpty()) {
+                tunnelUrl = extractedTunnel;
+            }
+        } catch (Exception ignored) { }
+
+        // Strip embedded parameters from base url
+        String cleanUrl = inputUrl.replaceAll("[?&]tailscale=[^&]*", "").replaceAll("[?&]tunnel=[^&]*", "");
+        if (cleanUrl.endsWith("?") || cleanUrl.endsWith("&")) {
+            cleanUrl = cleanUrl.substring(0, cleanUrl.length() - 1);
         }
 
-        saveUrls(lanUrl, tunnelUrl);
+        String host = parsed != null ? parsed.getHost() : "";
+        if (host == null) host = "";
 
-        String displayUrl = lanUrl != null ? lanUrl : tunnelUrl;
+        if (host.startsWith("100.") || host.endsWith(".ts.net")) {
+            tailscaleUrl = cleanUrl;
+        } else if (cleanUrl.contains("trycloudflare.com")) {
+            tunnelUrl = cleanUrl;
+        } else {
+            lanUrl = cleanUrl;
+        }
+
+        saveUrls(lanUrl, tailscaleUrl, tunnelUrl);
+
+        String displayUrl = lanUrl != null ? lanUrl : (tailscaleUrl != null ? tailscaleUrl : tunnelUrl);
         if (displayUrl != null) {
             String js = "var input = document.getElementById('manual-ip'); if(input){ input.value = '" 
                     + displayUrl.replace("'", "\\'") + "'; }";
@@ -239,7 +265,7 @@ public class MainActivity extends Activity {
             webViewClient.resetFallbacks();
         }
 
-        new Thread(new SmartConnectRunnable(this, lanUrl, tunnelUrl)).start();
+        new Thread(new SmartConnectRunnable(this, lanUrl, tailscaleUrl, tunnelUrl)).start();
     }
 
     public void loadHostUrl(String url) {
@@ -249,19 +275,25 @@ public class MainActivity extends Activity {
             url = "http://" + url;
         }
 
-        // If this is a smart URL with both LAN+tunnel params, parse and do smart connect
-        if (url.contains("tunnel=")) {
+        // If this is a smart URL with query params, parse and do smart connect
+        if (url.contains("tailscale=") || url.contains("tunnel=")) {
             connectSmart(url);
             return;
         }
 
         connected = false;
 
-        // Save tunnel URL if this is a trycloudflare link
-        if (url.contains("trycloudflare.com")) {
-            saveUrls(null, url);
+        Uri p = null;
+        try { p = Uri.parse(url); } catch (Exception ignored) {}
+        String host = p != null ? p.getHost() : "";
+        if (host == null) host = "";
+
+        if (host.startsWith("100.") || host.endsWith(".ts.net")) {
+            saveUrls(null, url, null);
+        } else if (url.contains("trycloudflare.com")) {
+            saveUrls(null, null, url);
         } else {
-            saveUrls(url, null);
+            saveUrls(url, null, null);
         }
 
         if (webViewClient != null) {
@@ -291,6 +323,31 @@ public class MainActivity extends Activity {
         });
     }
 
+    public void openTailscaleApp() {
+        runOnUiThread(() -> {
+            try {
+                Intent intent = getPackageManager().getLaunchIntentForPackage("com.tailscale.ipn");
+                if (intent != null) {
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(intent);
+                    return;
+                }
+            } catch (Exception ignored) { }
+
+            try {
+                Intent storeIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=com.tailscale.ipn"));
+                storeIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(storeIntent);
+            } catch (Exception e) {
+                try {
+                    Intent webIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/tailscale/tailscale-android/releases"));
+                    webIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(webIntent);
+                } catch (Exception ignored) { }
+            }
+        });
+    }
+
     public void connectLan(String lanUrl) {
         String target = (lanUrl != null && !lanUrl.isEmpty()) ? lanUrl : getSavedLanUrl();
         if (target != null && !target.isEmpty()) {
@@ -300,15 +357,27 @@ public class MainActivity extends Activity {
         }
     }
 
-    public void onBeaconReceived(String name, String ip, int port, String auth, String tunnel, int verCode, String ver) {
+    public void connectTailscale(String tsUrl) {
+        String target = (tsUrl != null && !tsUrl.isEmpty()) ? tsUrl : getSavedTailscaleUrl();
+        if (target != null && !target.isEmpty()) {
+            runOnUiThread(() -> loadHostUrl(target));
+        } else {
+            showDiscoveryPage();
+        }
+    }
+
+    public void onBeaconReceived(String name, String ip, int port, String auth, String tunnel, String tailscale, int verCode, String ver) {
         // Feed discovered host into discovery HTML
-        String js = String.format("if(window.onHostDiscovered){ window.onHostDiscovered('%s','%s',%d,'%s','%s'); }",
-                name, ip, port, auth, tunnel);
+        String js = String.format("if(window.onHostDiscovered){ window.onHostDiscovered('%s','%s',%d,'%s','%s','%s'); }",
+                name, ip, port, auth, tunnel, tailscale != null ? tailscale : "");
         webView.post(new EvalJsRunnable(webView, js));
 
         // If not connected and discovery page is open, auto connect
         if (!connected) {
             String smartUrl = "http://" + ip + ":" + port + "/?auth=" + auth;
+            if (tailscale != null && !tailscale.isEmpty()) {
+                smartUrl += "&tailscale=" + Uri.encode(tailscale);
+            }
             if (tunnel != null && !tunnel.isEmpty()) {
                 smartUrl += "&tunnel=" + Uri.encode(tunnel);
             }

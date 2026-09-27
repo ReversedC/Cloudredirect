@@ -48,17 +48,25 @@ public sealed class RemotePlayServer : IDisposable
     public string PairingToken { get; private set; } = Guid.NewGuid().ToString("N")[..8];
     public bool IsRunning => _listener != null;
     public int ConnectedClientsCount { get; private set; }
+    public string? TailscaleIp => TailscaleService.Instance.TailscaleIp;
+    public string? TailscaleUrl => !string.IsNullOrEmpty(TailscaleIp) ? $"http://{TailscaleIp}:{Port}/?auth={PairingToken}" : null;
     public string? TunnelUrl => RemoteTunnelService.Instance.TunnelUrl;
     public string SmartConnectUrl
     {
         get
         {
+            var sb = new StringBuilder(ServerUrl);
+            string? ts = TailscaleUrl;
+            if (!string.IsNullOrEmpty(ts))
+            {
+                sb.Append($"&tailscale={Uri.EscapeDataString(ts)}");
+            }
             string? tunnel = RemoteTunnelService.Instance.TunnelUrl;
             if (!string.IsNullOrEmpty(tunnel))
             {
-                return $"{ServerUrl}&tunnel={Uri.EscapeDataString(tunnel)}";
+                sb.Append($"&tunnel={Uri.EscapeDataString(tunnel)}");
             }
-            return ServerUrl;
+            return sb.ToString();
         }
     }
 
@@ -66,6 +74,7 @@ public sealed class RemotePlayServer : IDisposable
     public event Action? OnStateChanged;
 
     private void OnTunnelStateChanged() => OnStateChanged?.Invoke();
+    private void OnTailscaleStateChanged() => OnStateChanged?.Invoke();
 
     public bool Start(int port = DefaultPort)
     {
@@ -88,6 +97,11 @@ public sealed class RemotePlayServer : IDisposable
             RemoteTunnelService.Instance.OnStateChanged -= OnTunnelStateChanged;
             RemoteTunnelService.Instance.OnStateChanged += OnTunnelStateChanged;
             _ = RemoteTunnelService.Instance.StartAsync(Port, PairingToken);
+
+            // Hook Tailscale status updates
+            TailscaleService.Instance.OnStateChanged -= OnTailscaleStateChanged;
+            TailscaleService.Instance.OnStateChanged += OnTailscaleStateChanged;
+            _ = TailscaleService.Instance.RefreshStatusAsync();
 
             _listenTask = Task.Run(() => AcceptLoopAsync(_cts.Token));
             _beaconTask = Task.Run(() => BeaconLoopAsync(_cts.Token));
@@ -115,6 +129,7 @@ public sealed class RemotePlayServer : IDisposable
         ScreenCaptureService.Instance.Stop();
         RemoteTunnelService.Instance.Stop();
         RemoteTunnelService.Instance.OnStateChanged -= OnTunnelStateChanged;
+        TailscaleService.Instance.OnStateChanged -= OnTailscaleStateChanged;
 
         Log("SUO Link Server stopped.");
         OnStateChanged?.Invoke();
@@ -162,6 +177,7 @@ public sealed class RemotePlayServer : IDisposable
                     port = Port,
                     auth = PairingToken,
                     game = ActiveGameTrackerService.CurrentGame?.Name ?? "",
+                    tailscale = TailscaleUrl ?? "",
                     tunnel = RemoteTunnelService.Instance.TunnelUrl ?? "",
                     version = appVer,
                     versionCode = appVerCode
@@ -285,6 +301,8 @@ public sealed class RemotePlayServer : IDisposable
                         version = appVer,
                         versionCode = appVerCode,
                         apkUrl = "/download/suo-link.apk",
+                        tailscaleIp = TailscaleIp,
+                        tailscaleUrl = TailscaleUrl ?? "",
                         tunnelUrl = RemoteTunnelService.Instance.TunnelUrl ?? ""
                     };
                     await SendJsonResponseAsync(stream, JsonSerializer.Serialize(ver), cancel);
@@ -296,6 +314,9 @@ public sealed class RemotePlayServer : IDisposable
                 {
                     var tunnelInfo = new
                     {
+                        tailscaleIp = TailscaleIp,
+                        tailscaleUrl = TailscaleUrl,
+                        isTailscaleConnected = TailscaleService.Instance.IsConnected,
                         tunnelUrl = RemoteTunnelService.Instance.TunnelUrl,
                         publicWanIp = RemoteTunnelService.Instance.PublicWanIp,
                         isUpnpMapped = RemoteTunnelService.Instance.IsUpnpMapped,
@@ -323,6 +344,9 @@ public sealed class RemotePlayServer : IDisposable
                         hostName = Environment.MachineName,
                         ip = LanIp,
                         port = Port,
+                        tailscaleIp = TailscaleIp,
+                        tailscaleUrl = TailscaleUrl,
+                        tunnelUrl = RemoteTunnelService.Instance.TunnelUrl,
                         fps = ScreenCaptureService.Instance.TargetFps,
                         quality = ScreenCaptureService.Instance.JpegQuality,
                         currentGame = ActiveGameTrackerService.CurrentGame?.Name,
