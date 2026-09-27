@@ -205,6 +205,10 @@ public partial class CloudFolderBrowserDialog : FluentWindow
         if (res == Wpf.Ui.Controls.MessageBoxResult.Primary)
         {
             var destPath = Path.Combine(targetDir, file.Name);
+            if (AppSettings.AutoConflictHealing && File.Exists(destPath))
+            {
+                SaveHistoryManager.CreateConflictBackup(_gameName, targetDir, $"Pre-Download Conflict Vault: {file.Name}", _appId > 0 ? _appId.ToString() : null);
+            }
             bool ok = await UniversalCloudSyncService.DownloadCloudFileAsync(file, destPath);
             if (ok)
             {

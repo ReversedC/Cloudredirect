@@ -84,6 +84,36 @@ public static class AppSettings
         set => WriteBool("auto_protect_non_cloud_games", value);
     }
 
+    public static bool AutoSyncOnGameExit
+    {
+        get => ReadBool("auto_sync_on_game_exit", true);
+        set => WriteBool("auto_sync_on_game_exit", value);
+    }
+
+    public static bool AutoMidGameCheckpoint
+    {
+        get => ReadBool("auto_mid_game_checkpoint", true);
+        set => WriteBool("auto_mid_game_checkpoint", value);
+    }
+
+    public static bool AutoConflictHealing
+    {
+        get => ReadBool("auto_conflict_healing", true);
+        set => WriteBool("auto_conflict_healing", value);
+    }
+
+    public static bool AutoStorageCompression
+    {
+        get => ReadBool("auto_storage_compression", true);
+        set => WriteBool("auto_storage_compression", value);
+    }
+
+    public static bool AutoCommunityDatabase
+    {
+        get => ReadBool("auto_community_database", true);
+        set => WriteBool("auto_community_database", value);
+    }
+
     public static double ZoomScale
     {
         get => ReadDouble("zoom_scale", 1.0);

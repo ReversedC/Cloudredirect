@@ -2387,4 +2387,39 @@ Tem certeza?</value>
   <data name="CloudExplorer_Retry" xml:space="preserve">
     <value>Tentar Novamente</value>
   </data>
+
+  <!-- Auto-Everything Cloud Saves -->
+  <data name="Settings_AutoEverything_Title" xml:space="preserve">
+    <value>Sistema de Nuvem Totalmente Automático</value>
+  </data>
+  <data name="Settings_AutoSyncExit" xml:space="preserve">
+    <value>Sincronização Automática ao Sair do Jogo</value>
+  </data>
+  <data name="Settings_AutoSyncExitHint" xml:space="preserve">
+    <value>Sincroniza e faz backup automático dos saves para a nuvem ao fechar o jogo, com notificações discretas.</value>
+  </data>
+  <data name="Settings_AutoCheckpoint" xml:space="preserve">
+    <value>Ponto de Restauração Automático em Jogo (Seguro contra Quedas)</value>
+  </data>
+  <data name="Settings_AutoCheckpointHint" xml:space="preserve">
+    <value>Cria instantâneos periódicos enquanto joga para evitar perdas causadas por encerramentos inesperados do jogo.</value>
+  </data>
+  <data name="Settings_AutoConflictHealing" xml:space="preserve">
+    <value>Resolução Automática de Conflitos e Auto-Cura</value>
+  </data>
+  <data name="Settings_AutoConflictHealingHint" xml:space="preserve">
+    <value>Resolve conflitos arquivando no Cofre de Conflitos e restaura automaticamente saves corrompidos.</value>
+  </data>
+  <data name="Settings_AutoCompression" xml:space="preserve">
+    <value>Gerenciamento e Compressão Automática de Armazenamento</value>
+  </data>
+  <data name="Settings_AutoCompressionHint" xml:space="preserve">
+    <value>Compacta os instantâneos com ZIP economizando até 90% de espaço e limpa duplicatas antigas de forma inteligente.</value>
+  </data>
+  <data name="Settings_AutoCommunityDb" xml:space="preserve">
+    <value>Sincronização com Base de Dados da Comunidade</value>
+  </data>
+  <data name="Settings_AutoCommunityDbHint" xml:space="preserve">
+    <value>Detecta automaticamente pastas de salvamento para milhares de jogos na Steam, Epic, GOG, Game Pass e emuladores.</value>
+  </data>
 </root>

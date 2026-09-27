@@ -2408,6 +2408,41 @@
   <data name="CloudExplorer_Retry" xml:space="preserve">
     <value>重试</value>
   </data>
+
+  <!-- Auto-Everything Cloud Saves -->
+  <data name="Settings_AutoEverything_Title" xml:space="preserve">
+    <value>全自动云存档系统</value>
+  </data>
+  <data name="Settings_AutoSyncExit" xml:space="preserve">
+    <value>退出游戏时自动同步</value>
+  </data>
+  <data name="Settings_AutoSyncExitHint" xml:space="preserve">
+    <value>退出游戏时自动将存档同步并备份至云端，并弹出精致的游戏通知。</value>
+  </data>
+  <data name="Settings_AutoCheckpoint" xml:space="preserve">
+    <value>游戏中自动检查点（崩溃防灾保险）</value>
+  </data>
+  <data name="Settings_AutoCheckpointHint" xml:space="preserve">
+    <value>在游戏运行期间定期创建存档快照，防止游戏意外崩溃导致进度丢失。</value>
+  </data>
+  <data name="Settings_AutoConflictHealing" xml:space="preserve">
+    <value>自动冲突解决与存档自愈</value>
+  </data>
+  <data name="Settings_AutoConflictHealingHint" xml:space="preserve">
+    <value>通过将冲突存档归档至冲突保险库自动解决设备冲突，并自动从健康快照恢复损坏的存档。</value>
+  </data>
+  <data name="Settings_AutoCompression" xml:space="preserve">
+    <value>自动存储管理与压缩</value>
+  </data>
+  <data name="Settings_AutoCompressionHint" xml:space="preserve">
+    <value>使用 ZIP 压缩存档快照以节省高达 90% 的磁盘空间，并智能清理过期的冗余历史副本。</value>
+  </data>
+  <data name="Settings_AutoCommunityDb" xml:space="preserve">
+    <value>社区存档数据库同步</value>
+  </data>
+  <data name="Settings_AutoCommunityDbHint" xml:space="preserve">
+    <value>自动识别数千款游戏的存档路径，涵盖 Steam、Epic、GOG、Game Pass 及各主流模拟器。</value>
+  </data>
 </root>
 
 

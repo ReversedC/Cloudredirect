@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text.Json;
 
@@ -112,15 +113,31 @@ public static class SaveHistoryManager
 
             Directory.CreateDirectory(targetDir);
 
-            foreach (var file in sourceFiles)
+            bool isCompressed = AppSettings.AutoStorageCompression;
+            if (isCompressed)
             {
-                var relPath = Path.GetRelativePath(sourceDirectory, file);
-                var destPath = Path.Combine(targetDir, relPath);
-                var destDir = Path.GetDirectoryName(destPath)!;
-                if (!Directory.Exists(destDir))
-                    Directory.CreateDirectory(destDir);
+                var zipPath = Path.Combine(targetDir, "data.zip");
+                using (var archive = ZipFile.Open(zipPath, ZipArchiveMode.Create))
+                {
+                    foreach (var file in sourceFiles)
+                    {
+                        var relPath = Path.GetRelativePath(sourceDirectory, file);
+                        archive.CreateEntryFromFile(file, relPath, CompressionLevel.Optimal);
+                    }
+                }
+            }
+            else
+            {
+                foreach (var file in sourceFiles)
+                {
+                    var relPath = Path.GetRelativePath(sourceDirectory, file);
+                    var destPath = Path.Combine(targetDir, relPath);
+                    var destDir = Path.GetDirectoryName(destPath)!;
+                    if (!Directory.Exists(destDir))
+                        Directory.CreateDirectory(destDir);
 
-                File.Copy(file, destPath, overwrite: true);
+                    File.Copy(file, destPath, overwrite: true);
+                }
             }
 
             var meta = new
@@ -129,13 +146,14 @@ public static class SaveHistoryManager
                 trigger = triggerDescription,
                 fileCount = sourceFiles.Length,
                 totalBytes,
+                compressed = isCompressed,
                 appId = appId ?? ""
             };
 
             var metaPath = Path.Combine(targetDir, "snapshot.json");
             File.WriteAllText(metaPath, JsonSerializer.Serialize(meta, new JsonSerializerOptions { WriteIndented = true }));
 
-            // Cleanup oldest if exceeds maximum
+            // Cleanup oldest according to retention rules
             PurgeOldSnapshots(gameSnapshotDir);
 
             return new SnapshotInfo(timestampStr, now, triggerDescription, sourceFiles.Length, totalBytes, targetDir);
@@ -275,21 +293,29 @@ public static class SaveHistoryManager
                 Directory.CreateDirectory(targetDirectory);
             }
 
-            // 2. Copy snapshot files back into targetDirectory
-            var snapshotFiles = Directory.GetFiles(snapshot.DirectoryPath, "*", SearchOption.AllDirectories);
-            foreach (var file in snapshotFiles)
+            // 2. Extract from data.zip if compressed, or copy loose files
+            var zipPath = Path.Combine(snapshot.DirectoryPath, "data.zip");
+            if (File.Exists(zipPath))
             {
-                var fileName = Path.GetFileName(file);
-                if (fileName.Equals("snapshot.json", StringComparison.OrdinalIgnoreCase))
-                    continue;
+                ZipFile.ExtractToDirectory(zipPath, targetDirectory, overwriteFiles: true);
+            }
+            else
+            {
+                var snapshotFiles = Directory.GetFiles(snapshot.DirectoryPath, "*", SearchOption.AllDirectories);
+                foreach (var file in snapshotFiles)
+                {
+                    var fileName = Path.GetFileName(file);
+                    if (fileName.Equals("snapshot.json", StringComparison.OrdinalIgnoreCase))
+                        continue;
 
-                var relPath = Path.GetRelativePath(snapshot.DirectoryPath, file);
-                var destPath = Path.Combine(targetDirectory, relPath);
-                var destDir = Path.GetDirectoryName(destPath)!;
-                if (!Directory.Exists(destDir))
-                    Directory.CreateDirectory(destDir);
+                    var relPath = Path.GetRelativePath(snapshot.DirectoryPath, file);
+                    var destPath = Path.Combine(targetDirectory, relPath);
+                    var destDir = Path.GetDirectoryName(destPath)!;
+                    if (!Directory.Exists(destDir))
+                        Directory.CreateDirectory(destDir);
 
-                File.Copy(file, destPath, overwrite: true);
+                    File.Copy(file, destPath, overwrite: true);
+                }
             }
 
             return true;
@@ -301,6 +327,73 @@ public static class SaveHistoryManager
         }
     }
 
+    /// <summary>
+    /// Checks whether the files in a save directory appear corrupted (e.g. all 0 bytes or completely empty after a crash).
+    /// </summary>
+    public static bool CheckSaveCorruption(string saveDirectory)
+    {
+        try
+        {
+            if (!Directory.Exists(saveDirectory)) return false;
+            var files = Directory.GetFiles(saveDirectory, "*", SearchOption.AllDirectories);
+            if (files.Length == 0) return false;
+
+            long totalBytes = files.Sum(f => new FileInfo(f).Length);
+            return totalBytes == 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Attempts to auto-heal a corrupted save directory by safely restoring the latest valid snapshot.
+    /// </summary>
+    public static bool TryAutoHealFromLastSnapshot(string gameIdentifier, string saveDirectory, out string healMessage, string? appId = null)
+    {
+        healMessage = string.Empty;
+        try
+        {
+            if (!CheckSaveCorruption(saveDirectory))
+                return false;
+
+            var snapshots = GetSnapshots(gameIdentifier, appId)
+                .Where(s => s.TotalBytes > 0 && s.FileCount > 0)
+                .ToList();
+
+            if (snapshots.Count == 0)
+            {
+                healMessage = "Save is corrupted, but no valid prior snapshots were found.";
+                return false;
+            }
+
+            var bestSnapshot = snapshots[0];
+            // Take safety snapshot of the corrupted state first
+            CreateSnapshot(gameIdentifier, saveDirectory, "Corrupted State Prior to Auto-Heal", appId);
+
+            bool restored = RestoreSnapshot(gameIdentifier, saveDirectory, bestSnapshot);
+            if (restored)
+            {
+                healMessage = $"Corrupted save auto-healed from healthy snapshot ({bestSnapshot.FormattedTime}).";
+                return true;
+            }
+        }
+        catch (Exception ex)
+        {
+            healMessage = $"Auto-heal error: {ex.Message}";
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Creates an immutable backup in the Conflict Vault prior to any overwrite or cloud conflict sync.
+    /// </summary>
+    public static SnapshotInfo? CreateConflictBackup(string gameIdentifier, string sourceDirectory, string conflictReason, string? appId = null)
+    {
+        return CreateSnapshot(gameIdentifier, sourceDirectory, $"[Conflict Vault] {conflictReason}", appId);
+    }
+
     private static void PurgeOldSnapshots(string gameSnapshotDir)
     {
         try
@@ -309,11 +402,76 @@ public static class SaveHistoryManager
                 .OrderBy(Directory.GetCreationTime)
                 .ToList();
 
-            while (dirs.Count > MaxSnapshotsPerGame)
+            if (dirs.Count <= 5) return;
+
+            if (AppSettings.AutoStorageCompression)
             {
-                var toDelete = dirs[0];
-                dirs.RemoveAt(0);
-                Directory.Delete(toDelete, true);
+                // Smart Time-Based Retention:
+                // Snapshots within last 24 hours: keep all.
+                // Snapshots within 1 to 7 days: keep 1 per day.
+                // Snapshots within 7 to 30 days: keep 1 per week.
+                // Snapshots older than 30 days: keep 1 per month.
+                var now = DateTime.Now;
+                var toKeep = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var olderSnapshots = new List<(string Dir, DateTime Time)>();
+
+                foreach (var d in dirs)
+                {
+                    var time = Directory.GetCreationTime(d);
+                    var age = now - time;
+                    if (age.TotalHours <= 24)
+                    {
+                        toKeep.Add(d);
+                    }
+                    else
+                    {
+                        olderSnapshots.Add((d, time));
+                    }
+                }
+
+                // Group 1-7 days by date
+                var dayGroups = olderSnapshots
+                    .Where(x => (now - x.Time).TotalDays <= 7)
+                    .GroupBy(x => x.Time.Date);
+                foreach (var g in dayGroups)
+                {
+                    toKeep.Add(g.OrderByDescending(x => x.Time).First().Dir);
+                }
+
+                // Group 7-30 days by ISO week
+                var weekGroups = olderSnapshots
+                    .Where(x => (now - x.Time).TotalDays > 7 && (now - x.Time).TotalDays <= 30)
+                    .GroupBy(x => x.Time.DayOfYear / 7);
+                foreach (var g in weekGroups)
+                {
+                    toKeep.Add(g.OrderByDescending(x => x.Time).First().Dir);
+                }
+
+                // Group > 30 days by month
+                var monthGroups = olderSnapshots
+                    .Where(x => (now - x.Time).TotalDays > 30)
+                    .GroupBy(x => new { x.Time.Year, x.Time.Month });
+                foreach (var g in monthGroups)
+                {
+                    toKeep.Add(g.OrderByDescending(x => x.Time).First().Dir);
+                }
+
+                foreach (var d in dirs)
+                {
+                    if (!toKeep.Contains(d))
+                    {
+                        try { Directory.Delete(d, true); } catch { }
+                    }
+                }
+            }
+            else
+            {
+                while (dirs.Count > MaxSnapshotsPerGame)
+                {
+                    var toDelete = dirs[0];
+                    dirs.RemoveAt(0);
+                    try { Directory.Delete(toDelete, true); } catch { }
+                }
             }
         }
         catch { }

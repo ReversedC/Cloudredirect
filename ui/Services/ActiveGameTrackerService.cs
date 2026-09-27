@@ -233,9 +233,19 @@ public static class ActiveGameTrackerService
                             UniversalSaveWatcherService.UpdateProfileStatus(profile, "Game Running 🎮");
                             OnActiveGameChanged?.Invoke(_currentGame);
                         }
+
+                        // Periodic Mid-Game Checkpoint (Disaster Insurance)
+                        CheckMidGameCheckpoint(_currentGame);
                         return;
                     }
                 }
+            }
+
+            // Periodic Mid-Game Checkpoint for active Steam game
+            if (_currentGame != null)
+            {
+                CheckMidGameCheckpoint(_currentGame);
+                return;
             }
 
             // 3. If a game was active and now stopped:
@@ -243,6 +253,8 @@ public static class ActiveGameTrackerService
             {
                 var exitedGame = _currentGame;
                 _currentGame = null;
+                _lastMidGameCheckpointTime = DateTime.MinValue;
+                _lastTrackedSaveDir = null;
                 OnActiveGameChanged?.Invoke(null);
 
                 var gameName = exitedGame.Name;
@@ -254,42 +266,76 @@ public static class ActiveGameTrackerService
                 {
                     try
                     {
+                        // SAFETY DIRECTIVE: Genuine Steam games that have native Steam Cloud enabled
+                        // must NEVER be touched, redirected, or interfered with.
+                        if (exitedGame.IsGenuineOwned && exitedGame.HasSteamCloud)
+                        {
+                            return;
+                        }
+
+                        if (!AppSettings.AutoSyncOnGameExit)
+                        {
+                            return;
+                        }
+
+                        var sw = Stopwatch.StartNew();
+
                         if (universalProfile != null)
                         {
                             _lastActiveUniversalProfile = null;
                             _lastMonitoredUniversalProcess = null;
-                            await UniversalSaveWatcherService.SyncProfileNowAsync(universalProfile, "Auto-Backup on Game Exit");
+                            bool ok = await UniversalSaveWatcherService.SyncProfileNowAsync(universalProfile, "Auto-Backup on Game Exit");
+                            sw.Stop();
+
+                            if (AppSettings.ShowSyncNotifications)
+                            {
+                                var message = ok
+                                    ? $"☁️ {gameName}: Saves synchronized to cloud ({sw.Elapsed.TotalSeconds:F1}s)"
+                                    : $"⚠️ {gameName}: Cloud sync encountered an issue upon exit.";
+                                TrayIconService.Instance.ShowNotification("CloudRedirect", message);
+                            }
                         }
                         else
                         {
-                            // Wait briefly for game process / Steam cloud to finish flushing saves
+                            // Wait briefly for game process to finish flushing saves
                             await Task.Delay(2000);
 
                             var steamPath = SteamDetector.FindSteamPath();
                             string? saveDir = null;
-                            if (appId > 0)
+                            if (appId > 0 && !exitedGame.HasSteamCloud)
                             {
-                                saveDir = SaveHistoryManager.FindAppStorageDir(steamPath, appId);
+                                saveDir = SaveHistoryManager.FindAppStorageDir(steamPath, appId)
+                                          ?? GameSaveAutoDetector.DetectSaveFolder(gameName, procName, appId);
                             }
-
-                            if (saveDir == null)
+                            else if (appId == 0)
                             {
-                                saveDir = GameSaveAutoDetector.DetectSaveFolder(gameName, procName, appId);
+                                saveDir = GameSaveAutoDetector.DetectSaveFolder(gameName, procName);
                             }
 
                             if (saveDir != null && Directory.Exists(saveDir))
                             {
+                                // Check for corruption and auto-heal if needed
+                                if (AppSettings.AutoConflictHealing && SaveHistoryManager.CheckSaveCorruption(saveDir))
+                                {
+                                    if (SaveHistoryManager.TryAutoHealFromLastSnapshot(gameName, saveDir, out var healMsg, appId > 0 ? appId.ToString() : null))
+                                    {
+                                        TrayIconService.Instance.ShowNotification("CloudRedirect Auto-Heal", $"🩹 {gameName}: {healMsg}");
+                                    }
+                                }
+
                                 var snapshot = SaveHistoryManager.CreateSnapshot(
                                     gameName,
                                     saveDir,
                                     "Auto-Backup on Game Exit",
                                     appId > 0 ? appId.ToString() : null);
 
+                                sw.Stop();
+
                                 if (snapshot != null && AppSettings.ShowSyncNotifications)
                                 {
                                     TrayIconService.Instance.ShowNotification(
-                                        "Save Protection",
-                                        $"{gameName}: Save snapshot created upon game exit ({snapshot.FileCount} file(s), {snapshot.FormattedSize}).");
+                                        "CloudRedirect",
+                                        $"🛡️ {gameName}: Local save protected ({snapshot.FileCount} file(s) • {snapshot.FormattedSize}) in {sw.Elapsed.TotalSeconds:F1}s");
                                 }
                             }
                         }
@@ -305,5 +351,71 @@ public static class ActiveGameTrackerService
         {
             System.Diagnostics.Debug.WriteLine($"ActiveGameTracker error: {ex}");
         }
+    }
+
+    private static DateTime _lastMidGameCheckpointTime = DateTime.MinValue;
+    private static string? _lastTrackedSaveDir;
+
+    private static void CheckMidGameCheckpoint(ActiveGameInfo game)
+    {
+        if (!AppSettings.AutoMidGameCheckpoint) return;
+
+        // Never interfere with genuine Steam games that have native Steam Cloud
+        if (game.IsGenuineOwned && game.HasSteamCloud) return;
+
+        try
+        {
+            var saveDir = game.UniversalProfile?.ExpandedSavePath;
+            if (string.IsNullOrEmpty(saveDir))
+            {
+                if (game.AppId > 0)
+                {
+                    var steamPath = SteamDetector.FindSteamPath();
+                    saveDir = SaveHistoryManager.FindAppStorageDir(steamPath, game.AppId)
+                              ?? GameSaveAutoDetector.DetectSaveFolder(game.Name, game.ProcessName, game.AppId);
+                }
+                else
+                {
+                    saveDir = GameSaveAutoDetector.DetectSaveFolder(game.Name, game.ProcessName);
+                }
+            }
+
+            if (string.IsNullOrEmpty(saveDir) || !Directory.Exists(saveDir)) return;
+
+            if (_lastMidGameCheckpointTime == DateTime.MinValue || _lastTrackedSaveDir != saveDir)
+            {
+                _lastMidGameCheckpointTime = DateTime.Now;
+                _lastTrackedSaveDir = saveDir;
+                return;
+            }
+
+            // Check if 5 minutes elapsed since last checkpoint
+            if ((DateTime.Now - _lastMidGameCheckpointTime).TotalMinutes >= 5)
+            {
+                var files = Directory.GetFiles(saveDir, "*", SearchOption.AllDirectories);
+                if (files.Length > 0)
+                {
+                    var newestFile = files.Max(f => File.GetLastWriteTime(f));
+                    if (newestFile > _lastMidGameCheckpointTime)
+                    {
+                        var snap = SaveHistoryManager.CreateSnapshot(
+                            game.Name,
+                            saveDir,
+                            "Mid-Game Checkpoint (Disaster Insurance)",
+                            game.AppId > 0 ? game.AppId.ToString() : null);
+
+                        _lastMidGameCheckpointTime = DateTime.Now;
+
+                        if (snap != null && AppSettings.ShowSyncNotifications)
+                        {
+                            TrayIconService.Instance.ShowNotification(
+                                "CloudRedirect Checkpoint",
+                                $"🛡️ {game.Name}: Mid-game checkpoint saved (Disaster Insurance)");
+                        }
+                    }
+                }
+            }
+        }
+        catch { }
     }
 }

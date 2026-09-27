@@ -362,6 +362,14 @@ public static class UniversalSaveWatcherService
                 return false;
             }
 
+            if (AppSettings.AutoConflictHealing && SaveHistoryManager.CheckSaveCorruption(saveDir))
+            {
+                if (SaveHistoryManager.TryAutoHealFromLastSnapshot(profile.GameName, saveDir, out var healMsg, profile.SteamAppId > 0 ? profile.SteamAppId.ToString() : null))
+                {
+                    TrayIconService.Instance.ShowNotification("CloudRedirect", $"🩹 {profile.GameName}: {healMsg}");
+                }
+            }
+
             UpdateProfileStatus(profile, "Syncing...");
 
             // 1. Create a versioned local snapshot first (Advanced Save Protection)
@@ -375,10 +383,10 @@ public static class UniversalSaveWatcherService
             SaveProfiles();
 
             var message = syncResult.Success
-                ? $"{profile.GameName}: Save files successfully backed up and synchronized to cloud."
-                : $"{profile.GameName}: Local snapshot saved. Cloud sync: {syncResult.Message}";
+                ? $"☁️ {profile.GameName}: Saves synchronized to cloud."
+                : $"⚠️ {profile.GameName}: Local snapshot saved. Cloud sync: {syncResult.Message}";
 
-            TrayIconService.Instance.ShowNotification("CloudRedirect Universal Save", message);
+            TrayIconService.Instance.ShowNotification("CloudRedirect", message);
             return syncResult.Success;
         }
         catch (Exception ex)

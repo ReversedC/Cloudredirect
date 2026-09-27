@@ -2303,4 +2303,39 @@ Fail can be restored from the Pulihkan tab. Continue?</value>
   <data name="CloudExplorer_Retry" xml:space="preserve">
     <value>Cuba Lagi</value>
   </data>
+
+  <!-- Auto-Everything Cloud Saves -->
+  <data name="Settings_AutoEverything_Title" xml:space="preserve">
+    <value>Sistem Simpanan Awan Serba Automatik</value>
+  </data>
+  <data name="Settings_AutoSyncExit" xml:space="preserve">
+    <value>Penyegerakan Automatik Semasa Keluar Permainan</value>
+  </data>
+  <data name="Settings_AutoSyncExitHint" xml:space="preserve">
+    <value>Menyegerakkan dan menyandarkan fail simpanan ke awan secara automatik apabila permainan ditutup, dengan notifikasi yang bergaya.</value>
+  </data>
+  <data name="Settings_AutoCheckpoint" xml:space="preserve">
+    <value>Titik Semak Automatik Semasa Bermain (Insurans Bencana)</value>
+  </data>
+  <data name="Settings_AutoCheckpointHint" xml:space="preserve">
+    <value>Mengambil sandaran berkala semasa bermain untuk mencegah kehilangan data akibat kerosakan permainan yang tidak dijangka.</value>
+  </data>
+  <data name="Settings_AutoConflictHealing" xml:space="preserve">
+    <value>Penyelesaian Konflik &amp; Pemulihan Automatik</value>
+  </data>
+  <data name="Settings_AutoConflictHealingHint" xml:space="preserve">
+    <value>Menyelesaikan konflik peranti secara automatik dengan mengarkib ke Peti Konflik, dan memulihkan fail simpanan yang rosak.</value>
+  </data>
+  <data name="Settings_AutoCompression" xml:space="preserve">
+    <value>Pengurusan Storan &amp; Pemampatan Automatik</value>
+  </data>
+  <data name="Settings_AutoCompressionHint" xml:space="preserve">
+    <value>Memampatkan syot kilat simpanan dengan ZIP bagi menjimatkan sehingga 90% ruang cakera dan membersihkan salinan lama.</value>
+  </data>
+  <data name="Settings_AutoCommunityDb" xml:space="preserve">
+    <value>Penyegerakan Pangkalan Data Simpanan Komuniti</value>
+  </data>
+  <data name="Settings_AutoCommunityDbHint" xml:space="preserve">
+    <value>Mengesan laluan simpanan ribuan permainan secara automatik merentasi Steam, Epic, GOG, Game Pass, dan emulator.</value>
+  </data>
 </root>

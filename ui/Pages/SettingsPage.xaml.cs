@@ -75,9 +75,14 @@ public partial class SettingsPage : Page
             MinimizeToTrayToggle.IsChecked = AppSettings.MinimizeToTrayOnClose;
             ShowNotificationsToggle.IsChecked = AppSettings.ShowSyncNotifications;
             GlobalHotkeyToggle.IsChecked = AppSettings.GlobalHotkeyEnabled;
-            PopulateHotkeyPresets();
             AutoProtectNonCloudToggle.IsChecked = AppSettings.AutoProtectNonCloudGames;
             AutoFitZoomToggle.IsChecked = AppSettings.AutoFitZoom;
+
+            AutoSyncExitToggle.IsChecked = AppSettings.AutoSyncOnGameExit;
+            AutoCheckpointToggle.IsChecked = AppSettings.AutoMidGameCheckpoint;
+            AutoConflictHealingToggle.IsChecked = AppSettings.AutoConflictHealing;
+            AutoCompressionToggle.IsChecked = AppSettings.AutoStorageCompression;
+            AutoCommunityDbToggle.IsChecked = AppSettings.AutoCommunityDatabase;
         }
         finally
         {
@@ -144,6 +149,11 @@ public partial class SettingsPage : Page
         AppSettings.MinimizeToTrayOnClose = MinimizeToTrayToggle.IsChecked == true;
         AppSettings.ShowSyncNotifications = ShowNotificationsToggle.IsChecked == true;
         AppSettings.AutoProtectNonCloudGames = AutoProtectNonCloudToggle.IsChecked == true;
+        AppSettings.AutoSyncOnGameExit = AutoSyncExitToggle.IsChecked == true;
+        AppSettings.AutoMidGameCheckpoint = AutoCheckpointToggle.IsChecked == true;
+        AppSettings.AutoConflictHealing = AutoConflictHealingToggle.IsChecked == true;
+        AppSettings.AutoStorageCompression = AutoCompressionToggle.IsChecked == true;
+        AppSettings.AutoCommunityDatabase = AutoCommunityDbToggle.IsChecked == true;
     }
 
     private void AutoFitZoomToggle_Changed(object sender, RoutedEventArgs e)

@@ -62,6 +62,10 @@ public static class GameSaveAutoDetector
         { "HogwartsLegacy", [@"%LOCALAPPDATA%\Hogwarts Legacy\Saved\SaveGames"] },
         { "LiesofP-Win64-Shipping", [@"%LOCALAPPDATA%\LiesofP\Saved\SaveGames"] },
         { "GodOfWar", [@"%USERPROFILE%\Saved Games\God of War"] },
+        { "GodOfWarRagnarok", [@"%USERPROFILE%\Saved Games\God of War Ragnarök"] },
+        { "GhostOfTsushima", [@"Documents\Ghost of Tsushima DIRECTOR'S CUT"] },
+        { "HorizonZeroDawn", [@"Documents\Horizon Zero Dawn\Saved Games"] },
+        { "HorizonForbiddenWest", [@"Documents\Horizon Forbidden West Complete Edition"] },
         { "Hades", [@"Documents\Saved Games\Hades"] },
         { "Hades2", [@"%USERPROFILE%\Saved Games\Hades II"] },
         { "Hollow Knight", [@"%USERPROFILE%\AppData\LocalLow\Team Cherry\Hollow Knight"] },
@@ -72,7 +76,26 @@ public static class GameSaveAutoDetector
         { "SkyrimSE", [@"Documents\My Games\Skyrim Special Edition\Saves"] },
         { "Stardew Valley", [@"%APPDATA%\StardewValley\Saves"] },
         { "Terraria", [@"Documents\My Games\Terraria\Players"] },
-        { "SlayTheSpire", [@"%USERPROFILE%\.prefs"] }
+        { "SlayTheSpire", [@"%USERPROFILE%\.prefs"] },
+        { "Balatro", [@"%APPDATA%\Balatro"] },
+        { "ManorLords-Win64-Shipping", [@"%LOCALAPPDATA%\ManorLords\Saved\SaveGames"] },
+        { "Helldivers2", [@"%APPDATA%\Arrowhead\Helldivers2"] },
+        { "Valheim", [@"%USERPROFILE%\AppData\LocalLow\IronGate\Valheim\worlds_local"] },
+        { "DaveTheDiver", [@"%USERPROFILE%\AppData\LocalLow\Mintrocket\DAVE THE DIVER"] },
+        { "ResidentEvil4", [@"%APPDATA%\RE4", @"%LOCALAPPDATA%\Capcom\RE4"] },
+        { "ResidentEvilVillage", [@"Documents\CAPCOM\RESIDENT EVIL VILLAGE"] },
+        { "Persona5Royal", [@"%APPDATA%\SEGA\P5R"] },
+        { "Persona3Reload", [@"%APPDATA%\SEGA\P3R"] },
+        { "Subnautica", [@"%USERPROFILE%\AppData\LocalLow\Unknown Worlds\Subnautica\SavedGames"] },
+        { "NoMansSky", [@"%APPDATA%\HelloGames\NMS"] },
+        { "RDR2", [@"Documents\Rockstar Games\Red Dead Redemption 2\Profiles"] },
+        { "GTA5", [@"Documents\Rockstar Games\GTA V\Profiles"] },
+        // Popular Emulators
+        { "Ryujinx", [@"%APPDATA%\Ryujinx\bis\user\save"] },
+        { "rpcs3", [@"%USERPROFILE%\AppData\Local\RPCS3\dev_hdd0\home"] },
+        { "Dolphin", [@"Documents\Dolphin Emulator\GC", @"Documents\Dolphin Emulator\Wii", @"%APPDATA%\Dolphin Emulator\GC"] },
+        { "pcsx2", [@"Documents\PCSX2\memcards", @"%USERPROFILE%\Documents\PCSX2\memcards"] },
+        { "retroarch", [@"%APPDATA%\RetroArch\saves"] }
     };
 
     /// <summary>
@@ -127,32 +150,35 @@ public static class GameSaveAutoDetector
             catch { }
         }
 
-        // 2. Check known signature table by process or game name
-        var keysToCheck = new List<string>();
-        if (!string.IsNullOrWhiteSpace(processName))
+        // 2. Check known signature table by process or game name (Community Database)
+        if (AppSettings.AutoCommunityDatabase)
         {
-            var cleanProc = Path.GetFileNameWithoutExtension(processName).Trim();
-            keysToCheck.Add(cleanProc);
-        }
-        if (!string.IsNullOrWhiteSpace(gameName))
-        {
-            keysToCheck.Add(gameName.Trim());
-            keysToCheck.Add(gameName.Replace(" ", "").Trim());
-        }
-
-        foreach (var key in keysToCheck)
-        {
-            foreach (var kvp in KnownGameSaveRelativePaths)
+            var keysToCheck = new List<string>();
+            if (!string.IsNullOrWhiteSpace(processName))
             {
-                if (kvp.Key.Equals(key, StringComparison.OrdinalIgnoreCase) ||
-                    key.Contains(kvp.Key, StringComparison.OrdinalIgnoreCase) ||
-                    kvp.Key.Contains(key, StringComparison.OrdinalIgnoreCase))
+                var cleanProc = Path.GetFileNameWithoutExtension(processName).Trim();
+                keysToCheck.Add(cleanProc);
+            }
+            if (!string.IsNullOrWhiteSpace(gameName))
+            {
+                keysToCheck.Add(gameName.Trim());
+                keysToCheck.Add(gameName.Replace(" ", "").Trim());
+            }
+
+            foreach (var key in keysToCheck)
+            {
+                foreach (var kvp in KnownGameSaveRelativePaths)
                 {
-                    foreach (var rawPath in kvp.Value)
+                    if (kvp.Key.Equals(key, StringComparison.OrdinalIgnoreCase) ||
+                        key.Contains(kvp.Key, StringComparison.OrdinalIgnoreCase) ||
+                        kvp.Key.Contains(key, StringComparison.OrdinalIgnoreCase))
                     {
-                        var expanded = ResolvePathWithWildcards(rawPath);
-                        if (expanded != null && Directory.Exists(expanded))
-                            return expanded;
+                        foreach (var rawPath in kvp.Value)
+                        {
+                            var expanded = ResolvePathWithWildcards(rawPath);
+                            if (expanded != null && Directory.Exists(expanded))
+                                return expanded;
+                        }
                     }
                 }
             }
@@ -397,26 +423,29 @@ public static class GameSaveAutoDetector
         var results = new List<DetectedGameSave>();
         var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        // 1. Check known signature games
-        foreach (var kvp in KnownGameSaveRelativePaths)
+        // 1. Check known signature games (Community Database)
+        if (AppSettings.AutoCommunityDatabase)
         {
-            foreach (var raw in kvp.Value)
+            foreach (var kvp in KnownGameSaveRelativePaths)
             {
-                var expanded = ResolvePathWithWildcards(raw);
-                if (expanded != null && Directory.Exists(expanded) && seenPaths.Add(expanded))
+                foreach (var raw in kvp.Value)
                 {
-                    try
+                    var expanded = ResolvePathWithWildcards(raw);
+                    if (expanded != null && Directory.Exists(expanded) && seenPaths.Add(expanded))
                     {
-                        var files = Directory.GetFiles(expanded, "*", SearchOption.AllDirectories);
-                        if (files.Length > 0)
+                        try
                         {
-                            long totalBytes = files.Sum(f => new FileInfo(f).Length);
-                            var lastMod = files.Max(f => File.GetLastWriteTime(f));
-                            var cleanName = FormatGameNameFromToken(kvp.Key);
-                            results.Add(new DetectedGameSave(cleanName, kvp.Key, expanded, files.Length, totalBytes, lastMod));
+                            var files = Directory.GetFiles(expanded, "*", SearchOption.AllDirectories);
+                            if (files.Length > 0)
+                            {
+                                long totalBytes = files.Sum(f => new FileInfo(f).Length);
+                                var lastMod = files.Max(f => File.GetLastWriteTime(f));
+                                var cleanName = FormatGameNameFromToken(kvp.Key);
+                                results.Add(new DetectedGameSave(cleanName, kvp.Key, expanded, files.Length, totalBytes, lastMod));
+                            }
                         }
+                        catch { }
                     }
-                    catch { }
                 }
             }
         }

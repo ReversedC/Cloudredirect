@@ -2432,4 +2432,39 @@ Steam 클라우드가 활성화된 경우 Steam이 복원된 파일을 덮어쓸
   <data name="CloudExplorer_Retry" xml:space="preserve">
     <value>다시 시도</value>
   </data>
+
+  <!-- Auto-Everything Cloud Saves -->
+  <data name="Settings_AutoEverything_Title" xml:space="preserve">
+    <value>올인원 자동 클라우드 세이브 시스템</value>
+  </data>
+  <data name="Settings_AutoSyncExit" xml:space="preserve">
+    <value>게임 종료 시 자동 동기화</value>
+  </data>
+  <data name="Settings_AutoSyncExitHint" xml:space="preserve">
+    <value>게임 종료 시 저장 파일을 클라우드에 자동으로 백업 및 동기화하고 세련된 알림을 표시합니다.</value>
+  </data>
+  <data name="Settings_AutoCheckpoint" xml:space="preserve">
+    <value>게임 플레이 중 자동 체크포인트 (재해 방지 보험)</value>
+  </data>
+  <data name="Settings_AutoCheckpointHint" xml:space="preserve">
+    <value>게임 실행 중 주기적으로 스냅샷을 생성하여 갑작스러운 충돌 시 저장 데이터 손실을 방지합니다.</value>
+  </data>
+  <data name="Settings_AutoConflictHealing" xml:space="preserve">
+    <value>자동 충돌 해결 및 세이브 자동 복구</value>
+  </data>
+  <data name="Settings_AutoConflictHealingHint" xml:space="preserve">
+    <value>충돌 발생 시 충돌 보관함으로 자동 보관하여 기기 간 충돌을 방지하고, 손상된 세이브를 최신 정상본으로 자동 복구합니다.</value>
+  </data>
+  <data name="Settings_AutoCompression" xml:space="preserve">
+    <value>자동 저장소 관리 및 압축</value>
+  </data>
+  <data name="Settings_AutoCompressionHint" xml:space="preserve">
+    <value>스냅샷을 ZIP으로 압축하여 최대 90%의 디스크 공간을 절약하고 오래된 중복 사본을 스마트하게 정리합니다.</value>
+  </data>
+  <data name="Settings_AutoCommunityDb" xml:space="preserve">
+    <value>커뮤니티 세이브 데이터베이스 동기화</value>
+  </data>
+  <data name="Settings_AutoCommunityDbHint" xml:space="preserve">
+    <value>Steam, Epic, GOG, Game Pass 및 에뮬레이터 전반의 수천 가지 게임 저장 경로를 자동으로 감지합니다.</value>
+  </data>
 </root>

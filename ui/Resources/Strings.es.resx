@@ -2382,4 +2382,39 @@ Esto puede causar pérdida de datos en algunos casos.
   <data name="CloudExplorer_Retry" xml:space="preserve">
     <value>Reintentar</value>
   </data>
+
+  <!-- Auto-Everything Cloud Saves -->
+  <data name="Settings_AutoEverything_Title" xml:space="preserve">
+    <value>Sistema de Guardado en la Nube Totalmente Automático</value>
+  </data>
+  <data name="Settings_AutoSyncExit" xml:space="preserve">
+    <value>Sincronización Automática al Salir del Juego</value>
+  </data>
+  <data name="Settings_AutoSyncExitHint" xml:space="preserve">
+    <value>Sincroniza y respalda automáticamente los archivos de guardado en la nube al salir del juego con una elegante notificación.</value>
+  </data>
+  <data name="Settings_AutoCheckpoint" xml:space="preserve">
+    <value>Punto de Control Automático en Partida (Seguro contra Desastres)</value>
+  </data>
+  <data name="Settings_AutoCheckpointHint" xml:space="preserve">
+    <value>Toma instantáneas periódicas de la partida mientras juegas para evitar pérdidas por cierres inesperados.</value>
+  </data>
+  <data name="Settings_AutoConflictHealing" xml:space="preserve">
+    <value>Resolución Automática de Conflictos y Autorreparación</value>
+  </data>
+  <data name="Settings_AutoConflictHealingHint" xml:space="preserve">
+    <value>Resuelve automáticamente los conflictos archivando en la Bóveda de Conflictos y repara partidas corruptas con copias válidas.</value>
+  </data>
+  <data name="Settings_AutoCompression" xml:space="preserve">
+    <value>Gestión y Compresión Automática del Almacenamiento</value>
+  </data>
+  <data name="Settings_AutoCompressionHint" xml:space="preserve">
+    <value>Comprime las instantáneas en ZIP ahorrando hasta un 90% de espacio y depura duplicados antiguos inteligentemente.</value>
+  </data>
+  <data name="Settings_AutoCommunityDb" xml:space="preserve">
+    <value>Sincronización con Base de Datos Comunitaria</value>
+  </data>
+  <data name="Settings_AutoCommunityDbHint" xml:space="preserve">
+    <value>Detecta automáticamente las rutas de guardado de miles de juegos en Steam, Epic, GOG, Game Pass y emuladores.</value>
+  </data>
 </root>

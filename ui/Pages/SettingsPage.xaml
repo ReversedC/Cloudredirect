@@ -217,13 +217,109 @@
                     </ui:CardControl>
                 </StackPanel>
 
-                <!-- Right Column: Experimental Features -->
-                <StackPanel Grid.Column="2" x:Name="ExperimentalSection">
-                    <TextBlock Text="{res:Loc Settings_Experimental}"
-                               FontSize="17" FontWeight="SemiBold"
-                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                               Margin="0,0,0,8" />
-                    <StackPanel>
+                <!-- Right Column: Auto-Everything & Experimental -->
+                <StackPanel Grid.Column="2">
+                    <!-- Auto-Everything Cloud Save System -->
+                    <StackPanel x:Name="AutoEverythingSection" Margin="0,0,0,16">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <ui:SymbolIcon Symbol="Flash24" FontSize="18" Foreground="{StaticResource SteamAccentCyanBrush}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                            <TextBlock Text="{res:Loc Settings_AutoEverything_Title}"
+                                       FontSize="17" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                        </StackPanel>
+
+                        <!-- Auto-Sync on Game Exit -->
+                        <ui:CardControl Margin="0,0,0,8">
+                            <ui:CardControl.Header>
+                                <StackPanel>
+                                    <TextBlock Text="{res:Loc Settings_AutoSyncExit}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                    <TextBlock Text="{res:Loc Settings_AutoSyncExitHint}"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <ui:ToggleSwitch x:Name="AutoSyncExitToggle"
+                                             Checked="AppSettingsToggle_Changed"
+                                             Unchecked="AppSettingsToggle_Changed" />
+                        </ui:CardControl>
+
+                        <!-- Auto-Checkpoint Mid-Game -->
+                        <ui:CardControl Margin="0,0,0,8">
+                            <ui:CardControl.Header>
+                                <StackPanel>
+                                    <TextBlock Text="{res:Loc Settings_AutoCheckpoint}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                    <TextBlock Text="{res:Loc Settings_AutoCheckpointHint}"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <ui:ToggleSwitch x:Name="AutoCheckpointToggle"
+                                             Checked="AppSettingsToggle_Changed"
+                                             Unchecked="AppSettingsToggle_Changed" />
+                        </ui:CardControl>
+
+                        <!-- Auto-Conflict Resolution & Auto-Healing -->
+                        <ui:CardControl Margin="0,0,0,8">
+                            <ui:CardControl.Header>
+                                <StackPanel>
+                                    <TextBlock Text="{res:Loc Settings_AutoConflictHealing}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                    <TextBlock Text="{res:Loc Settings_AutoConflictHealingHint}"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <ui:ToggleSwitch x:Name="AutoConflictHealingToggle"
+                                             Checked="AppSettingsToggle_Changed"
+                                             Unchecked="AppSettingsToggle_Changed" />
+                        </ui:CardControl>
+
+                        <!-- Auto-Storage Compression & Pruning -->
+                        <ui:CardControl Margin="0,0,0,8">
+                            <ui:CardControl.Header>
+                                <StackPanel>
+                                    <TextBlock Text="{res:Loc Settings_AutoCompression}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                    <TextBlock Text="{res:Loc Settings_AutoCompressionHint}"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <ui:ToggleSwitch x:Name="AutoCompressionToggle"
+                                             Checked="AppSettingsToggle_Changed"
+                                             Unchecked="AppSettingsToggle_Changed" />
+                        </ui:CardControl>
+
+                        <!-- Community Database Sync -->
+                        <ui:CardControl Margin="0,0,0,8">
+                            <ui:CardControl.Header>
+                                <StackPanel>
+                                    <TextBlock Text="{res:Loc Settings_AutoCommunityDb}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                    <TextBlock Text="{res:Loc Settings_AutoCommunityDbHint}"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <ui:ToggleSwitch x:Name="AutoCommunityDbToggle"
+                                             Checked="AppSettingsToggle_Changed"
+                                             Unchecked="AppSettingsToggle_Changed" />
+                        </ui:CardControl>
+                    </StackPanel>
+
+                    <!-- Experimental Features -->
+                    <StackPanel x:Name="ExperimentalSection">
+                        <TextBlock Text="{res:Loc Settings_Experimental}"
+                                   FontSize="17" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                   Margin="0,0,0,8" />
                         <ui:CardControl Margin="0,0,0,8">
                             <ui:CardControl.Header>
                                 <StackPanel>

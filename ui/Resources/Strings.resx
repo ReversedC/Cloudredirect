@@ -2435,4 +2435,39 @@ Are you sure?</value>
   <data name="CloudExplorer_Retry" xml:space="preserve">
     <value>Retry</value>
   </data>
+
+  <!-- Auto-Everything Cloud Saves -->
+  <data name="Settings_AutoEverything_Title" xml:space="preserve">
+    <value>Auto-Everything Cloud Saves</value>
+  </data>
+  <data name="Settings_AutoSyncExit" xml:space="preserve">
+    <value>Auto-Sync on Game Exit</value>
+  </data>
+  <data name="Settings_AutoSyncExitHint" xml:space="preserve">
+    <value>Automatically synchronizes and backs up save files to the cloud when a game exits, with a sleek gaming toast notification.</value>
+  </data>
+  <data name="Settings_AutoCheckpoint" xml:space="preserve">
+    <value>Auto-Checkpoint Mid-Game (Disaster Insurance)</value>
+  </data>
+  <data name="Settings_AutoCheckpointHint" xml:space="preserve">
+    <value>Takes periodic background checkpoints while gaming to prevent progress loss from unexpected game crashes.</value>
+  </data>
+  <data name="Settings_AutoConflictHealing" xml:space="preserve">
+    <value>Auto-Conflict Resolution &amp; Auto-Healing</value>
+  </data>
+  <data name="Settings_AutoConflictHealingHint" xml:space="preserve">
+    <value>Automatically vaults competing local versions prior to cloud sync and auto-repairs corrupted zero-byte save files.</value>
+  </data>
+  <data name="Settings_AutoCompression" xml:space="preserve">
+    <value>Auto-Storage Management &amp; Compression</value>
+  </data>
+  <data name="Settings_AutoCompressionHint" xml:space="preserve">
+    <value>Compresses save snapshots with ZIP to reduce disk usage by up to 90% and intelligently prunes duplicate historic copies.</value>
+  </data>
+  <data name="Settings_AutoCommunityDb" xml:space="preserve">
+    <value>Community Save Database Sync</value>
+  </data>
+  <data name="Settings_AutoCommunityDbHint" xml:space="preserve">
+    <value>Automatically discovers save folders for thousands of titles across Steam, Epic, GOG, Game Pass, and emulators.</value>
+  </data>
 </root>
