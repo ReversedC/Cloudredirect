@@ -2513,10 +2513,10 @@ Steam 클라우드가 활성화된 경우 Steam이 복원된 파일을 덮어쓸
     <value>전체</value>
   </data>
   <data name="LuaSync_FilterLocal" xml:space="preserve">
-    <value>로컬 전용</value>
+    <value>로컬</value>
   </data>
   <data name="LuaSync_FilterCloud" xml:space="preserve">
-    <value>클라우드 전용</value>
+    <value>클라우드</value>
   </data>
   <data name="LuaSync_FilterSynced" xml:space="preserve">
     <value>동기화됨</value>

@@ -70,11 +70,11 @@ public partial class LuaSyncPage : Page
         // 2. Chip status filter
         if (FilterLocalRadio?.IsChecked == true)
         {
-            filtered = filtered.Where(g => g.Status == LuaSyncStatus.LocalOnly);
+            filtered = filtered.Where(g => g.IsLocal);
         }
         else if (FilterCloudRadio?.IsChecked == true)
         {
-            filtered = filtered.Where(g => g.Status == LuaSyncStatus.CloudOnly);
+            filtered = filtered.Where(g => g.IsCloud);
         }
         else if (FilterSyncedRadio?.IsChecked == true)
         {
@@ -227,7 +227,7 @@ public partial class LuaSyncPage : Page
             }, _syncCts.Token));
 
             SetBusy(false);
-            ApplyFilter();
+            await LoadGamesAsync();
 
             MessageBox.Show(
                 successMessage(result),

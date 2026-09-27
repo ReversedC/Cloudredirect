@@ -2468,10 +2468,10 @@ Tem certeza?</value>
     <value>Todos</value>
   </data>
   <data name="LuaSync_FilterLocal" xml:space="preserve">
-    <value>Apenas Local</value>
+    <value>Local</value>
   </data>
   <data name="LuaSync_FilterCloud" xml:space="preserve">
-    <value>Apenas na Nuvem</value>
+    <value>Nuvem</value>
   </data>
   <data name="LuaSync_FilterSynced" xml:space="preserve">
     <value>Sincronizados</value>

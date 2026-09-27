@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -28,6 +29,7 @@ public class LuaGameItem : INotifyPropertyChanged
     private bool _isSelected;
     private bool _isLocal;
     private bool _isCloud;
+    private bool _isEncrypted;
     private string _gameName = "";
     private string? _headerUrl;
 
@@ -55,6 +57,12 @@ public class LuaGameItem : INotifyPropertyChanged
     {
         get => _isCloud;
         set { _isCloud = value; OnPropertyChanged(); UpdateStatus(); }
+    }
+
+    public bool IsEncrypted
+    {
+        get => _isEncrypted;
+        set { _isEncrypted = value; OnPropertyChanged(); }
     }
 
     public bool IsSelected
@@ -118,7 +126,8 @@ public class LuaGameItem : INotifyPropertyChanged
 
 /// <summary>
 /// Service for listing, encrypting, uploading, restoring, and deleting
-/// Steam plugin Lua files (.lua) to and from Cloud storage (Google Drive or Local Sync Folder).
+/// Steam plugin Lua files (.lua) to and from Cloud storage (Google Drive, Local Sync Folder,
+/// or existing cloud_redirect Lua archives).
 /// </summary>
 public static class LuaCloudSyncService
 {
@@ -139,14 +148,16 @@ public static class LuaCloudSyncService
     private record CloudFileInfo(string FileId, string FileName, long SizeBytes, DateTime? ModifiedUtc);
 
     /// <summary>
-    /// Loads all Lua games: scanning local stplug-in directory and remote cloud storage.
+    /// Loads all Lua games: scanning local stplug-in directory, local cloud storage cache (LuaManifest.json / LuaArchive.zip),
+    /// .sync_state, and remote cloud storage (Google Drive / Folder).
     /// Resolves Steam game titles and header poster URLs.
     /// </summary>
     public static async Task<List<LuaGameItem>> LoadLuaGamesAsync(CancellationToken ct = default)
     {
         var resultDict = new ConcurrentDictionary<uint, LuaGameItem>();
+        var steam = SteamDetector.FindSteamPath();
 
-        // 1. Scan Local Files
+        // 1. Scan Local Files in config/stplug-in/*.lua
         var localDir = GetStPluginDir();
         if (localDir != null && Directory.Exists(localDir))
         {
@@ -168,7 +179,126 @@ public static class LuaCloudSyncService
             }
         }
 
-        // 2. Scan Cloud Storage
+        // 2. Scan Existing Cloud Storage Cache (cloud_redirect/storage/*/0/LuaManifest.json & LuaArchive.zip)
+        if (!string.IsNullOrEmpty(steam) && Directory.Exists(steam))
+        {
+            var storageDir = Path.Combine(steam, "cloud_redirect", "storage");
+            if (Directory.Exists(storageDir))
+            {
+                foreach (var accountDir in Directory.GetDirectories(storageDir))
+                {
+                    var zeroDir = Path.Combine(accountDir, "0");
+                    var manifestPath = Path.Combine(zeroDir, "LuaManifest.json");
+                    var zipPath = Path.Combine(zeroDir, "LuaArchive.zip");
+
+                    if (File.Exists(manifestPath))
+                    {
+                        try
+                        {
+                            var json = File.ReadAllText(manifestPath);
+                            using var doc = JsonDocument.Parse(json);
+                            foreach (var prop in doc.RootElement.EnumerateObject())
+                            {
+                                bool isDel = prop.Value.TryGetProperty("del", out var d) && d.GetInt64() > 0;
+                                if (isDel) continue;
+
+                                var fname = prop.Name;
+                                if (uint.TryParse(Path.GetFileNameWithoutExtension(fname), out var appId))
+                                {
+                                    long size = prop.Value.TryGetProperty("size", out var s) ? s.GetInt64() : 0;
+                                    long mod = prop.Value.TryGetProperty("mod", out var m) ? m.GetInt64() : 0;
+                                    var modUtc = mod > 0 ? DateTimeOffset.FromUnixTimeSeconds(mod).UtcDateTime : (DateTime?)null;
+
+                                    if (resultDict.TryGetValue(appId, out var existing))
+                                    {
+                                        existing.IsCloud = true;
+                                        if (existing.CloudSizeBytes == 0) existing.CloudSizeBytes = size;
+                                        if (existing.CloudModifiedUtc == null) existing.CloudModifiedUtc = modUtc;
+                                        existing.CloudFileId ??= $"archive:{zipPath}:{fname}";
+                                    }
+                                    else
+                                    {
+                                        resultDict[appId] = new LuaGameItem
+                                        {
+                                            AppId = appId,
+                                            IsCloud = true,
+                                            CloudSizeBytes = size,
+                                            CloudModifiedUtc = modUtc,
+                                            CloudFileId = $"archive:{zipPath}:{fname}"
+                                        };
+                                    }
+                                }
+                            }
+                        }
+                        catch { }
+                    }
+                    else if (File.Exists(zipPath))
+                    {
+                        try
+                        {
+                            using var zip = ZipFile.OpenRead(zipPath);
+                            foreach (var entry in zip.Entries)
+                            {
+                                if (uint.TryParse(Path.GetFileNameWithoutExtension(entry.Name), out var appId))
+                                {
+                                    if (resultDict.TryGetValue(appId, out var existing))
+                                    {
+                                        existing.IsCloud = true;
+                                        if (existing.CloudSizeBytes == 0) existing.CloudSizeBytes = entry.Length;
+                                        if (existing.CloudModifiedUtc == null) existing.CloudModifiedUtc = entry.LastWriteTime.UtcDateTime;
+                                        existing.CloudFileId ??= $"archive:{zipPath}:{entry.Name}";
+                                    }
+                                    else
+                                    {
+                                        resultDict[appId] = new LuaGameItem
+                                        {
+                                            AppId = appId,
+                                            IsCloud = true,
+                                            CloudSizeBytes = entry.Length,
+                                            CloudModifiedUtc = entry.LastWriteTime.UtcDateTime,
+                                            CloudFileId = $"archive:{zipPath}:{entry.Name}"
+                                        };
+                                    }
+                                }
+                            }
+                        }
+                        catch { }
+                    }
+                }
+            }
+
+            // Also check .sync_state in config/stplug-in/.sync_state
+            var syncStatePath = Path.Combine(steam, "config", "stplug-in", ".sync_state");
+            if (File.Exists(syncStatePath))
+            {
+                try
+                {
+                    var lines = File.ReadAllLines(syncStatePath);
+                    for (int i = 1; i < lines.Length; i++)
+                    {
+                        var line = lines[i].Trim();
+                        if (uint.TryParse(Path.GetFileNameWithoutExtension(line), out var appId))
+                        {
+                            if (resultDict.TryGetValue(appId, out var existing))
+                            {
+                                existing.IsCloud = true;
+                            }
+                            else
+                            {
+                                resultDict[appId] = new LuaGameItem
+                                {
+                                    AppId = appId,
+                                    IsCloud = true
+                                };
+                            }
+                        }
+                    }
+                }
+                catch { }
+            }
+        }
+
+        // 3. Scan Remote Cloud Storage (EncryptedLua in Google Drive or Sync Folder)
         try
         {
             var cloudFiles = await ListCloudFilesAsync(ct);
@@ -180,6 +310,7 @@ public static class LuaCloudSyncService
                 if (resultDict.TryGetValue(appId, out var existing))
                 {
                     existing.IsCloud = true;
+                    existing.IsEncrypted = true;
                     existing.CloudFileId = cInfo.FileId;
                     existing.CloudSizeBytes = cInfo.SizeBytes;
                     existing.CloudModifiedUtc = cInfo.ModifiedUtc;
@@ -190,6 +321,7 @@ public static class LuaCloudSyncService
                     {
                         AppId = appId,
                         IsCloud = true,
+                        IsEncrypted = true,
                         CloudFileId = cInfo.FileId,
                         CloudSizeBytes = cInfo.SizeBytes,
                         CloudModifiedUtc = cInfo.ModifiedUtc
@@ -204,7 +336,7 @@ public static class LuaCloudSyncService
 
         var list = resultDict.Values.OrderBy(x => x.AppId).ToList();
 
-        // 3. Resolve metadata (Game Name and Header Poster) in batch from Steam store client
+        // 4. Resolve metadata (Game Name and Header Poster) in batch from Steam Store & local manifests
         var allAppIds = list.Select(x => x.AppId).Distinct().ToList();
         var storeDict = await SteamStoreClient.Shared.GetAppInfoAsync(allAppIds);
 
@@ -217,7 +349,9 @@ public static class LuaCloudSyncService
             }
             else
             {
-                item.GameName = $"App {item.AppId}";
+                // Fallback to local Steam appmanifest name
+                var localName = SteamDetector.GetGameName(steam, item.AppId);
+                item.GameName = !string.IsNullOrWhiteSpace(localName) ? localName : $"App {item.AppId}";
                 item.HeaderUrl = $"https://cdn.akamai.steamstatic.com/steam/apps/{item.AppId}/header.jpg";
             }
         }
@@ -301,6 +435,26 @@ public static class LuaCloudSyncService
                         }
                     }
                 }
+
+                // Also check sync folder archives if present
+                foreach (var z in Directory.GetFiles(syncPath, "LuaArchive.zip", SearchOption.AllDirectories))
+                {
+                    try
+                    {
+                        using var zip = ZipFile.OpenRead(z);
+                        foreach (var entry in zip.Entries)
+                        {
+                            if (uint.TryParse(Path.GetFileNameWithoutExtension(entry.Name), out var appId))
+                            {
+                                if (!dict.ContainsKey(appId))
+                                {
+                                    dict[appId] = new CloudFileInfo($"archive:{z}:{entry.Name}", entry.Name, entry.Length, entry.LastWriteTime.UtcDateTime);
+                                }
+                            }
+                        }
+                    }
+                    catch { }
+                }
             }
         }
 
@@ -308,7 +462,8 @@ public static class LuaCloudSyncService
     }
 
     /// <summary>
-    /// Encrypts and uploads the selected items to the Cloud provider.
+    /// Encrypts and uploads the selected items to the Cloud provider (AES-256)
+    /// and updates the local Lua storage archive and manifest.
     /// </summary>
     public static async Task<int> BackupLuaFilesAsync(
         IEnumerable<LuaGameItem> items,
@@ -323,13 +478,10 @@ public static class LuaCloudSyncService
         if (itemList.Count == 0) return 0;
 
         var config = SteamDetector.ReadConfig();
-        if (config == null)
-            throw new InvalidOperationException("No cloud provider configured.");
-
         int succeeded = 0;
         int total = itemList.Count;
 
-        if (config.Provider == "gdrive")
+        if (config?.Provider == "gdrive")
         {
             var tokenPath = config.TokenPath ?? Path.Combine(SteamDetector.GetConfigDir(), "google_tokens.json");
             var accessToken = await OAuthService.GetValidAccessTokenAsync("gdrive", tokenPath);
@@ -344,7 +496,6 @@ public static class LuaCloudSyncService
             if (string.IsNullOrEmpty(luaFolderId))
                 throw new InvalidOperationException("Failed to access cloud destination folder.");
 
-            // List existing files in destination to avoid duplicates
             var existingFiles = await ListDriveFolderFilesSimpleAsync(http, luaFolderId);
 
             for (int i = 0; i < total; i++)
@@ -361,7 +512,6 @@ public static class LuaCloudSyncService
 
                 string remoteName = $"{item.AppId}.crlua";
 
-                // If file already exists in cloud, delete old copy before upload
                 if (existingFiles.TryGetValue(remoteName, out var existingId))
                 {
                     try { await http.DeleteAsync($"https://www.googleapis.com/drive/v3/files/{existingId}", ct); } catch { }
@@ -371,13 +521,14 @@ public static class LuaCloudSyncService
                 if (ok)
                 {
                     item.IsCloud = true;
+                    item.IsEncrypted = true;
                     item.CloudSizeBytes = encryptedBytes.Length;
                     item.CloudModifiedUtc = DateTime.UtcNow;
                     succeeded++;
                 }
             }
         }
-        else if (config.IsFolder || config.IsLocal || !string.IsNullOrEmpty(config.SyncPath))
+        else if (config != null && (config.IsFolder || config.IsLocal || !string.IsNullOrEmpty(config.SyncPath)))
         {
             var syncPath = config.SyncPath ?? "";
             var cloudDir = Path.Combine(syncPath, CloudFolderName);
@@ -399,6 +550,7 @@ public static class LuaCloudSyncService
                 await File.WriteAllBytesAsync(destPath, encryptedBytes, ct);
 
                 item.IsCloud = true;
+                item.IsEncrypted = true;
                 item.CloudFileId = destPath;
                 item.CloudSizeBytes = encryptedBytes.Length;
                 item.CloudModifiedUtc = DateTime.UtcNow;
@@ -406,11 +558,20 @@ public static class LuaCloudSyncService
             }
         }
 
+        // Also update local LuaArchive.zip and LuaManifest.json so C++ core & Dashboard sync stays up-to-date
+        var steam = SteamDetector.FindSteamPath();
+        if (!string.IsNullOrEmpty(steam) && Directory.Exists(steam))
+        {
+            try { LuaSyncHelper.ManualBackup(steam); }
+            catch { }
+        }
+
         return succeeded;
     }
 
     /// <summary>
     /// Downloads, decrypts, and restores the selected items into local stplug-in directory.
+    /// Supports both new AES-256 .crlua files and existing LuaArchive.zip packages.
     /// </summary>
     public static async Task<int> RestoreLuaFilesAsync(
         IEnumerable<LuaGameItem> items,
@@ -427,76 +588,133 @@ public static class LuaCloudSyncService
         if (itemList.Count == 0) return 0;
 
         var config = SteamDetector.ReadConfig();
-        if (config == null)
-            throw new InvalidOperationException("No cloud provider configured.");
-
+        var steam = SteamDetector.FindSteamPath();
         int succeeded = 0;
         int total = itemList.Count;
 
-        if (config.Provider == "gdrive")
+        HttpClient? http = null;
+        if (config?.Provider == "gdrive")
         {
             var tokenPath = config.TokenPath ?? Path.Combine(SteamDetector.GetConfigDir(), "google_tokens.json");
             var accessToken = await OAuthService.GetValidAccessTokenAsync("gdrive", tokenPath);
-            if (string.IsNullOrEmpty(accessToken))
-                throw new InvalidOperationException("Google Drive authentication token expired.");
+            if (!string.IsNullOrEmpty(accessToken))
+            {
+                http = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
+                http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            }
+        }
 
-            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
-            http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-
+        try
+        {
             for (int i = 0; i < total; i++)
             {
                 ct.ThrowIfCancellationRequested();
                 var item = itemList[i];
                 progress?.Invoke(i + 1, total, item.GameName);
 
-                if (string.IsNullOrEmpty(item.CloudFileId)) continue;
+                var localPath = Path.Combine(localDir, $"{item.AppId}.lua");
+                bool restored = false;
 
-                var getUrl = $"https://www.googleapis.com/drive/v3/files/{item.CloudFileId}?alt=media";
-                var resp = await http.GetAsync(getUrl, ct);
-                if (resp.IsSuccessStatusCode)
+                // Case 1: Item is in a local or synced zip archive (archive:path:name)
+                if (!string.IsNullOrEmpty(item.CloudFileId) && item.CloudFileId.StartsWith("archive:"))
                 {
-                    byte[] encryptedBytes = await resp.Content.ReadAsByteArrayAsync(ct);
-                    byte[] plainBytes = LuaCrypto.Decrypt(encryptedBytes);
+                    var raw = item.CloudFileId.Substring("archive:".Length);
+                    var splitIdx = raw.LastIndexOf(':');
+                    string zipPath = splitIdx > 0 ? raw.Substring(0, splitIdx) : raw;
+                    string entryName = splitIdx > 0 ? raw.Substring(splitIdx + 1) : $"{item.AppId}.lua";
 
-                    var localPath = Path.Combine(localDir, $"{item.AppId}.lua");
-                    await File.WriteAllBytesAsync(localPath, plainBytes, ct);
+                    if (File.Exists(zipPath))
+                    {
+                        try
+                        {
+                            using var zip = ZipFile.OpenRead(zipPath);
+                            var entry = zip.GetEntry(entryName) ?? zip.GetEntry($"{item.AppId}.lua");
+                            if (entry != null)
+                            {
+                                entry.ExtractToFile(localPath, overwrite: true);
+                                restored = true;
+                            }
+                        }
+                        catch { }
+                    }
+                }
 
+                // Case 2: Item has a Google Drive File ID for encrypted .crlua
+                if (!restored && http != null && !string.IsNullOrEmpty(item.CloudFileId) && !item.CloudFileId.Contains(Path.DirectorySeparatorChar) && !item.CloudFileId.StartsWith("archive:"))
+                {
+                    try
+                    {
+                        var getUrl = $"https://www.googleapis.com/drive/v3/files/{item.CloudFileId}?alt=media";
+                        var resp = await http.GetAsync(getUrl, ct);
+                        if (resp.IsSuccessStatusCode)
+                        {
+                            byte[] encryptedBytes = await resp.Content.ReadAsByteArrayAsync(ct);
+                            byte[] plainBytes = LuaCrypto.Decrypt(encryptedBytes);
+                            await File.WriteAllBytesAsync(localPath, plainBytes, ct);
+                            restored = true;
+                        }
+                    }
+                    catch { }
+                }
+
+                // Case 3: Item is a local file path to .crlua
+                if (!restored && !string.IsNullOrEmpty(item.CloudFileId) && File.Exists(item.CloudFileId) && item.CloudFileId.EndsWith(".crlua", StringComparison.OrdinalIgnoreCase))
+                {
+                    try
+                    {
+                        byte[] encryptedBytes = await File.ReadAllBytesAsync(item.CloudFileId, ct);
+                        byte[] plainBytes = LuaCrypto.Decrypt(encryptedBytes);
+                        await File.WriteAllBytesAsync(localPath, plainBytes, ct);
+                        restored = true;
+                    }
+                    catch { }
+                }
+
+                // Case 4: Fallback to searching any LuaArchive.zip in storage
+                if (!restored && !string.IsNullOrEmpty(steam))
+                {
+                    var storageBase = Path.Combine(steam, "cloud_redirect", "storage");
+                    if (Directory.Exists(storageBase))
+                    {
+                        var zips = Directory.GetFiles(storageBase, "LuaArchive.zip", SearchOption.AllDirectories);
+                        foreach (var z in zips)
+                        {
+                            try
+                            {
+                                using var zip = ZipFile.OpenRead(z);
+                                var entry = zip.GetEntry($"{item.AppId}.lua");
+                                if (entry != null)
+                                {
+                                    entry.ExtractToFile(localPath, overwrite: true);
+                                    restored = true;
+                                    break;
+                                }
+                            }
+                            catch { }
+                        }
+                    }
+                }
+
+                if (restored)
+                {
+                    var fi = new FileInfo(localPath);
                     item.IsLocal = true;
-                    item.LocalSizeBytes = plainBytes.Length;
-                    item.LocalModifiedUtc = DateTime.UtcNow;
+                    item.LocalSizeBytes = fi.Exists ? fi.Length : 0;
+                    item.LocalModifiedUtc = fi.Exists ? fi.LastWriteTimeUtc : DateTime.UtcNow;
                     succeeded++;
                 }
             }
         }
-        else if (config.IsFolder || config.IsLocal || !string.IsNullOrEmpty(config.SyncPath))
+        finally
         {
-            for (int i = 0; i < total; i++)
-            {
-                ct.ThrowIfCancellationRequested();
-                var item = itemList[i];
-                progress?.Invoke(i + 1, total, item.GameName);
-
-                if (string.IsNullOrEmpty(item.CloudFileId) || !File.Exists(item.CloudFileId))
-                    continue;
-
-                byte[] encryptedBytes = await File.ReadAllBytesAsync(item.CloudFileId, ct);
-                byte[] plainBytes = LuaCrypto.Decrypt(encryptedBytes);
-
-                var localPath = Path.Combine(localDir, $"{item.AppId}.lua");
-                await File.WriteAllBytesAsync(localPath, plainBytes, ct);
-
-                item.IsLocal = true;
-                item.LocalSizeBytes = plainBytes.Length;
-                item.LocalModifiedUtc = DateTime.UtcNow;
-                succeeded++;
-            }
+            http?.Dispose();
         }
 
         return succeeded;
     }
 
     /// <summary>
-    /// Deletes the selected Lua encrypted backups from the cloud.
+    /// Deletes the selected Lua backups from the cloud (Google Drive, folder, and local storage archives).
     /// </summary>
     public static async Task<int> DeleteCloudLuaFilesAsync(
         IEnumerable<LuaGameItem> items,
@@ -507,34 +725,131 @@ public static class LuaCloudSyncService
         if (itemList.Count == 0) return 0;
 
         var config = SteamDetector.ReadConfig();
-        if (config == null) return 0;
-
+        var steam = SteamDetector.FindSteamPath();
         int succeeded = 0;
         int total = itemList.Count;
 
-        if (config.Provider == "gdrive")
+        HttpClient? http = null;
+        if (config?.Provider == "gdrive")
         {
             var tokenPath = config.TokenPath ?? Path.Combine(SteamDetector.GetConfigDir(), "google_tokens.json");
             var accessToken = await OAuthService.GetValidAccessTokenAsync("gdrive", tokenPath);
-            if (string.IsNullOrEmpty(accessToken))
-                throw new InvalidOperationException("Google Drive authentication token expired.");
+            if (!string.IsNullOrEmpty(accessToken))
+            {
+                http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+                http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            }
+        }
 
-            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
-            http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-
+        try
+        {
             for (int i = 0; i < total; i++)
             {
                 ct.ThrowIfCancellationRequested();
                 var item = itemList[i];
                 progress?.Invoke(i + 1, total, item.GameName);
 
-                if (string.IsNullOrEmpty(item.CloudFileId)) continue;
+                bool deleted = false;
 
-                var delUrl = $"https://www.googleapis.com/drive/v3/files/{item.CloudFileId}";
-                var resp = await http.DeleteAsync(delUrl, ct);
-                if (resp.IsSuccessStatusCode)
+                // 1. Delete Google Drive encrypted file if present
+                if (http != null && !string.IsNullOrEmpty(item.CloudFileId) && !item.CloudFileId.Contains(Path.DirectorySeparatorChar) && !item.CloudFileId.StartsWith("archive:"))
+                {
+                    try
+                    {
+                        var delUrl = $"https://www.googleapis.com/drive/v3/files/{item.CloudFileId}";
+                        var resp = await http.DeleteAsync(delUrl, ct);
+                        if (resp.IsSuccessStatusCode) deleted = true;
+                    }
+                    catch { }
+                }
+
+                // 2. Delete local encrypted .crlua file if present
+                if (!string.IsNullOrEmpty(item.CloudFileId) && File.Exists(item.CloudFileId) && item.CloudFileId.EndsWith(".crlua", StringComparison.OrdinalIgnoreCase))
+                {
+                    try
+                    {
+                        File.Delete(item.CloudFileId);
+                        deleted = true;
+                    }
+                    catch { }
+                }
+
+                // 3. Remove entry from LuaArchive.zip and LuaManifest.json in cloud_redirect/storage
+                if (!string.IsNullOrEmpty(steam) && Directory.Exists(steam))
+                {
+                    var storageBase = Path.Combine(steam, "cloud_redirect", "storage");
+                    if (Directory.Exists(storageBase))
+                    {
+                        foreach (var acct in Directory.GetDirectories(storageBase))
+                        {
+                            var zeroDir = Path.Combine(acct, "0");
+                            var zipPath = Path.Combine(zeroDir, "LuaArchive.zip");
+                            var manifestPath = Path.Combine(zeroDir, "LuaManifest.json");
+
+                            if (File.Exists(zipPath))
+                            {
+                                try
+                                {
+                                    using var zip = ZipFile.Open(zipPath, ZipArchiveMode.Update);
+                                    var entry = zip.GetEntry($"{item.AppId}.lua");
+                                    if (entry != null)
+                                    {
+                                        entry.Delete();
+                                        deleted = true;
+                                    }
+                                }
+                                catch { }
+                            }
+
+                            if (File.Exists(manifestPath))
+                            {
+                                try
+                                {
+                                    var json = File.ReadAllText(manifestPath);
+                                    var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+                                    if (dict != null && dict.Remove($"{item.AppId}.lua"))
+                                    {
+                                        File.WriteAllText(manifestPath, JsonSerializer.Serialize(dict, new JsonSerializerOptions { WriteIndented = true }));
+                                        deleted = true;
+                                    }
+                                }
+                                catch { }
+                            }
+                        }
+                    }
+
+                    // Remove from .sync_state
+                    var syncStatePath = Path.Combine(steam, "config", "stplug-in", ".sync_state");
+                    if (File.Exists(syncStatePath))
+                    {
+                        try
+                        {
+                            var lines = File.ReadAllLines(syncStatePath);
+                            var newLines = lines.Where(l => !string.Equals(l.Trim(), $"{item.AppId}.lua", StringComparison.OrdinalIgnoreCase)).ToList();
+                            if (newLines.Count < lines.Length)
+                            {
+                                File.WriteAllLines(syncStatePath, newLines);
+                                deleted = true;
+                            }
+                        }
+                        catch { }
+                    }
+                }
+
+                // 4. Remove from folder provider sync path if configured
+                if (config != null && !string.IsNullOrEmpty(config.SyncPath) && Directory.Exists(config.SyncPath))
+                {
+                    var crlua = Path.Combine(config.SyncPath, CloudFolderName, $"{item.AppId}.crlua");
+                    if (File.Exists(crlua))
+                    {
+                        try { File.Delete(crlua); deleted = true; } catch { }
+                    }
+                }
+
+                if (deleted || !string.IsNullOrEmpty(item.CloudFileId))
                 {
                     item.IsCloud = false;
+                    item.IsEncrypted = false;
                     item.CloudFileId = null;
                     item.CloudSizeBytes = 0;
                     item.CloudModifiedUtc = null;
@@ -542,24 +857,9 @@ public static class LuaCloudSyncService
                 }
             }
         }
-        else if (config.IsFolder || config.IsLocal || !string.IsNullOrEmpty(config.SyncPath))
+        finally
         {
-            for (int i = 0; i < total; i++)
-            {
-                ct.ThrowIfCancellationRequested();
-                var item = itemList[i];
-                progress?.Invoke(i + 1, total, item.GameName);
-
-                if (!string.IsNullOrEmpty(item.CloudFileId) && File.Exists(item.CloudFileId))
-                {
-                    File.Delete(item.CloudFileId);
-                    item.IsCloud = false;
-                    item.CloudFileId = null;
-                    item.CloudSizeBytes = 0;
-                    item.CloudModifiedUtc = null;
-                    succeeded++;
-                }
-            }
+            http?.Dispose();
         }
 
         return succeeded;

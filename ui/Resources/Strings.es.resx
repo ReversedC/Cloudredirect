@@ -2463,10 +2463,10 @@ Esto puede causar pérdida de datos en algunos casos.
     <value>Todos</value>
   </data>
   <data name="LuaSync_FilterLocal" xml:space="preserve">
-    <value>Solo locales</value>
+    <value>Local</value>
   </data>
   <data name="LuaSync_FilterCloud" xml:space="preserve">
-    <value>Solo en la nube</value>
+    <value>Nube</value>
   </data>
   <data name="LuaSync_FilterSynced" xml:space="preserve">
     <value>Sincronizados</value>

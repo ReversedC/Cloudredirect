@@ -2384,10 +2384,10 @@ Fail can be restored from the Pulihkan tab. Continue?</value>
     <value>Semua</value>
   </data>
   <data name="LuaSync_FilterLocal" xml:space="preserve">
-    <value>Tempatan Sahaja</value>
+    <value>Tempatan</value>
   </data>
   <data name="LuaSync_FilterCloud" xml:space="preserve">
-    <value>Awan Sahaja</value>
+    <value>Awan</value>
   </data>
   <data name="LuaSync_FilterSynced" xml:space="preserve">
     <value>Disegerakkan</value>

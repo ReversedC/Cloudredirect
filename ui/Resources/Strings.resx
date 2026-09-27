@@ -2516,10 +2516,10 @@ Are you sure?</value>
     <value>All</value>
   </data>
   <data name="LuaSync_FilterLocal" xml:space="preserve">
-    <value>Local Only</value>
+    <value>Local</value>
   </data>
   <data name="LuaSync_FilterCloud" xml:space="preserve">
-    <value>Cloud Only</value>
+    <value>Cloud</value>
   </data>
   <data name="LuaSync_FilterSynced" xml:space="preserve">
     <value>Synced</value>

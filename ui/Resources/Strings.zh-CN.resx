@@ -2489,10 +2489,10 @@
     <value>全部</value>
   </data>
   <data name="LuaSync_FilterLocal" xml:space="preserve">
-    <value>仅本地</value>
+    <value>本地</value>
   </data>
   <data name="LuaSync_FilterCloud" xml:space="preserve">
-    <value>仅云端</value>
+    <value>云端</value>
   </data>
   <data name="LuaSync_FilterSynced" xml:space="preserve">
     <value>已同步</value>
