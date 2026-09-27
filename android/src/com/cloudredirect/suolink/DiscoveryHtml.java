@@ -32,6 +32,18 @@ public class DiscoveryHtml {
 "    .logo-title { font-size: 26px; font-weight: 800; color: #fff; letter-spacing: 1px; }" +
 "    .logo-title span { color: #00d2ff; }" +
 "    .subtitle { color: #94a3b8; font-size: 13px; max-width: 440px; line-height: 1.4; margin-bottom: 18px; }" +
+"    #connecting-banner {" +
+"      display: none;" +
+"      width: 100%; max-width: 360px;" +
+"      background: rgba(0, 210, 255, 0.15);" +
+"      border: 1px solid #00d2ff;" +
+"      color: #00d2ff;" +
+"      font-size: 13px; font-weight: 700;" +
+"      padding: 10px 14px; border-radius: 10px;" +
+"      margin-bottom: 16px;" +
+"      box-shadow: 0 0 15px rgba(0, 210, 255, 0.2);" +
+"      word-break: break-all;" +
+"    }" +
 "    #update-banner {" +
 "      display: none;" +
 "      width: 100%; max-width: 360px;" +
@@ -99,6 +111,8 @@ public class DiscoveryHtml {
 "    <div class='logo-title'>SUO <span>LINK</span></div>" +
 "  </div>" +
 "  <p class='subtitle'>Steam Link &amp; GameHub Remote Play for CloudRedirect.<br>Scan PC screen to connect in 1 second.</p>" +
+"  <!-- CONNECTING BANNER -->" +
+"  <div id='connecting-banner'>🚀 Connecting to PC...</div>" +
 "  <!-- AUTO UPDATE BANNER -->" +
 "  <div id='update-banner'>⬆️ New SUO Link update downloading...</div>" +
 "  <!-- 1-TAP QR CODE SCANNER BUTTON -->" +
@@ -127,6 +141,13 @@ public class DiscoveryHtml {
 "    function connectUrl(url) {" +
 "      if (!url) return;" +
 "      url = url.trim();" +
+"      var input = document.getElementById('manual-ip');" +
+"      if (input) input.value = url;" +
+"      var banner = document.getElementById('connecting-banner');" +
+"      if (banner) {" +
+"        banner.innerText = '🚀 Connecting to ' + url + '...';" +
+"        banner.style.display = 'block';" +
+"      }" +
 "      try {" +
 "        if (window.SuoNative && window.SuoNative.vibrate) window.SuoNative.vibrate(40);" +
 "        if (window.SuoNative && window.SuoNative.connectSmart) {" +
@@ -165,6 +186,16 @@ public class DiscoveryHtml {
 "      } catch (e) {}" +
 "      window.location.href = 'suolink://gallery';" +
 "    }" +
+"    window.setScannedUrl = function(url) {" +
+"      if (!url) return;" +
+"      var input = document.getElementById('manual-ip');" +
+"      if (input) input.value = url;" +
+"      var banner = document.getElementById('connecting-banner');" +
+"      if (banner) {" +
+"        banner.innerText = '✓ Scanned: ' + url + '\\n🚀 Connecting...';" +
+"        banner.style.display = 'block';" +
+"      }" +
+"    };" +
 "    window.onHostDiscovered = function(name, ip, port, auth, tunnel) {" +
 "      var fullUrl = 'http://' + ip + ':' + port + '/?auth=' + auth;" +
 "      if (tunnel) fullUrl += '&tunnel=' + encodeURIComponent(tunnel);" +

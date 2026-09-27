@@ -11,8 +11,8 @@ public class LoadUrlRunnable implements Runnable {
 
     @Override
     public void run() {
-        if (!activity.isConnected()) {
-            activity.loadHostUrl(url);
+        if (activity != null && url != null && !url.trim().isEmpty()) {
+            activity.loadHostUrl(url.trim());
         }
     }
 }

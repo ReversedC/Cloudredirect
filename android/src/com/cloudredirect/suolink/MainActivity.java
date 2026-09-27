@@ -190,8 +190,15 @@ public class MainActivity extends Activity {
         webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
     }
 
+    public WebView getWebView() { return webView; }
+
     public void connectSmart(String inputUrl) {
-        if (inputUrl == null || inputUrl.isEmpty()) return;
+        if (inputUrl == null || inputUrl.trim().isEmpty()) return;
+        inputUrl = inputUrl.trim();
+
+        if (!inputUrl.startsWith("http://") && !inputUrl.startsWith("https://")) {
+            inputUrl = "http://" + inputUrl;
+        }
 
         String lanUrl = inputUrl;
         String tunnelUrl = null;
@@ -213,12 +220,30 @@ public class MainActivity extends Activity {
         }
 
         saveUrls(lanUrl, tunnelUrl);
+
+        String displayUrl = lanUrl != null ? lanUrl : tunnelUrl;
+        if (displayUrl != null) {
+            String js = "var input = document.getElementById('manual-ip'); if(input){ input.value = '" 
+                    + displayUrl.replace("'", "\\'") + "'; }";
+            webView.post(new EvalJsRunnable(webView, js));
+        }
+
         new Thread(new SmartConnectRunnable(this, lanUrl, tunnelUrl)).start();
     }
 
     public void loadHostUrl(String url) {
-        if (url == null || url.isEmpty()) return;
+        if (url == null || url.trim().isEmpty()) return;
+        url = url.trim();
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            url = "http://" + url;
+        }
+        connected = false;
         saveUrls(url, null);
+
+        String js = "var input = document.getElementById('manual-ip'); if(input){ input.value = '" 
+                + url.replace("'", "\\'") + "'; }";
+        webView.post(new EvalJsRunnable(webView, js));
+
         webView.loadUrl(url);
     }
 
@@ -367,8 +392,13 @@ public class MainActivity extends Activity {
         // 1. Handle in-app ScannerActivity result
         if (requestCode == REQUEST_CODE_SCANNER && resultCode == Activity.RESULT_OK && data != null) {
             String scannedUrl = data.getStringExtra(ScannerActivity.EXTRA_SCANNED_URL);
-            if (scannedUrl != null && !scannedUrl.isEmpty()) {
-                connectSmart(scannedUrl);
+            if (scannedUrl != null && !scannedUrl.trim().isEmpty()) {
+                final String target = scannedUrl.trim();
+                String js = "var input = document.getElementById('manual-ip'); if(input){ input.value = '" 
+                        + target.replace("'", "\\'") + "'; }";
+                webView.post(new EvalJsRunnable(webView, js));
+                runOnUiThread(new ShowToastRunnable(this, "Connecting to PC..."));
+                connectSmart(target);
             }
             return;
         }

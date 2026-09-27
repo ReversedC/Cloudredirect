@@ -39,7 +39,11 @@ public class SuoWebViewClient extends WebViewClient {
     @Override
     public void onPageFinished(WebView view, String url) {
         super.onPageFinished(view, url);
-        if (url != null && !url.equals("about:blank") && !url.startsWith("data:") && !url.contains("suolink.local") && !url.contains("localhost")) {
+        if (url != null && !url.equals("about:blank") 
+                && !url.startsWith("data:") 
+                && !url.startsWith("file://")
+                && !url.contains("suolink.local") 
+                && !url.contains("localhost")) {
             activity.setConnected(true);
         }
     }
