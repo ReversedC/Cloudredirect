@@ -1,10 +1,17 @@
 package com.cloudredirect.suolink;
 
+import android.Manifest;
 import android.app.Activity;
+import android.app.DownloadManager;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Vibrator;
 import android.view.InputDevice;
 import android.view.KeyEvent;
@@ -12,14 +19,15 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
-import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.widget.FrameLayout;
 
 public class MainActivity extends Activity {
 
-    private static final String PREF_KEY_LAST_HOST = "last_host_url";
+    private static final String PREFS_NAME = "suo_link_prefs";
+    private static final String PREF_KEY_LAN_URL = "last_lan_url";
+    private static final String PREF_KEY_TUNNEL_URL = "last_tunnel_url";
 
     private WebView webView;
     private Vibrator vibrator;
@@ -27,10 +35,28 @@ public class MainActivity extends Activity {
     private boolean connected = false;
     private Thread beaconListenerThread;
     private volatile boolean running = true;
+    private DownloadCompleteReceiver downloadReceiver;
 
     public boolean isConnected() { return connected; }
     public void setConnected(boolean val) { this.connected = val; }
     public boolean isRunning() { return running; }
+
+    public String getSavedLanUrl() {
+        return prefs != null ? prefs.getString(PREF_KEY_LAN_URL, null) : null;
+    }
+
+    public String getSavedTunnelUrl() {
+        return prefs != null ? prefs.getString(PREF_KEY_TUNNEL_URL, null) : null;
+    }
+
+    public void saveUrls(String lan, String tunnel) {
+        if (prefs != null) {
+            SharedPreferences.Editor ed = prefs.edit();
+            if (lan != null && !lan.isEmpty()) ed.putString(PREF_KEY_LAN_URL, lan);
+            if (tunnel != null && !tunnel.isEmpty()) ed.putString(PREF_KEY_TUNNEL_URL, tunnel);
+            ed.apply();
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,8 +69,19 @@ public class MainActivity extends Activity {
 
         setImmersiveMode();
 
-        prefs = getSharedPreferences("suo_link_prefs", MODE_PRIVATE);
+        prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+
+        // Request camera permission for instant QR scanning
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.CAMERA}, 101);
+            }
+        }
+
+        // Register download receiver for auto-update
+        downloadReceiver = new DownloadCompleteReceiver();
+        registerReceiver(downloadReceiver, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
 
         FrameLayout rootLayout = new FrameLayout(this);
         rootLayout.setBackgroundColor(0xFF0B0E14);
@@ -59,9 +96,15 @@ public class MainActivity extends Activity {
 
         setContentView(rootLayout);
 
-        String lastHost = prefs.getString(PREF_KEY_LAST_HOST, null);
-        if (lastHost != null && !lastHost.isEmpty()) {
-            loadHostUrl(lastHost);
+        // Auto-update check on every app launch
+        new Thread(new CheckUpdateRunnable(this)).start();
+
+        // Check if we have saved connection endpoints
+        String savedLan = getSavedLanUrl();
+        String savedTunnel = getSavedTunnelUrl();
+
+        if ((savedLan != null && !savedLan.isEmpty()) || (savedTunnel != null && !savedTunnel.isEmpty())) {
+            new Thread(new SmartConnectRunnable(this, savedLan, savedTunnel)).start();
         } else {
             showDiscoveryPage();
         }
@@ -81,38 +124,100 @@ public class MainActivity extends Activity {
         ws.setUseWideViewPort(true);
         ws.setLoadWithOverviewMode(true);
 
-        wv.setWebChromeClient(new WebChromeClient());
+        wv.setWebChromeClient(new SuoWebChromeClient());
         wv.setWebViewClient(new SuoWebViewClient(this));
-        wv.addJavascriptInterface(new SuoNativeBridge(vibrator), "SuoNative");
+        wv.addJavascriptInterface(new SuoNativeBridge(this, vibrator), "SuoNative");
     }
 
-    private void showDiscoveryPage() {
-        String html = "<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width, initial-scale=1.0'>" +
-                "<style>body{background:#0b0e14;color:#f1f5f9;font-family:sans-serif;display:flex;flex-direction:column;" +
-                "align-items:center;justify-content:center;height:100vh;margin:0;padding:20px;box-sizing:border-box;text-align:center;}" +
-                "h1{color:#00d2ff;font-size:28px;margin-bottom:10px;}" +
-                "p{color:#94a3b8;font-size:14px;max-width:400px;line-height:1.5;}" +
-                ".pulse{width:60px;height:60px;border-radius:50%;border:3px solid #00d2ff;margin:20px 0;animation:pulse 1.5s infinite;}" +
-                "@keyframes pulse{0%{transform:scale(0.8);opacity:0.3;}50%{transform:scale(1.2);opacity:1;}100%{transform:scale(0.8);opacity:0.3;}}" +
-                ".input-box{margin-top:20px;display:flex;gap:10px;}" +
-                "input{background:#151b24;border:1px solid #222d3d;color:#fff;padding:10px 14px;border-radius:8px;outline:none;font-size:14px;}" +
-                "button{background:linear-gradient(135deg,#00d2ff,#38ef7d);color:#000;border:none;font-weight:bold;padding:10px 20px;border-radius:8px;cursor:pointer;}" +
-                "</style></head><body>" +
-                "<h1>SUO LINK</h1>" +
-                "<div class='pulse'></div>" +
-                "<p>Searching for CloudRedirect Host PC on Wi-Fi... (Make sure CloudRedirect is open on your PC)</p>" +
-                "<div class='input-box'>" +
-                "<input type='text' id='ip' placeholder='192.168.1.xxx:8585'>" +
-                "<button onclick=\"connectManual()\">CONNECT</button>" +
-                "</div>" +
-                "<script>" +
-                "function connectManual(){" +
-                "  var val = document.getElementById('ip').value.trim();" +
-                "  if(val){ if(!val.startsWith('http')) val = 'http://' + val; window.location.href = val; }" +
-                "}" +
-                "</script></body></html>";
+    public void showDiscoveryPage() {
+        connected = false;
+        String html = DiscoveryHtml.getHtml(getSavedLanUrl(), getSavedTunnelUrl());
+        webView.loadDataWithBaseURL("file:///android_asset/", html, "text/html", "UTF-8", null);
+    }
 
+    public void showError(String failingUrl, String desc) {
+        connected = false;
+        String html = DiscoveryHtml.getErrorHtml(failingUrl, desc);
         webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
+    }
+
+    public void connectSmart(String inputUrl) {
+        if (inputUrl == null || inputUrl.isEmpty()) return;
+
+        String lanUrl = inputUrl;
+        String tunnelUrl = null;
+
+        // Parse smart URL: e.g. http://192.168.1.19:8585/?auth=abc&tunnel=https%3A%2F%2Fxxx.trycloudflare.com
+        if (inputUrl.contains("tunnel=")) {
+            try {
+                Uri parsed = Uri.parse(inputUrl);
+                String extractedTunnel = parsed.getQueryParameter("tunnel");
+                if (extractedTunnel != null && !extractedTunnel.isEmpty()) {
+                    tunnelUrl = extractedTunnel;
+                }
+                // Strip the tunnel query param from the direct LAN URL
+                lanUrl = inputUrl.replaceAll("[?&]tunnel=[^&]*", "");
+            } catch (Exception ignored) { }
+        } else if (inputUrl.contains("trycloudflare.com")) {
+            tunnelUrl = inputUrl;
+            lanUrl = null;
+        }
+
+        saveUrls(lanUrl, tunnelUrl);
+        new Thread(new SmartConnectRunnable(this, lanUrl, tunnelUrl)).start();
+    }
+
+    public void loadHostUrl(String url) {
+        if (url == null || url.isEmpty()) return;
+        saveUrls(url, null);
+        webView.loadUrl(url);
+    }
+
+    public void onBeaconReceived(String name, String ip, int port, String auth, String tunnel, int verCode, String ver) {
+        // Feed discovered host into discovery HTML
+        String js = String.format("if(window.onHostDiscovered){ window.onHostDiscovered('%s','%s',%d,'%s','%s'); }",
+                name, ip, port, auth, tunnel);
+        webView.post(new EvalJsRunnable(webView, js));
+
+        // If not connected and discovery page is open, auto connect
+        if (!connected) {
+            String smartUrl = "http://" + ip + ":" + port + "/?auth=" + auth;
+            if (tunnel != null && !tunnel.isEmpty()) {
+                smartUrl += "&tunnel=" + Uri.encode(tunnel);
+            }
+            connectSmart(smartUrl);
+        }
+
+        // Trigger update check if beacon reports newer version
+        int localVerCode = 1;
+        try {
+            localVerCode = getPackageManager().getPackageInfo(getPackageName(), 0).versionCode;
+        } catch (Exception ignored) { }
+
+        if (verCode > localVerCode) {
+            String apkUrl = "http://" + ip + ":" + port + "/download/suo-link.apk";
+            onUpdateAvailable(ver, apkUrl);
+        }
+    }
+
+    public void onUpdateAvailable(String version, String apkDownloadUrl) {
+        // Show in-app banner
+        String js = "if(window.showUpdateNotice){ window.showUpdateNotice('⬆️ Downloading SUO Link v" + version + "...'); }";
+        webView.post(new EvalJsRunnable(webView, js));
+
+        // Download APK via system DownloadManager
+        try {
+            DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+            DownloadManager.Request req = new DownloadManager.Request(Uri.parse(apkDownloadUrl));
+            req.setTitle("SUO Link Update (" + version + ")");
+            req.setDescription("Downloading latest SUO Link...");
+            req.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+            req.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "SUO-Link.apk");
+            req.setMimeType("application/vnd.android.package-archive");
+            dm.enqueue(req);
+        } catch (Exception ex) {
+            // Handle download exception
+        }
     }
 
     private void startBeaconDiscovery() {
@@ -121,19 +226,12 @@ public class MainActivity extends Activity {
         beaconListenerThread.start();
     }
 
-    public void loadHostUrl(String url) {
-        prefs.edit().putString(PREF_KEY_LAST_HOST, url).apply();
-        webView.loadUrl(url);
-    }
-
     @Override
     public boolean dispatchGenericMotionEvent(MotionEvent event) {
         if ((event.getSource() & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK &&
                 event.getAction() == MotionEvent.ACTION_MOVE) {
             float lx = event.getAxisValue(MotionEvent.AXIS_X);
             float ly = event.getAxisValue(MotionEvent.AXIS_Y);
-            float rx = event.getAxisValue(MotionEvent.AXIS_Z);
-            float ry = event.getAxisValue(MotionEvent.AXIS_RZ);
 
             String js = String.format("if(window.sendInput){ window.sendInput({type:'stick_vector', x:%f, y:%f}); }", lx, ly);
             webView.post(new EvalJsRunnable(webView, js));
@@ -199,6 +297,9 @@ public class MainActivity extends Activity {
     protected void onDestroy() {
         running = false;
         if (beaconListenerThread != null) beaconListenerThread.interrupt();
+        if (downloadReceiver != null) {
+            try { unregisterReceiver(downloadReceiver); } catch (Exception ignored) { }
+        }
         super.onDestroy();
     }
 }

@@ -29,12 +29,15 @@ public class BeaconRunnable implements Runnable {
                 try {
                     JSONObject json = new JSONObject(msg);
                     if ("SUO_LINK_HOST".equals(json.optString("service"))) {
+                        String name = json.optString("name", "CloudRedirect PC");
                         String ip = json.optString("ip");
                         int port = json.optInt("port", 8585);
                         String auth = json.optString("auth");
-                        String url = "http://" + ip + ":" + port + "/?auth=" + auth;
+                        String tunnel = json.optString("tunnel", "");
+                        int verCode = json.optInt("versionCode", 1);
+                        String ver = json.optString("version", "1.0.0");
 
-                        activity.runOnUiThread(new LoadUrlRunnable(activity, url));
+                        activity.runOnUiThread(new OnBeaconDiscoveredRunnable(activity, name, ip, port, auth, tunnel, verCode, ver));
                     }
                 } catch (Exception ignored) { }
             }

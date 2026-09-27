@@ -48,9 +48,24 @@ public sealed class RemotePlayServer : IDisposable
     public string PairingToken { get; private set; } = Guid.NewGuid().ToString("N")[..8];
     public bool IsRunning => _listener != null;
     public int ConnectedClientsCount { get; private set; }
+    public string? TunnelUrl => RemoteTunnelService.Instance.TunnelUrl;
+    public string SmartConnectUrl
+    {
+        get
+        {
+            string? tunnel = RemoteTunnelService.Instance.TunnelUrl;
+            if (!string.IsNullOrEmpty(tunnel))
+            {
+                return $"{ServerUrl}&tunnel={Uri.EscapeDataString(tunnel)}";
+            }
+            return ServerUrl;
+        }
+    }
 
     public event Action<string>? OnLog;
     public event Action? OnStateChanged;
+
+    private void OnTunnelStateChanged() => OnStateChanged?.Invoke();
 
     public bool Start(int port = DefaultPort)
     {
@@ -68,6 +83,11 @@ public sealed class RemotePlayServer : IDisposable
 
             // Start screen capture engine
             ScreenCaptureService.Instance.Start();
+
+            // Start automated multi-network tunnel & UPnP in background
+            RemoteTunnelService.Instance.OnStateChanged -= OnTunnelStateChanged;
+            RemoteTunnelService.Instance.OnStateChanged += OnTunnelStateChanged;
+            _ = RemoteTunnelService.Instance.StartAsync(Port, PairingToken);
 
             _listenTask = Task.Run(() => AcceptLoopAsync(_cts.Token));
             _beaconTask = Task.Run(() => BeaconLoopAsync(_cts.Token));
@@ -93,6 +113,8 @@ public sealed class RemotePlayServer : IDisposable
         _udpBeacon = null;
 
         ScreenCaptureService.Instance.Stop();
+        RemoteTunnelService.Instance.Stop();
+        RemoteTunnelService.Instance.OnStateChanged -= OnTunnelStateChanged;
 
         Log("SUO Link Server stopped.");
         OnStateChanged?.Invoke();
@@ -138,7 +160,10 @@ public sealed class RemotePlayServer : IDisposable
                     ip = LanIp,
                     port = Port,
                     auth = PairingToken,
-                    game = ActiveGameTrackerService.CurrentGame?.Name ?? ""
+                    game = ActiveGameTrackerService.CurrentGame?.Name ?? "",
+                    tunnel = RemoteTunnelService.Instance.TunnelUrl ?? "",
+                    version = "1.1.0",
+                    versionCode = 2
                 };
 
                 byte[] bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(beacon));
@@ -236,6 +261,34 @@ public sealed class RemotePlayServer : IDisposable
                 if (method == "GET" && (path == "/download/suo-link.apk" || path == "/suo-link.apk"))
                 {
                     await ServeApkAsync(stream, cancel);
+                    return;
+                }
+
+                // Route: APK Version Check (for SUO Link APK auto-update on launch)
+                if (method == "GET" && path == "/api/version")
+                {
+                    var ver = new
+                    {
+                        version = "1.1.0",
+                        versionCode = 2,
+                        apkUrl = "/download/suo-link.apk",
+                        tunnelUrl = RemoteTunnelService.Instance.TunnelUrl ?? ""
+                    };
+                    await SendJsonResponseAsync(stream, JsonSerializer.Serialize(ver), cancel);
+                    return;
+                }
+
+                // Route: Remote Tunnel & Multi-Network Status
+                if (method == "GET" && path == "/api/tunnel")
+                {
+                    var tunnelInfo = new
+                    {
+                        tunnelUrl = RemoteTunnelService.Instance.TunnelUrl,
+                        publicWanIp = RemoteTunnelService.Instance.PublicWanIp,
+                        isUpnpMapped = RemoteTunnelService.Instance.IsUpnpMapped,
+                        isTunnelActive = RemoteTunnelService.Instance.IsTunnelActive
+                    };
+                    await SendJsonResponseAsync(stream, JsonSerializer.Serialize(tunnelInfo), cancel);
                     return;
                 }
 

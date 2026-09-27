@@ -55,12 +55,29 @@ public partial class RemotePlayPage : Page
             ServerStatusPill.BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#3B6B22"));
             ToggleServerBtn.Content = "Stop Host";
 
-            ServerUrlBox.Text = server.ServerUrl;
+            string smartUrl = server.SmartConnectUrl;
+            ServerUrlBox.Text = smartUrl;
+
+            // Update endpoints badges
+            LanEndpointText.Text = $"Wi-Fi: {server.LanIp}:{server.Port}";
+            string? tunnel = server.TunnelUrl;
+            if (!string.IsNullOrEmpty(tunnel))
+            {
+                TunnelDot.Fill = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#A4D007"));
+                TunnelEndpointText.Text = "Remote / 4G / 5G: Active";
+                TunnelEndpointText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#A4D007"));
+            }
+            else
+            {
+                TunnelDot.Fill = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#66C0F4"));
+                TunnelEndpointText.Text = "Remote Tunnel: Connecting...";
+                TunnelEndpointText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#66C0F4"));
+            }
 
             // Generate high-resolution QR Code
             try
             {
-                var qrBmp = QrCodeHelper.GenerateQrCode(server.ServerUrl, pixelsPerModule: 8);
+                var qrBmp = QrCodeHelper.GenerateQrCode(smartUrl, pixelsPerModule: 8);
                 QrCodeImage.Source = qrBmp;
             }
             catch { }

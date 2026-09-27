@@ -6,9 +6,11 @@ import android.os.Vibrator;
 import android.webkit.JavascriptInterface;
 
 public class SuoNativeBridge {
+    private final MainActivity activity;
     private final Vibrator vibrator;
 
-    public SuoNativeBridge(Vibrator vibrator) {
+    public SuoNativeBridge(MainActivity activity, Vibrator vibrator) {
+        this.activity = activity;
         this.vibrator = vibrator;
     }
 
@@ -20,6 +22,27 @@ public class SuoNativeBridge {
             } else {
                 vibrator.vibrate(durationMs);
             }
+        }
+    }
+
+    @JavascriptInterface
+    public void showDiscovery() {
+        if (activity != null) {
+            activity.runOnUiThread(new ShowDiscoveryRunnable(activity));
+        }
+    }
+
+    @JavascriptInterface
+    public void saveAndLoadHost(final String url) {
+        if (activity != null && url != null) {
+            activity.runOnUiThread(new LoadUrlRunnable(activity, url));
+        }
+    }
+
+    @JavascriptInterface
+    public void connectSmart(final String url) {
+        if (activity != null && url != null) {
+            activity.connectSmart(url);
         }
     }
 }

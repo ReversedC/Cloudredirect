@@ -105,9 +105,25 @@
                                     <TextBlock Text="2" FontWeight="Bold" FontSize="12" Foreground="#66C0F4" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 </Border>
                                 <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="12" TextWrapping="Wrap"
-                                           Text="Or scan the QR code using your phone camera to download the APK or play directly in browser." />
+                                           Text="Scan QR with SUO Link app. It automatically auto-configures whether you are on local Wi-Fi, 4G/5G, or a different network!" />
                             </Grid>
                         </Border>
+
+                        <!-- Network Endpoints Badges -->
+                        <WrapPanel Margin="0,0,0,8">
+                            <Border Background="#10251B" BorderBrush="#2B5B3E" BorderThickness="1" CornerRadius="6" Padding="8,4" Margin="0,0,6,4">
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse Width="7" Height="7" Fill="#A4D007" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                    <TextBlock x:Name="LanEndpointText" Text="Wi-Fi: 192.168.1.xxx:8585" FontSize="11" Foreground="#A4D007" FontWeight="SemiBold" />
+                                </StackPanel>
+                            </Border>
+                            <Border Background="#132338" BorderBrush="#1F4770" BorderThickness="1" CornerRadius="6" Padding="8,4" Margin="0,0,6,4">
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse x:Name="TunnelDot" Width="7" Height="7" Fill="#66C0F4" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                    <TextBlock x:Name="TunnelEndpointText" Text="Remote Tunnel: Initializing..." FontSize="11" Foreground="#66C0F4" FontWeight="SemiBold" />
+                                </StackPanel>
+                            </Border>
+                        </WrapPanel>
 
                         <!-- URL & Action Buttons -->
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,8">

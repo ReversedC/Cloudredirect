@@ -34,7 +34,7 @@ if ($LASTEXITCODE -ne 0) { throw "aapt2 compile failed" }
 
 # 3. Link resources and generate R.java
 Write-Host "[2/6] Linking resources..." -ForegroundColor Yellow
-& $Aapt2 link -I $AndroidJar --manifest "$AndroidDir\AndroidManifest.xml" -o "$BuildDir\base.apk" --java "$BuildDir\gen" "$BuildDir\compiled_res\res.zip"
+& $Aapt2 link -I $AndroidJar -A "$AndroidDir\assets" --manifest "$AndroidDir\AndroidManifest.xml" -o "$BuildDir\base.apk" --java "$BuildDir\gen" "$BuildDir\compiled_res\res.zip"
 if ($LASTEXITCODE -ne 0) { throw "aapt2 link failed" }
 
 # 4. Compile Java sources with javac
