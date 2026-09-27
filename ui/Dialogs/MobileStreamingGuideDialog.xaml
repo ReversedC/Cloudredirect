@@ -53,15 +53,19 @@
                                     <TextBlock x:Name="LanIpText" Text="192.168.1.100" FontWeight="SemiBold" Foreground="#00D2FF" FontSize="12" />
                                 </StackPanel>
                             </WrapPanel>
-                        </StackPanel>
-
-                        <!-- Quick Action Buttons -->
+                        </StackPanel>                        <!-- Quick Action Buttons -->
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                             <ui:Button Appearance="Primary"
                                        Content="Enter 4-Digit PIN"
                                        Icon="{ui:SymbolIcon Key24}"
                                        Click="EnterPin_Click"
-                                       Margin="0,0,0,8"
+                                       Margin="0,0,0,6"
+                                       Cursor="Hand" />
+                            <ui:Button Appearance="Secondary"
+                                       Content="Get Stream APK"
+                                       Icon="{ui:SymbolIcon Phone24}"
+                                       Click="OpenMobileApk_Click"
+                                       Margin="0,0,0,6"
                                        Cursor="Hand" />
                             <ui:Button Appearance="Secondary"
                                        Content="Sync Games Now"
@@ -75,48 +79,52 @@
                 <!-- Platform Tabs -->
                 <TabControl Background="Transparent" BorderThickness="0">
                     
-                    <!-- TAB 1: GAMEHUB -->
-                    <TabItem Header="GameHub (Custom Buttons)">
+                    <!-- TAB 1: CLOUDREDIRECT STREAM (CUSTOM MOONLIGHT + GAMEHUB) -->
+                    <TabItem Header="CloudRedirect Stream (Recommended)">
                         <StackPanel Margin="0,12,0,0">
-                            <Border Background="#121C26" BorderBrush="#1F3244" BorderThickness="1" CornerRadius="6" Padding="16">
+                            <Border Background="#121C26" BorderBrush="#00D2FF" BorderThickness="1.5" CornerRadius="6" Padding="16">
                                 <StackPanel>
-                                    <TextBlock Text="How to Connect &amp; Customize in GameHub:" FontWeight="Bold" FontSize="14" Foreground="#00D2FF" Margin="0,0,0,12" />
+                                    <DockPanel LastChildFill="False" Margin="0,0,0,12">
+                                        <TextBlock Text="Custom Steam Theme &amp; GameHub Floating Controls" FontWeight="Bold" FontSize="14" Foreground="#00D2FF" VerticalAlignment="Center" />
+                                        <ui:Button DockPanel.Dock="Right"
+                                                   Appearance="Primary"
+                                                   Content="Open / Locate APK"
+                                                   Icon="{ui:SymbolIcon Folder24}"
+                                                   Click="OpenMobileApk_Click"
+                                                   Cursor="Hand" />
+                                    </DockPanel>
 
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                                         <Border Width="24" Height="24" Background="#1C384F" CornerRadius="12" Margin="0,0,10,0">
                                             <TextBlock Text="1" FontWeight="Bold" Foreground="#00D2FF" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                         </Border>
-                                        <TextBlock Text="Open the GameHub app on your Android phone." VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="Install CloudRedirect-Stream.apk on your Android phone." FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                            <TextBlock Text="Packaged with authentic Steam dark theme (#171A21) and custom touch controls." FontSize="11.5" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
                                     </StackPanel>
 
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                                         <Border Width="24" Height="24" Background="#1C384F" CornerRadius="12" Margin="0,0,10,0">
                                             <TextBlock Text="2" FontWeight="Bold" Foreground="#00D2FF" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                         </Border>
-                                        <TextBlock Text="Go to the PC Game / PC Streaming tab." VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                        <TextBlock Text="Open the app: your PC appears automatically in glowing Steam Cyan. Tap it to see your 4-digit pairing PIN." VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" TextWrapping="Wrap" />
                                     </StackPanel>
 
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                                         <Border Width="24" Height="24" Background="#1C384F" CornerRadius="12" Margin="0,0,10,0">
                                             <TextBlock Text="3" FontWeight="Bold" Foreground="#00D2FF" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                         </Border>
-                                        <TextBlock Text="Select your PC from the list (or tap 'Add PC' and enter your LAN IP). A 4-digit PIN will appear on your phone." VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" TextWrapping="Wrap" />
+                                        <TextBlock Text="Click 'Enter 4-Digit PIN' above and submit the PIN. Your phone pairs permanently." VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                                     </StackPanel>
 
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                                        <Border Width="24" Height="24" Background="#1C384F" CornerRadius="12" Margin="0,0,10,0">
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                        <Border Width="24" Height="24" Background="#1C384F" CornerRadius="12" Margin="0,0,10,0" VerticalAlignment="Top">
                                             <TextBlock Text="4" FontWeight="Bold" Foreground="#00D2FF" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                         </Border>
-                                        <TextBlock Text="Click the 'Enter 4-Digit PIN' button above and submit the PIN. Your phone pairs instantly!" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                    </StackPanel>
-
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                        <Border Width="24" Height="24" Background="#1C384F" CornerRadius="12" Margin="0,0,10,0" VerticalAlignment="Top">
-                                            <TextBlock Text="5" FontWeight="Bold" Foreground="#00D2FF" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        </Border>
                                         <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="Tap any synced .lua game to launch." FontWeight="SemiBold" Foreground="#66D18F" />
-                                            <TextBlock Text="Tap the floating GameHub pill on your phone screen to drag, resize, and add custom buttons (E, F, 1-9) anywhere!" 
+                                            <TextBlock Text="Tap any synced .lua or Steam game to stream with built-in GameHub HUD!" FontWeight="SemiBold" Foreground="#66D18F" />
+                                            <TextBlock Text="Tap the floating [🎮 STEAM] pill anytime to toggle Action Keys (E, F, Space, Shift, Ctrl, Tab, Esc) and Quickslot numbers (1-9) with instant tactile touch feedback!" 
                                                        FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Margin="0,2,0,0" />
                                         </StackPanel>
                                     </StackPanel>
@@ -125,18 +133,18 @@
                         </StackPanel>
                     </TabItem>
 
-                    <!-- TAB 2: MOONLIGHT -->
-                    <TabItem Header="Moonlight Streaming">
+                    <!-- TAB 2: GAMEHUB & STANDARD CLIENTS -->
+                    <TabItem Header="GameHub &amp; Moonlight">
                         <StackPanel Margin="0,12,0,0">
                             <Border Background="#121C26" BorderBrush="#1F3244" BorderThickness="1" CornerRadius="6" Padding="16">
                                 <StackPanel>
-                                    <TextBlock Text="How to Connect via Moonlight:" FontWeight="Bold" FontSize="14" Foreground="#66C0F4" Margin="0,0,0,12" />
+                                    <TextBlock Text="How to Connect via Standard Moonlight or GameHub:" FontWeight="Bold" FontSize="14" Foreground="#66C0F4" Margin="0,0,0,12" />
 
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                                         <Border Width="24" Height="24" Background="#1A2D3E" CornerRadius="12" Margin="0,0,10,0">
                                             <TextBlock Text="1" FontWeight="Bold" Foreground="#66C0F4" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                         </Border>
-                                        <TextBlock Text="Install Moonlight Game Streaming from Google Play Store (free, open source)." VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                        <TextBlock Text="Download official Moonlight Game Streaming from Google Play Store or use GameHub emulator." VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                                     </StackPanel>
 
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
@@ -159,7 +167,7 @@
                                         </Border>
                                         <StackPanel VerticalAlignment="Center">
                                             <TextBlock Text="Select any game or 'Steam Big Picture' to stream." FontWeight="SemiBold" Foreground="#66D18F" />
-                                            <TextBlock Text="In Moonlight Settings -> On-Screen Controls, you can drag, drop, and resize controls." 
+                                            <TextBlock Text="In Moonlight Settings -> On-Screen Controls, you can drag, drop, and resize default gamepad controls." 
                                                        FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0" />
                                         </StackPanel>
                                     </StackPanel>

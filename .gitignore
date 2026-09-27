@@ -17,3 +17,4 @@ release-*/
 scratch/
 android/build/
 android/debug.keystore
+*.apk

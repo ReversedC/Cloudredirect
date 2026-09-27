@@ -65,6 +65,33 @@ public partial class MobileStreamingGuideDialog : FluentWindow
         SunshineSyncService.OpenSunshineDashboard();
     }
 
+    private void OpenMobileApk_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            var localApk = System.IO.Path.Combine(baseDir, "CloudRedirect-Stream.apk");
+            if (!System.IO.File.Exists(localApk))
+            {
+                var pubPath = System.IO.Path.GetFullPath(System.IO.Path.Combine(baseDir, @"..\..\..\ui\bin\publish\CloudRedirect-Stream.apk"));
+                if (System.IO.File.Exists(pubPath)) localApk = pubPath;
+            }
+
+            if (System.IO.File.Exists(localApk))
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", $"/select,\"{localApk}\"") { UseShellExecute = true });
+            }
+            else
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://github.com/mirzaarsyad74-cmyk/Cloudredirect/releases/latest") { UseShellExecute = true });
+            }
+        }
+        catch (Exception ex)
+        {
+            Dialog.ShowErrorAsync("Open APK Error", ex.Message);
+        }
+    }
+
     private void Close_Click(object sender, RoutedEventArgs e)
     {
         Close();

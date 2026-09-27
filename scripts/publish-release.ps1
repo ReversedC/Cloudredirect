@@ -87,7 +87,7 @@ $releaseId = $release.id
 $existingAssetsUrl = "https://api.github.com/repos/$repoOwner/$repoName/releases/$releaseId/assets"
 $currentAssets = Invoke-RestMethod -Uri $existingAssetsUrl -Headers $headers -Method Get
 foreach ($asset in $currentAssets) {
-    if ($asset.name -eq "CloudRedirect.exe" -or $asset.name -eq "CloudRedirect.exe.sha256" -or $asset.name -eq "CloudRedirect-Setup.exe") {
+    if ($asset.name -eq "CloudRedirect.exe" -or $asset.name -eq "CloudRedirect.exe.sha256" -or $asset.name -eq "CloudRedirect-Setup.exe" -or $asset.name -eq "CloudRedirect-Stream.apk") {
         Write-Host "Deleting old asset: $($asset.name)..."
         Invoke-RestMethod -Uri $asset.url -Headers $headers -Method Delete
     }
@@ -118,6 +118,11 @@ function Upload-Asset($filePath, $assetName, $contentType) {
 
 Upload-Asset $exePath "CloudRedirect.exe" "application/octet-stream"
 Upload-Asset $shaPath "CloudRedirect.exe.sha256" "text/plain"
+
+$apkPath = Join-Path $PSScriptRoot "..\ui\bin\publish\CloudRedirect-Stream.apk"
+if (Test-Path $apkPath) {
+    Upload-Asset $apkPath "CloudRedirect-Stream.apk" "application/vnd.android.package-archive"
+}
 
 
 Write-Host "Release $tagName published successfully with assets!"
