@@ -111,6 +111,9 @@ public class DiscoveryHtml {
 "    <div class='logo-title'>SUO <span>LINK</span></div>" +
 "  </div>" +
 "  <p class='subtitle'>Steam Link &amp; GameHub Remote Play for CloudRedirect.<br>Scan PC screen to connect in 1 second.</p>" +
+"  <div style='background:rgba(0,210,255,0.08); border:1px solid rgba(0,210,255,0.25); border-radius:20px; padding:6px 14px; font-size:11px; color:#66c0f4; margin-bottom:14px; display:inline-flex; align-items:center; gap:6px;'>" +
+"    <span>🌐</span> Connects on ANY network: Home Wi-Fi or 4G/5G mobile" +
+"  </div>" +
 "  <!-- CONNECTING BANNER -->" +
 "  <div id='connecting-banner'>🚀 Connecting to PC...</div>" +
 "  <!-- AUTO UPDATE BANNER -->" +
@@ -134,7 +137,7 @@ public class DiscoveryHtml {
 "  <div class='divider'></div>" +
 "  <!-- MANUAL IP FALLBACK -->" +
 "  <div class='manual-box'>" +
-"    <input type='text' id='manual-ip' class='manual-input' placeholder='192.168.1.xxx:8585' value='" + safeLastHost + "'>" +
+"    <input type='text' id='manual-ip' class='manual-input' placeholder='192.168.1.xxx:8585 or trycloudflare URL' value='" + safeLastHost + "'>" +
 "    <button class='btn-manual' onclick='connectManual()'>CONNECT</button>" +
 "  </div>" +
 "  <script>" +
@@ -221,24 +224,63 @@ public class DiscoveryHtml {
     }
 
     public static String getErrorHtml(String failedUrl, String description) {
+        return getErrorHtml(failedUrl, description, null);
+    }
+
+    public static String getErrorHtml(String failedUrl, String description, String savedTunnelUrl) {
         String safeUrl = failedUrl != null ? failedUrl : "";
-        return "<!DOCTYPE html>" +
-"<html><head><meta name='viewport' content='width=device-width, initial-scale=1.0'>" +
-"<style>" +
-"body { background: #0b0e14; color: #f1f5f9; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 24px; box-sizing: border-box; text-align: center; }" +
-"h1 { color: #ef4444; font-size: 24px; margin-bottom: 8px; }" +
-"p { color: #94a3b8; font-size: 13px; line-height: 1.5; max-width: 400px; margin-bottom: 16px; }" +
-".url-badge { background: #151b24; border: 1px solid #334155; padding: 6px 12px; border-radius: 6px; font-family: monospace; font-size: 12px; color: #66c0f4; margin-bottom: 20px; word-break: break-all; }" +
-".btn { background: #00d2ff; color: #000; font-weight: bold; border: none; padding: 12px 24px; border-radius: 20px; cursor: pointer; font-size: 14px; margin: 6px; }" +
-".btn-sec { background: #1e293b; color: #fff; border: 1px solid #334155; }" +
-"</style></head><body>" +
-"<h1>⚠️ Connection Refused</h1>" +
-"<p>Could not connect to CloudRedirect Host PC.<br>Ensure CloudRedirect is running on your PC and both devices are on the same Wi-Fi.</p>" +
-"<div class='url-badge'>" + safeUrl + "</div>" +
-"<div>" +
-"  <button class='btn' onclick='window.location.reload()'>🔄 RETRY</button>" +
-"  <button class='btn btn-sec' onclick='if(window.SuoNative && window.SuoNative.showDiscovery) window.SuoNative.showDiscovery(); else window.location.href=\"suolink://scan\";'>📷 SCAN QR CODE</button>" +
-"</div>" +
-"</body></html>";
+        String safeTunnel = savedTunnelUrl != null ? savedTunnelUrl : "";
+        boolean hasTunnel = !safeTunnel.isEmpty();
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width, initial-scale=1.0'>");
+        sb.append("<style>");
+        sb.append("body { background: #0b0e14; color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; text-align: center; }");
+        sb.append("h1 { color: #ef4444; font-size: 22px; margin-bottom: 8px; font-weight: 800; }");
+        sb.append("p { color: #94a3b8; font-size: 13px; line-height: 1.5; max-width: 440px; margin-bottom: 12px; }");
+        sb.append(".url-badge { background: #151b24; border: 1px solid #334155; padding: 6px 14px; border-radius: 6px; font-family: monospace; font-size: 12px; color: #66c0f4; margin-bottom: 16px; word-break: break-all; max-width: 90%; }");
+        sb.append(".guide-card { width: 100%; max-width: 440px; background: rgba(0, 210, 255, 0.06); border: 1px solid rgba(0, 210, 255, 0.25); border-radius: 10px; padding: 14px; margin-bottom: 18px; text-align: left; font-size: 12px; line-height: 1.5; color: #cbd5e1; }");
+        sb.append(".guide-title { font-weight: 700; color: #00d2ff; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }");
+        sb.append(".btn-row { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 380px; align-items: center; }");
+        sb.append(".btn { width: 100%; background: #00d2ff; color: #0b0e14; font-weight: 800; border: none; padding: 13px 20px; border-radius: 24px; cursor: pointer; font-size: 14px; letter-spacing: 0.3px; box-shadow: 0 4px 14px rgba(0, 210, 255, 0.3); }");
+        sb.append(".btn-tunnel { background: linear-gradient(135deg, #38ef7d, #11998e); color: #0b0e14; box-shadow: 0 4px 14px rgba(56, 239, 125, 0.35); }");
+        sb.append(".btn-sec { background: #1e293b; color: #f1f5f9; border: 1px solid #334155; font-weight: 600; box-shadow: none; }");
+        sb.append(".btn:active { transform: scale(0.98); opacity: 0.9; }");
+        sb.append("</style></head><body>");
+        sb.append("<h1>⚠️ Connection Refused</h1>");
+        sb.append("<p>Could not connect to host PC. Verify CloudRedirect is running on PC.</p>");
+        sb.append("<div class='url-badge'>").append(safeUrl).append("</div>");
+        sb.append("<div class='guide-card'>");
+        sb.append("<div class='guide-title'>🌐 Using a Different Network (Cellular 4G/5G or Outside Home)?</div>");
+        sb.append("Private IP (192.168.x.x) only works on the <b>exact same Wi-Fi router</b>.<br>");
+        sb.append("To connect from mobile data or another network:<br>");
+        sb.append("1. On PC, open CloudRedirect &gt; <b>Remote Play</b>.<br>");
+        sb.append("2. Select <b>Remote (4G/5G)</b> or <b>Smart Auto</b> tab.<br>");
+        sb.append("3. Tap <b>SCAN PC QR CODE</b> below to scan and connect instantly!");
+        sb.append("</div>");
+        sb.append("<div class='btn-row'>");
+        if (hasTunnel) {
+            sb.append("<button class='btn btn-tunnel' onclick='connectTunnel()'>🌐 CONNECT VIA REMOTE TUNNEL</button>");
+        }
+        sb.append("<button class='btn' onclick='triggerQrScan()'>📷 SCAN PC QR CODE</button>");
+        sb.append("<button class='btn btn-sec' onclick='window.location.reload()'>🔄 RETRY CONNECTION</button>");
+        sb.append("<button class='btn btn-sec' onclick='showDiscovery()'>🏠 BACK TO DISCOVERY</button>");
+        sb.append("</div>");
+        sb.append("<script>");
+        sb.append("function triggerQrScan() {");
+        sb.append("  try { if (window.SuoNative && window.SuoNative.openCameraScanner) { window.SuoNative.openCameraScanner(); return; } } catch(e){}");
+        sb.append("  window.location.href = 'suolink://scan';");
+        sb.append("}");
+        sb.append("function showDiscovery() {");
+        sb.append("  try { if (window.SuoNative && window.SuoNative.showDiscovery) { window.SuoNative.showDiscovery(); return; } } catch(e){}");
+        sb.append("  window.location.href = 'suolink://discovery';");
+        sb.append("}");
+        sb.append("function connectTunnel() {");
+        sb.append("  var tUrl = '").append(safeTunnel.replace("'", "\\'")).append("';");
+        sb.append("  try { if (window.SuoNative && window.SuoNative.connectSmart) { window.SuoNative.connectSmart(tUrl); return; } } catch(e){}");
+        sb.append("  window.location.href = tUrl;");
+        sb.append("}");
+        sb.append("</script></body></html>");
+        return sb.toString();
     }
 }

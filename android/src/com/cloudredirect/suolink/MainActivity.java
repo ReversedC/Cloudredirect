@@ -186,8 +186,8 @@ public class MainActivity extends Activity {
 
     public void showError(String failingUrl, String desc) {
         connected = false;
-        String html = DiscoveryHtml.getErrorHtml(failingUrl, desc);
-        webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
+        String html = DiscoveryHtml.getErrorHtml(failingUrl, desc, getSavedTunnelUrl());
+        webView.loadDataWithBaseURL("file:///android_asset/", html, "text/html", "UTF-8", null);
     }
 
     public WebView getWebView() { return webView; }
@@ -236,6 +236,10 @@ public class MainActivity extends Activity {
         url = url.trim();
         if (!url.startsWith("http://") && !url.startsWith("https://")) {
             url = "http://" + url;
+        }
+        if (url.contains("tunnel=") || url.contains("trycloudflare.com")) {
+            connectSmart(url);
+            return;
         }
         connected = false;
         saveUrls(url, null);

@@ -12,7 +12,14 @@ namespace CloudRedirect.Pages;
 
 public partial class RemotePlayPage : Page
 {
-    private bool _isRemoteMode = false;
+    private enum ConnectionMode
+    {
+        SmartAuto,
+        RemoteOnly,
+        LocalWifi
+    }
+
+    private ConnectionMode _mode = ConnectionMode.SmartAuto;
 
     public RemotePlayPage()
     {
@@ -44,7 +51,18 @@ public partial class RemotePlayPage : Page
 
     private void NetworkMode_Checked(object sender, RoutedEventArgs e)
     {
-        _isRemoteMode = (RemoteModeRadio?.IsChecked == true);
+        if (RemoteModeRadio?.IsChecked == true)
+        {
+            _mode = ConnectionMode.RemoteOnly;
+        }
+        else if (WifiModeRadio?.IsChecked == true)
+        {
+            _mode = ConnectionMode.LocalWifi;
+        }
+        else
+        {
+            _mode = ConnectionMode.SmartAuto;
+        }
         RefreshConnectionDisplay();
     }
 
@@ -129,28 +147,90 @@ public partial class RemotePlayPage : Page
         if (!server.IsRunning) return;
 
         string activeUrl;
-        if (_isRemoteMode)
+        string? tunnel = server.TunnelUrl;
+
+        switch (_mode)
         {
-            string? tunnel = server.TunnelUrl;
-            activeUrl = !string.IsNullOrEmpty(tunnel) ? tunnel : server.ServerUrl;
-            QrBadgeText.Text = "🌐 REMOTE (4G / 5G / ANY)";
-            QrBadgeText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#38EF7D"));
-            ModeHintText.Text = "Connect from outside home via secure Cloudflare Tunnel (zero router setup needed):";
-        }
-        else
-        {
-            activeUrl = server.ServerUrl;
-            QrBadgeText.Text = "📶 WI-FI (LOCAL LAN)";
-            QrBadgeText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#66C0F4"));
-            ModeHintText.Text = "Connect from home on the same Wi-Fi network (<1ms ultra-low latency):";
+            case ConnectionMode.RemoteOnly:
+                if (!string.IsNullOrEmpty(tunnel))
+                {
+                    activeUrl = tunnel;
+                    QrBadgeText.Text = "🌐 REMOTE (4G / 5G / ANY NETWORK)";
+                    QrBadgeText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#38EF7D"));
+                    ModeHintText.Text = "Direct Cloudflare Tunnel link. Works anywhere in the world on mobile data or any network:";
+                    if (ModeExplainerText != null)
+                    {
+                        ModeExplainerText.Text = "🌐 Remote Mode: Connects across the Internet via Cloudflare Tunnel. Scan with SUO Link or open link in Chrome/Safari.";
+                        ModeExplainerText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#38EF7D"));
+                    }
+                }
+                else
+                {
+                    activeUrl = "Establishing secure Cloudflare Tunnel... (please wait ~5s)";
+                    QrBadgeText.Text = "🌐 CONNECTING TUNNEL...";
+                    QrBadgeText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E5A93C"));
+                    ModeHintText.Text = "Initializing zero-config remote tunnel. QR code will appear automatically in ~5 seconds:";
+                    if (ModeExplainerText != null)
+                    {
+                        ModeExplainerText.Text = "⏳ Generating Cloudflare Tunnel for remote network access... Please wait a few seconds.";
+                        ModeExplainerText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E5A93C"));
+                    }
+                }
+                break;
+
+            case ConnectionMode.LocalWifi:
+                activeUrl = server.ServerUrl;
+                QrBadgeText.Text = "📶 LOCAL WI-FI (OFFLINE LAN)";
+                QrBadgeText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#66C0F4"));
+                ModeHintText.Text = "Connect from home on the same Wi-Fi network (<1ms ultra-low latency):";
+                if (ModeExplainerText != null)
+                {
+                    ModeExplainerText.Text = "📶 Local Wi-Fi Mode: Requires both PC and phone to be connected to the exact same Wi-Fi router.";
+                    ModeExplainerText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#8F98A0"));
+                }
+                break;
+
+            case ConnectionMode.SmartAuto:
+            default:
+                activeUrl = server.SmartConnectUrl;
+                if (!string.IsNullOrEmpty(tunnel))
+                {
+                    QrBadgeText.Text = "⚡ SMART AUTO (WI-FI + 4G/5G READY)";
+                    QrBadgeText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#00D2FF"));
+                    ModeHintText.Text = "Universal Smart QR: Connects via LAN when home (<1ms) or auto-routes via Cloudflare Tunnel on 4G/5G:";
+                    if (ModeExplainerText != null)
+                    {
+                        ModeExplainerText.Text = "⚡ Smart Auto: Scan from phone on ANY network. Auto-connects via Wi-Fi (<1ms) or Cloudflare Tunnel (4G/5G)!";
+                        ModeExplainerText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#00D2FF"));
+                    }
+                }
+                else
+                {
+                    QrBadgeText.Text = "⚡ SMART AUTO (ESTABLISHING TUNNEL...)";
+                    QrBadgeText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E5A93C"));
+                    ModeHintText.Text = "Universal Smart QR: Local Wi-Fi ready, establishing remote tunnel for 4G/5G failover...";
+                    if (ModeExplainerText != null)
+                    {
+                        ModeExplainerText.Text = "⚡ Smart Auto: Local Wi-Fi is ready. Establishing remote tunnel for different networks in background...";
+                        ModeExplainerText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E5A93C"));
+                    }
+                }
+                break;
         }
 
         ServerUrlBox.Text = activeUrl;
 
         try
         {
-            var qrBmp = QrCodeHelper.GenerateQrCode(activeUrl, pixelsPerModule: 8);
-            QrCodeImage.Source = qrBmp;
+            if (activeUrl.StartsWith("http"))
+            {
+                var qrBmp = QrCodeHelper.GenerateQrCode(activeUrl, pixelsPerModule: 8);
+                QrCodeImage.Source = qrBmp;
+            }
+            else
+            {
+                QrCodeImage.Source = null;
+            }
         }
         catch { }
     }

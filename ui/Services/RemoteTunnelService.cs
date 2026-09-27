@@ -85,6 +85,15 @@ public sealed class RemoteTunnelService
             _tunnelProcess = null;
         }
 
+        try
+        {
+            foreach (var p in Process.GetProcessesByName("cloudflared"))
+            {
+                try { p.Kill(entireProcessTree: true); p.Dispose(); } catch { }
+            }
+        }
+        catch { }
+
         OnStateChanged?.Invoke();
         Log("Remote Tunnel stopped.");
     }
@@ -103,6 +112,16 @@ public sealed class RemoteTunnelService
                 if (!ok || cancel.IsCancellationRequested) return;
             }
 
+            // Clean up any stale instances before launching
+            try
+            {
+                foreach (var p in Process.GetProcessesByName("cloudflared"))
+                {
+                    try { p.Kill(entireProcessTree: true); p.Dispose(); } catch { }
+                }
+            }
+            catch { }
+
             Log("Starting Cloudflare Quick Tunnel for remote network access...");
 
             var psi = new ProcessStartInfo
@@ -110,12 +129,12 @@ public sealed class RemoteTunnelService
                 FileName = exe,
                 Arguments = $"tunnel --url http://127.0.0.1:{localPort} --no-autoupdate",
                 RedirectStandardError = true,
-                RedirectStandardOutput = true,
+                RedirectStandardOutput = false,
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
 
-            _tunnelProcess = new Process { StartInfo = psi };
+            _tunnelProcess = new Process { StartInfo = psi, EnableRaisingEvents = true };
             _tunnelProcess.Start();
 
             // Cloudflare logs the quick tunnel URL to standard error:

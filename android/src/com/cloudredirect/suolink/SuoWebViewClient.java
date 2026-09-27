@@ -24,6 +24,10 @@ public class SuoWebViewClient extends WebViewClient {
                 activity.runOnUiThread(new OpenGalleryRunnable(activity));
                 return true;
             }
+            if (url.startsWith("suolink://discovery")) {
+                activity.runOnUiThread(new ShowDiscoveryRunnable(activity));
+                return true;
+            }
         }
         return super.shouldOverrideUrlLoading(view, url);
     }
