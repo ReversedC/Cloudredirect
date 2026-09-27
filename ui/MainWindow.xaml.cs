@@ -117,6 +117,9 @@ public partial class MainWindow : FluentWindow
                 var mode = await Task.Run(() => MigrateLegacyMode());
                 ApplyMode(mode);
 
+                App.LogStartup("Loaded: RemotePlayServer.Instance.Start");
+                Services.RemotePlayServer.Instance.Start();
+
                 App.LogStartup("Loaded: NavigateTo DashboardPage");
                 NavigateTo(typeof(Pages.DashboardPage));
                 App.LogStartup("Loaded: DashboardPage navigation succeeded");
