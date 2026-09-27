@@ -202,6 +202,11 @@ public partial class SettingsPage : Page
         UiZoomManager.Instance.SetAutoFit(isEnabled);
     }
 
+    private void OpenLuaSync_Click(object sender, RoutedEventArgs e)
+    {
+        (Application.Current.MainWindow as MainWindow)?.NavigateTo(typeof(Pages.LuaSyncPage));
+    }
+
     /// <summary>Reads sync toggles from config.json (called inside Task.Run).</summary>
     private static void ReadSyncTogglesInto(ref bool? achievements, ref bool? playtime, ref bool? luas, ref bool? autoUpdateDll,
                                               ref bool? showNonSteamGame, ref bool? customCloudIcon)

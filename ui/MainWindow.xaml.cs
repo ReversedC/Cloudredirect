@@ -447,6 +447,7 @@ public partial class MainWindow : FluentWindow
                     nameof(Pages.SettingsPage) => S.Get("Nav_Settings"),
                     nameof(Pages.UniversalSavesPage) => S.Get("Nav_UniversalSaves"),
                     nameof(Pages.RemotePlayPage) => "SUO Link (Remote Play)",
+                    nameof(Pages.LuaSyncPage) => S.Get("Nav_LuaSync"),
                     _ => ""
                 };
             }

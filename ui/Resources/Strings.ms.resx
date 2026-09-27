@@ -2344,4 +2344,112 @@ Fail can be restored from the Pulihkan tab. Continue?</value>
   <data name="Settings_GlobalHotkeyHint" xml:space="preserve">
     <value>Pintasan seluruh sistem untuk memanggil, membuka, atau menogol CloudRedirect pada bila-bila masa, walaupun semasa bermain permainan atau diminimumkan ke dulang sistem.</value>
   </data>
+  <data name="Nav_LuaSync" xml:space="preserve">
+    <value>Penyegerakan Skrip Lua</value>
+  </data>
+  <data name="LuaSync_Title" xml:space="preserve">
+    <value>Skrip Pemalam Lua (stplug-in)</value>
+  </data>
+  <data name="LuaSync_Subtitle" xml:space="preserve">
+    <value>Sandaran awan disulitkan pengetahuan-sifar (zero-knowledge) untuk skrip manifes Steam.</value>
+  </data>
+  <data name="LuaSync_OpenManager" xml:space="preserve">
+    <value>Urus Skrip Lua</value>
+  </data>
+  <data name="LuaSync_SelectAll" xml:space="preserve">
+    <value>Pilih Semua</value>
+  </data>
+  <data name="LuaSync_DeselectAll" xml:space="preserve">
+    <value>Nyahpilih Semua</value>
+  </data>
+  <data name="LuaSync_BackupSelected" xml:space="preserve">
+    <value>Sandarkan Pilihan (AES-256)</value>
+  </data>
+  <data name="LuaSync_RestoreSelected" xml:space="preserve">
+    <value>Pulihkan Pilihan</value>
+  </data>
+  <data name="LuaSync_RestoreAll" xml:space="preserve">
+    <value>Pulihkan Semua</value>
+  </data>
+  <data name="LuaSync_DeleteCloud" xml:space="preserve">
+    <value>Padam dari Awan</value>
+  </data>
+  <data name="LuaSync_Refresh" xml:space="preserve">
+    <value>Segarkan Senarai</value>
+  </data>
+  <data name="LuaSync_SearchPlaceholder" xml:space="preserve">
+    <value>Cari nama permainan atau AppID...</value>
+  </data>
+  <data name="LuaSync_FilterAll" xml:space="preserve">
+    <value>Semua</value>
+  </data>
+  <data name="LuaSync_FilterLocal" xml:space="preserve">
+    <value>Tempatan Sahaja</value>
+  </data>
+  <data name="LuaSync_FilterCloud" xml:space="preserve">
+    <value>Awan Sahaja</value>
+  </data>
+  <data name="LuaSync_FilterSynced" xml:space="preserve">
+    <value>Disegerakkan</value>
+  </data>
+  <data name="LuaSync_StatusSynced" xml:space="preserve">
+    <value>🔒 Disegerakkan</value>
+  </data>
+  <data name="LuaSync_StatusLocalOnly" xml:space="preserve">
+    <value>💻 Tempatan Sahaja</value>
+  </data>
+  <data name="LuaSync_StatusCloudOnly" xml:space="preserve">
+    <value>☁️ Awan Sahaja</value>
+  </data>
+  <data name="LuaSync_LoadingGames" xml:space="preserve">
+    <value>Mengimbas skrip Lua dan memuatkan poster permainan...</value>
+  </data>
+  <data name="LuaSync_NoItemsFound" xml:space="preserve">
+    <value>Tiada Skrip Lua Dijumpai</value>
+  </data>
+  <data name="LuaSync_NoItemsHint" xml:space="preserve">
+    <value>Tiada skrip permainan sepadan dijumpai dalam direktori stplug-in Steam tempatan atau sandaran awan anda.</value>
+  </data>
+  <data name="LuaSync_SelectLocalToBackup" xml:space="preserve">
+    <value>Sila pilih sekurang-kurangnya satu skrip tempatan untuk disulitkan dan disandarkan ke awan.</value>
+  </data>
+  <data name="LuaSync_SelectCloudToRestore" xml:space="preserve">
+    <value>Sila pilih sekurang-kurangnya satu skrip awan untuk dinyahsulit dan dipulihkan ke PC ini.</value>
+  </data>
+  <data name="LuaSync_SelectCloudToDelete" xml:space="preserve">
+    <value>Sila pilih sekurang-kurangnya satu skrip awan untuk dipadam daripada sandaran awan anda.</value>
+  </data>
+  <data name="LuaSync_NoCloudItems" xml:space="preserve">
+    <value>Tiada skrip Lua yang disulitkan dijumpai dalam storan awan anda.</value>
+  </data>
+  <data name="LuaSync_ConfirmRestoreAll" xml:space="preserve">
+    <value>Adakah anda pasti mahu memuat turun, menyahsulit, dan memulihkan semua {0} skrip permainan Lua dari awan?</value>
+  </data>
+  <data name="LuaSync_DeleteCloudTitle" xml:space="preserve">
+    <value>Padam Sandaran Lua dari Awan</value>
+  </data>
+  <data name="LuaSync_DeleteCloudConfirm" xml:space="preserve">
+    <value>Adakah anda pasti mahu memadam secara kekal {0} sandaran Lua yang disulitkan dari awan anda?</value>
+  </data>
+  <data name="LuaSync_BackingUp" xml:space="preserve">
+    <value>Menyulitkan &amp; Memuat Naik</value>
+  </data>
+  <data name="LuaSync_Restoring" xml:space="preserve">
+    <value>Memuat Turun &amp; Menyahsulit</value>
+  </data>
+  <data name="LuaSync_Deleting" xml:space="preserve">
+    <value>Memadam dari Awan</value>
+  </data>
+  <data name="LuaSync_SuccessBackup" xml:space="preserve">
+    <value>Berjaya menyulitkan dan menyandarkan {0} skrip Lua ke awan.</value>
+  </data>
+  <data name="LuaSync_SuccessRestore" xml:space="preserve">
+    <value>Berjaya memuat turun dan memulihkan {0} skrip Lua ke direktori stplug-in.</value>
+  </data>
+  <data name="LuaSync_SuccessDelete" xml:space="preserve">
+    <value>Berjaya memadam {0} skrip Lua yang disulitkan dari awan.</value>
+  </data>
+  <data name="LuaSync_ErrorLoading" xml:space="preserve">
+    <value>Gagal memuatkan skrip Lua: {0}</value>
+  </data>
 </root>

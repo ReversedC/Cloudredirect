@@ -2449,6 +2449,114 @@
   <data name="Settings_GlobalHotkeyHint" xml:space="preserve">
     <value>随时呼出、打开或切换 CloudRedirect 的全局快捷键，即使在游戏中或最小化到系统托盘时也能立即唤醒。</value>
   </data>
+  <data name="Nav_LuaSync" xml:space="preserve">
+    <value>Lua 脚本同步</value>
+  </data>
+  <data name="LuaSync_Title" xml:space="preserve">
+    <value>Lua 插件脚本 (stplug-in)</value>
+  </data>
+  <data name="LuaSync_Subtitle" xml:space="preserve">
+    <value>针对 Steam 插件 Lua Manifest 脚本的零知识加密云端备份与安全管理。</value>
+  </data>
+  <data name="LuaSync_OpenManager" xml:space="preserve">
+    <value>管理 Lua 脚本</value>
+  </data>
+  <data name="LuaSync_SelectAll" xml:space="preserve">
+    <value>全选</value>
+  </data>
+  <data name="LuaSync_DeselectAll" xml:space="preserve">
+    <value>取消全选</value>
+  </data>
+  <data name="LuaSync_BackupSelected" xml:space="preserve">
+    <value>备份所选 (AES-256)</value>
+  </data>
+  <data name="LuaSync_RestoreSelected" xml:space="preserve">
+    <value>还原所选</value>
+  </data>
+  <data name="LuaSync_RestoreAll" xml:space="preserve">
+    <value>全部还原</value>
+  </data>
+  <data name="LuaSync_DeleteCloud" xml:space="preserve">
+    <value>从云端删除</value>
+  </data>
+  <data name="LuaSync_Refresh" xml:space="preserve">
+    <value>刷新列表</value>
+  </data>
+  <data name="LuaSync_SearchPlaceholder" xml:space="preserve">
+    <value>搜索游戏名称或 AppID...</value>
+  </data>
+  <data name="LuaSync_FilterAll" xml:space="preserve">
+    <value>全部</value>
+  </data>
+  <data name="LuaSync_FilterLocal" xml:space="preserve">
+    <value>仅本地</value>
+  </data>
+  <data name="LuaSync_FilterCloud" xml:space="preserve">
+    <value>仅云端</value>
+  </data>
+  <data name="LuaSync_FilterSynced" xml:space="preserve">
+    <value>已同步</value>
+  </data>
+  <data name="LuaSync_StatusSynced" xml:space="preserve">
+    <value>🔒 已同步</value>
+  </data>
+  <data name="LuaSync_StatusLocalOnly" xml:space="preserve">
+    <value>💻 仅本地</value>
+  </data>
+  <data name="LuaSync_StatusCloudOnly" xml:space="preserve">
+    <value>☁️ 仅云端</value>
+  </data>
+  <data name="LuaSync_LoadingGames" xml:space="preserve">
+    <value>正在扫描 Lua 脚本并获取游戏海报...</value>
+  </data>
+  <data name="LuaSync_NoItemsFound" xml:space="preserve">
+    <value>未找到 Lua 脚本</value>
+  </data>
+  <data name="LuaSync_NoItemsHint" xml:space="preserve">
+    <value>在您的本地 Steam stplug-in 目录或云端备份中均未找到匹配的游戏脚本。</value>
+  </data>
+  <data name="LuaSync_SelectLocalToBackup" xml:space="preserve">
+    <value>请至少选择一个本地脚本进行加密并备份至云端。</value>
+  </data>
+  <data name="LuaSync_SelectCloudToRestore" xml:space="preserve">
+    <value>请至少选择一个云端脚本进行解密并还原至本机。</value>
+  </data>
+  <data name="LuaSync_SelectCloudToDelete" xml:space="preserve">
+    <value>请至少选择一个云端脚本从云端备份中删除。</value>
+  </data>
+  <data name="LuaSync_NoCloudItems" xml:space="preserve">
+    <value>您的云存储中未发现任何已加密的 Lua 脚本。</value>
+  </data>
+  <data name="LuaSync_ConfirmRestoreAll" xml:space="preserve">
+    <value>确定要从云端下载、解密并还原所有 {0} 个 Lua 游戏脚本吗？</value>
+  </data>
+  <data name="LuaSync_DeleteCloudTitle" xml:space="preserve">
+    <value>删除云端 Lua 备份</value>
+  </data>
+  <data name="LuaSync_DeleteCloudConfirm" xml:space="preserve">
+    <value>确定要从云端永久删除选中的 {0} 个已加密 Lua 备份吗？</value>
+  </data>
+  <data name="LuaSync_BackingUp" xml:space="preserve">
+    <value>正在加密并上传</value>
+  </data>
+  <data name="LuaSync_Restoring" xml:space="preserve">
+    <value>正在下载并解密</value>
+  </data>
+  <data name="LuaSync_Deleting" xml:space="preserve">
+    <value>正在从云端删除</value>
+  </data>
+  <data name="LuaSync_SuccessBackup" xml:space="preserve">
+    <value>已成功加密并备份 {0} 个 Lua 脚本至云端。</value>
+  </data>
+  <data name="LuaSync_SuccessRestore" xml:space="preserve">
+    <value>已成功下载并还原 {0} 个 Lua 脚本至 stplug-in 目录。</value>
+  </data>
+  <data name="LuaSync_SuccessDelete" xml:space="preserve">
+    <value>已成功从云端删除 {0} 个已加密的 Lua 脚本。</value>
+  </data>
+  <data name="LuaSync_ErrorLoading" xml:space="preserve">
+    <value>加载 Lua 脚本失败: {0}</value>
+  </data>
 </root>
 
 

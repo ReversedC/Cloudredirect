@@ -530,6 +530,13 @@
                                Cursor="Hand"
                                Click="MigrationAction_Click" />
 
+                    <ui:Button Content="{res:Loc Nav_LuaSync}"
+                               Icon="{ui:SymbolIcon Code24}"
+                               Padding="12,6"
+                               Margin="0,0,8,6"
+                               Cursor="Hand"
+                               Click="LuaSyncAction_Click" />
+
                     <!-- Utility Buttons -->
                     <ui:Button Content="{res:Loc Dashboard_OpenLogFile}"
                                Icon="{ui:SymbolIcon Document24}"

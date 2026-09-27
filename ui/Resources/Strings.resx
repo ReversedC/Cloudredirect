@@ -2476,4 +2476,112 @@ Are you sure?</value>
   <data name="Settings_GlobalHotkeyHint" xml:space="preserve">
     <value>System-wide shortcut to summon, open, or toggle CloudRedirect anytime, even while in-game or minimized to tray.</value>
   </data>
+  <data name="Nav_LuaSync" xml:space="preserve">
+    <value>Lua Scripts Sync</value>
+  </data>
+  <data name="LuaSync_Title" xml:space="preserve">
+    <value>Lua Plugin Scripts (stplug-in)</value>
+  </data>
+  <data name="LuaSync_Subtitle" xml:space="preserve">
+    <value>Zero-knowledge encrypted cloud backup and management for Steam plugin Lua manifest scripts.</value>
+  </data>
+  <data name="LuaSync_OpenManager" xml:space="preserve">
+    <value>Manage Lua Scripts</value>
+  </data>
+  <data name="LuaSync_SelectAll" xml:space="preserve">
+    <value>Select All</value>
+  </data>
+  <data name="LuaSync_DeselectAll" xml:space="preserve">
+    <value>Deselect All</value>
+  </data>
+  <data name="LuaSync_BackupSelected" xml:space="preserve">
+    <value>Backup Selected (AES-256)</value>
+  </data>
+  <data name="LuaSync_RestoreSelected" xml:space="preserve">
+    <value>Restore Selected</value>
+  </data>
+  <data name="LuaSync_RestoreAll" xml:space="preserve">
+    <value>Restore All</value>
+  </data>
+  <data name="LuaSync_DeleteCloud" xml:space="preserve">
+    <value>Delete from Cloud</value>
+  </data>
+  <data name="LuaSync_Refresh" xml:space="preserve">
+    <value>Refresh List</value>
+  </data>
+  <data name="LuaSync_SearchPlaceholder" xml:space="preserve">
+    <value>Search game name or AppID...</value>
+  </data>
+  <data name="LuaSync_FilterAll" xml:space="preserve">
+    <value>All</value>
+  </data>
+  <data name="LuaSync_FilterLocal" xml:space="preserve">
+    <value>Local Only</value>
+  </data>
+  <data name="LuaSync_FilterCloud" xml:space="preserve">
+    <value>Cloud Only</value>
+  </data>
+  <data name="LuaSync_FilterSynced" xml:space="preserve">
+    <value>Synced</value>
+  </data>
+  <data name="LuaSync_StatusSynced" xml:space="preserve">
+    <value>🔒 Synced</value>
+  </data>
+  <data name="LuaSync_StatusLocalOnly" xml:space="preserve">
+    <value>💻 Local Only</value>
+  </data>
+  <data name="LuaSync_StatusCloudOnly" xml:space="preserve">
+    <value>☁️ Cloud Only</value>
+  </data>
+  <data name="LuaSync_LoadingGames" xml:space="preserve">
+    <value>Scanning Lua scripts and fetching game artwork...</value>
+  </data>
+  <data name="LuaSync_NoItemsFound" xml:space="preserve">
+    <value>No Lua Scripts Found</value>
+  </data>
+  <data name="LuaSync_NoItemsHint" xml:space="preserve">
+    <value>No matching game scripts were found in your local Steam stplug-in directory or Cloud backup.</value>
+  </data>
+  <data name="LuaSync_SelectLocalToBackup" xml:space="preserve">
+    <value>Please select at least one local script to encrypt and backup to the cloud.</value>
+  </data>
+  <data name="LuaSync_SelectCloudToRestore" xml:space="preserve">
+    <value>Please select at least one cloud script to decrypt and restore to this PC.</value>
+  </data>
+  <data name="LuaSync_SelectCloudToDelete" xml:space="preserve">
+    <value>Please select at least one cloud script to delete from your cloud backup.</value>
+  </data>
+  <data name="LuaSync_NoCloudItems" xml:space="preserve">
+    <value>No encrypted Lua scripts were found in your cloud storage.</value>
+  </data>
+  <data name="LuaSync_ConfirmRestoreAll" xml:space="preserve">
+    <value>Are you sure you want to download, decrypt, and restore all {0} Lua game scripts from the cloud?</value>
+  </data>
+  <data name="LuaSync_DeleteCloudTitle" xml:space="preserve">
+    <value>Delete Cloud Lua Backups</value>
+  </data>
+  <data name="LuaSync_DeleteCloudConfirm" xml:space="preserve">
+    <value>Are you sure you want to permanently delete {0} selected encrypted Lua backup(s) from your cloud?</value>
+  </data>
+  <data name="LuaSync_BackingUp" xml:space="preserve">
+    <value>Encrypting &amp; Uploading</value>
+  </data>
+  <data name="LuaSync_Restoring" xml:space="preserve">
+    <value>Downloading &amp; Decrypting</value>
+  </data>
+  <data name="LuaSync_Deleting" xml:space="preserve">
+    <value>Deleting from Cloud</value>
+  </data>
+  <data name="LuaSync_SuccessBackup" xml:space="preserve">
+    <value>Successfully encrypted and backed up {0} Lua script(s) to the cloud.</value>
+  </data>
+  <data name="LuaSync_SuccessRestore" xml:space="preserve">
+    <value>Successfully downloaded and restored {0} Lua script(s) to stplug-in.</value>
+  </data>
+  <data name="LuaSync_SuccessDelete" xml:space="preserve">
+    <value>Successfully deleted {0} encrypted Lua script(s) from the cloud.</value>
+  </data>
+  <data name="LuaSync_ErrorLoading" xml:space="preserve">
+    <value>Failed to load Lua scripts: {0}</value>
+  </data>
 </root>

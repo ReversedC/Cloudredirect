@@ -714,6 +714,11 @@ public partial class DashboardPage : Page
         (Application.Current.MainWindow as MainWindow)?.NavigateTo(typeof(Pages.RemotePlayPage));
     }
 
+    private void LuaSyncAction_Click(object sender, RoutedEventArgs e)
+    {
+        (Application.Current.MainWindow as MainWindow)?.NavigateTo(typeof(Pages.LuaSyncPage));
+    }
+
     private void InitializeLanguageSelector()
     {
         _languageLoading = true;

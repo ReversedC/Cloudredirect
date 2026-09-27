@@ -97,6 +97,25 @@
                                                  Unchecked="AppSettingsToggle_Changed" />
                             </ui:CardControl>
 
+                            <!-- Lua Plugin Scripts (stplug-in) -->
+                            <ui:CardControl Margin="0,8,0,0">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="{res:Loc LuaSync_Title}"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                        <TextBlock Text="{res:Loc LuaSync_Subtitle}"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:Button Content="{res:Loc LuaSync_OpenManager}"
+                                           Icon="{ui:SymbolIcon Code24}"
+                                           Appearance="Secondary"
+                                           Cursor="Hand"
+                                           Click="OpenLuaSync_Click" />
+                            </ui:CardControl>
+
                             <!-- Start with Windows -->
                             <ui:CardControl Margin="0,8,0,0">
                                 <ui:CardControl.Header>

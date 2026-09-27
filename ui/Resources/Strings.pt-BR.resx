@@ -2428,4 +2428,112 @@ Tem certeza?</value>
   <data name="Settings_GlobalHotkeyHint" xml:space="preserve">
     <value>Atalho em todo o sistema para invocar, abrir ou alternar o CloudRedirect a qualquer momento, mesmo durante o jogo ou minimizado na bandeja.</value>
   </data>
+  <data name="Nav_LuaSync" xml:space="preserve">
+    <value>Sincronização Lua</value>
+  </data>
+  <data name="LuaSync_Title" xml:space="preserve">
+    <value>Scripts de Plugin Lua (stplug-in)</value>
+  </data>
+  <data name="LuaSync_Subtitle" xml:space="preserve">
+    <value>Backup na nuvem com criptografia de conhecimento zero para scripts manifest da Steam.</value>
+  </data>
+  <data name="LuaSync_OpenManager" xml:space="preserve">
+    <value>Gerenciar Scripts Lua</value>
+  </data>
+  <data name="LuaSync_SelectAll" xml:space="preserve">
+    <value>Selecionar Tudo</value>
+  </data>
+  <data name="LuaSync_DeselectAll" xml:space="preserve">
+    <value>Desmarcar Tudo</value>
+  </data>
+  <data name="LuaSync_BackupSelected" xml:space="preserve">
+    <value>Fazer Backup dos Selecionados (AES-256)</value>
+  </data>
+  <data name="LuaSync_RestoreSelected" xml:space="preserve">
+    <value>Restaurar Selecionados</value>
+  </data>
+  <data name="LuaSync_RestoreAll" xml:space="preserve">
+    <value>Restaurar Todos</value>
+  </data>
+  <data name="LuaSync_DeleteCloud" xml:space="preserve">
+    <value>Excluir da Nuvem</value>
+  </data>
+  <data name="LuaSync_Refresh" xml:space="preserve">
+    <value>Atualizar Lista</value>
+  </data>
+  <data name="LuaSync_SearchPlaceholder" xml:space="preserve">
+    <value>Buscar nome do jogo ou AppID...</value>
+  </data>
+  <data name="LuaSync_FilterAll" xml:space="preserve">
+    <value>Todos</value>
+  </data>
+  <data name="LuaSync_FilterLocal" xml:space="preserve">
+    <value>Apenas Local</value>
+  </data>
+  <data name="LuaSync_FilterCloud" xml:space="preserve">
+    <value>Apenas na Nuvem</value>
+  </data>
+  <data name="LuaSync_FilterSynced" xml:space="preserve">
+    <value>Sincronizados</value>
+  </data>
+  <data name="LuaSync_StatusSynced" xml:space="preserve">
+    <value>🔒 Sincronizado</value>
+  </data>
+  <data name="LuaSync_StatusLocalOnly" xml:space="preserve">
+    <value>💻 Apenas Local</value>
+  </data>
+  <data name="LuaSync_StatusCloudOnly" xml:space="preserve">
+    <value>☁️ Apenas na Nuvem</value>
+  </data>
+  <data name="LuaSync_LoadingGames" xml:space="preserve">
+    <value>Escaneando scripts Lua e buscando pôsteres...</value>
+  </data>
+  <data name="LuaSync_NoItemsFound" xml:space="preserve">
+    <value>Nenhum Script Lua Encontrado</value>
+  </data>
+  <data name="LuaSync_NoItemsHint" xml:space="preserve">
+    <value>Nenhum script de jogo correspondente foi encontrado na pasta stplug-in local ou na nuvem.</value>
+  </data>
+  <data name="LuaSync_SelectLocalToBackup" xml:space="preserve">
+    <value>Selecione ao menos um script local para criptografar e enviar para a nuvem.</value>
+  </data>
+  <data name="LuaSync_SelectCloudToRestore" xml:space="preserve">
+    <value>Selecione ao menos um script da nuvem para descriptografar e restaurar neste PC.</value>
+  </data>
+  <data name="LuaSync_SelectCloudToDelete" xml:space="preserve">
+    <value>Selecione ao menos um script da nuvem para excluir do backup na nuvem.</value>
+  </data>
+  <data name="LuaSync_NoCloudItems" xml:space="preserve">
+    <value>Nenhum script Lua criptografado foi encontrado no seu armazenamento na nuvem.</value>
+  </data>
+  <data name="LuaSync_ConfirmRestoreAll" xml:space="preserve">
+    <value>Tem certeza de que deseja baixar, descriptografar e restaurar todos os {0} scripts Lua da nuvem?</value>
+  </data>
+  <data name="LuaSync_DeleteCloudTitle" xml:space="preserve">
+    <value>Excluir Backups Lua da Nuvem</value>
+  </data>
+  <data name="LuaSync_DeleteCloudConfirm" xml:space="preserve">
+    <value>Tem certeza de que deseja excluir permanentemente {0} backup(s) criptografado(s) de Lua da sua nuvem?</value>
+  </data>
+  <data name="LuaSync_BackingUp" xml:space="preserve">
+    <value>Criptografando e Enviando</value>
+  </data>
+  <data name="LuaSync_Restoring" xml:space="preserve">
+    <value>Baixando e Descriptografando</value>
+  </data>
+  <data name="LuaSync_Deleting" xml:space="preserve">
+    <value>Excluindo da Nuvem</value>
+  </data>
+  <data name="LuaSync_SuccessBackup" xml:space="preserve">
+    <value>{0} script(s) Lua criptografado(s) e enviado(s) para a nuvem com sucesso.</value>
+  </data>
+  <data name="LuaSync_SuccessRestore" xml:space="preserve">
+    <value>{0} script(s) Lua baixado(s) e restaurado(s) na pasta stplug-in com sucesso.</value>
+  </data>
+  <data name="LuaSync_SuccessDelete" xml:space="preserve">
+    <value>{0} script(s) criptografado(s) de Lua excluído(s) da nuvem com sucesso.</value>
+  </data>
+  <data name="LuaSync_ErrorLoading" xml:space="preserve">
+    <value>Falha ao carregar scripts Lua: {0}</value>
+  </data>
 </root>
