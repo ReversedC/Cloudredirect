@@ -693,6 +693,13 @@ public partial class DashboardPage : Page
         (Application.Current.MainWindow as MainWindow)?.NavigateTo(typeof(Pages.SettingsPage));
     }
 
+    private void MobileStreamAction_Click(object sender, RoutedEventArgs e)
+    {
+        var guide = new Dialogs.MobileStreamingGuideDialog();
+        guide.Owner = Application.Current.MainWindow;
+        guide.ShowDialog();
+    }
+
     private void LuaFilesCard_Click(object sender, RoutedEventArgs e)
     {
         (Application.Current.MainWindow as MainWindow)?.NavigateTo(typeof(Pages.LuaSyncPage));
