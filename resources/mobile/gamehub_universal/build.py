@@ -8,7 +8,7 @@ SDK = r"C:\Users\admin\AppData\Local\Android\Sdk"
 BUILD_TOOLS = os.path.join(SDK, "build-tools", "35.0.0")
 PLATFORM_JAR = os.path.join(SDK, "platforms", "android-34", "android.jar")
 JDK_BIN = r"C:\Program Files\Microsoft\jdk-21.0.12.101-hotspot\bin"
-KEYSTORE = r"C:\Users\admin\.gemini\antigravity-ide\brain\1e9eb3ca-cb48-4ce7-98cd-789cda9efbab\scratch\tools\cloudredirect.keystore"
+KEYSTORE = os.path.normpath(os.path.join(ROOT, "..", "cloudredirect.keystore"))
 
 AAPT2 = os.path.join(BUILD_TOOLS, "aapt2.exe")
 D8 = os.path.join(BUILD_TOOLS, "d8.bat")
@@ -105,5 +105,15 @@ cmd = [
     aligned_apk
 ]
 subprocess.check_call(cmd, shell=True)
+
+# Also create GameHub-HUD.apk copy
+hud_apk = os.path.join(ROOT, "..", "GameHub-HUD.apk")
+shutil.copy2(final_apk, hud_apk)
+
+# Copy to publish directory
+publish_dir = os.path.normpath(os.path.join(ROOT, "..", "..", "..", "ui", "bin", "publish"))
+if os.path.exists(publish_dir):
+    shutil.copy2(final_apk, os.path.join(publish_dir, "GameHub-TouchHUD.apk"))
+    shutil.copy2(final_apk, os.path.join(publish_dir, "GameHub-HUD.apk"))
 
 print(f"SUCCESS: Created and signed {final_apk} (Size: {os.path.getsize(final_apk)} bytes)")

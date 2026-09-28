@@ -12,7 +12,8 @@ import android.os.Vibrator;
 import android.util.DisplayMetrics;
 import android.view.MotionEvent;
 import android.view.View;
-import android.widget.FrameLayout;
+import android.widget.Toast;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -23,6 +24,7 @@ public class GameHubTouchView extends View {
     private final List<HudConfig.ControlDef> controls = new ArrayList<HudConfig.ControlDef>();
     private boolean isEditMode = false;
     private float hudAlpha = 0.70f;
+    private final GameHubInputSender inputSender;
 
     // Paints
     private final Paint basePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -34,7 +36,6 @@ public class GameHubTouchView extends View {
     // Multi-touch tracking: pointerId -> control
     private final Map<Integer, ActiveTouch> activeTouches = new HashMap<Integer, ActiveTouch>();
 
-    // Callback when user taps Collapse or Edit in toolbar
     public interface OnToolbarActionListener {
         void onCollapse();
         void onOpacityCycle();
@@ -49,7 +50,7 @@ public class GameHubTouchView extends View {
         public float currentY;
         public float stickDeltaX;
         public float stickDeltaY;
-        public String subTarget; // For D-Pad: "UP", "DOWN", "LEFT", "RIGHT"
+        public String lastDpadDirection;
 
         public ActiveTouch(HudConfig.ControlDef control, float x, float y) {
             this.control = control;
@@ -61,6 +62,7 @@ public class GameHubTouchView extends View {
     public GameHubTouchView(Context context) {
         super(context);
         vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+        inputSender = GameHubInputSender.getInstance(context);
         hudAlpha = HudConfig.getOpacity(context);
 
         // Load controls from config
@@ -147,30 +149,30 @@ public class GameHubTouchView extends View {
     private void drawTopToolbar(Canvas canvas, int w, int h) {
         toolbarPaint.setStyle(Paint.Style.FILL);
         toolbarPaint.setColor(0xCC0E151E);
-        canvas.drawRoundRect(w * 0.25f, 10, w * 0.75f, 65, 24, 24, toolbarPaint);
+        canvas.drawRoundRect(w * 0.20f, 10, w * 0.80f, 65, 24, 24, toolbarPaint);
 
         toolbarPaint.setStyle(Paint.Style.STROKE);
         toolbarPaint.setStrokeWidth(2f);
         toolbarPaint.setColor(0xFF283A4E);
-        canvas.drawRoundRect(w * 0.25f, 10, w * 0.75f, 65, 24, 24, toolbarPaint);
+        canvas.drawRoundRect(w * 0.20f, 10, w * 0.80f, 65, 24, 24, toolbarPaint);
 
         // Buttons inside toolbar
         textPaint.setTextSize(spToPx(12));
         textPaint.setColor(isEditMode ? 0xFFA4D007 : 0xFF00D2FF);
-        canvas.drawText(isEditMode ? "✎ EDIT (ON)" : "✎ EDIT", w * 0.33f, 44, textPaint);
+        canvas.drawText(isEditMode ? "✎ EDIT (ON)" : "✎ EDIT", w * 0.28f, 44, textPaint);
 
         textPaint.setColor(0xFF66C0F4);
         int pct = (int)(hudAlpha * 100);
-        canvas.drawText("👁 " + pct + "%", w * 0.45f, 44, textPaint);
+        canvas.drawText("👁 " + pct + "%", w * 0.41f, 44, textPaint);
 
         textPaint.setColor(0xFF66C0F4);
-        canvas.drawText("⚙ PRESET", w * 0.57f, 44, textPaint);
+        canvas.drawText("⚙ PRESET", w * 0.54f, 44, textPaint);
 
         textPaint.setColor(0xFFE5A823);
-        canvas.drawText("💾 SAVE", w * 0.65f, 44, textPaint);
+        canvas.drawText("💾 SAVE", w * 0.66f, 44, textPaint);
 
         textPaint.setColor(0xFFD83B3B);
-        canvas.drawText("✖ CLOSE", w * 0.72f, 44, textPaint);
+        canvas.drawText("✖ CLOSE", w * 0.75f, 44, textPaint);
     }
 
     private void drawJoystick(Canvas canvas, HudConfig.ControlDef def, float cx, float cy, float sizePx) {
@@ -262,7 +264,7 @@ public class GameHubTouchView extends View {
         canvas.drawCircle(cx, cy, r, basePaint);
 
         // Label
-        textPaint.setTextSize(spToPx(def.label.length() > 2 ? 11 : 16));
+        textPaint.setTextSize(spToPx(def.label.length() > 3 ? 10 : (def.label.length() > 2 ? 12 : 16)));
         textPaint.setColor(isPressed ? 0xFFFFFFFF : Color.argb(alpha, 245, 245, 245));
         canvas.drawText(def.label, cx, cy + spToPx(def.label.length() > 2 ? 4 : 5), textPaint);
     }
@@ -281,7 +283,7 @@ public class GameHubTouchView extends View {
             case MotionEvent.ACTION_DOWN:
             case MotionEvent.ACTION_POINTER_DOWN:
                 // Check Toolbar clicks first
-                if (y >= 10 && y <= 65 && x >= w * 0.25f && x <= w * 0.75f) {
+                if (y >= 10 && y <= 65 && x >= w * 0.20f && x <= w * 0.80f) {
                     handleToolbarClick(x, w);
                     return true;
                 }
@@ -290,12 +292,18 @@ public class GameHubTouchView extends View {
                 HudConfig.ControlDef hit = findHitControl(x, y, w, h);
                 if (hit != null) {
                     ActiveTouch touch = new ActiveTouch(hit, x, y);
-                    updateStickDelta(touch, hit, x, y, w, h);
                     activeTouches.put(pointerId, touch);
                     triggerHaptic();
 
-                    // Optional gesture dispatch to Steam Link
-                    GameHubAccessibilityService.dispatchTap(x, y);
+                    if ("stick".equals(hit.type)) {
+                        updateStickDelta(touch, hit, x, y, w, h);
+                    } else if ("dpad".equals(hit.type)) {
+                        updateDpadDirection(touch, hit, x, y, w, h);
+                    } else {
+                        // Action button down: send to PC and local accessibility
+                        inputSender.sendButton(hit, true);
+                        GameHubAccessibilityService.dispatchTap(x, y);
+                    }
 
                     invalidate();
                     return true;
@@ -315,7 +323,11 @@ public class GameHubTouchView extends View {
                             t.control.xRatio = Math.max(0.05f, Math.min(0.95f, px / w));
                             t.control.yRatio = Math.max(0.12f, Math.min(0.95f, py / h));
                         } else {
-                            updateStickDelta(t, t.control, px, py, w, h);
+                            if ("stick".equals(t.control.type)) {
+                                updateStickDelta(t, t.control, px, py, w, h);
+                            } else if ("dpad".equals(t.control.type)) {
+                                updateDpadDirection(t, t.control, px, py, w, h);
+                            }
                         }
                     }
                 }
@@ -325,7 +337,18 @@ public class GameHubTouchView extends View {
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_POINTER_UP:
             case MotionEvent.ACTION_CANCEL:
-                activeTouches.remove(pointerId);
+                ActiveTouch releaseTouch = activeTouches.remove(pointerId);
+                if (releaseTouch != null) {
+                    if ("stick".equals(releaseTouch.control.type)) {
+                        inputSender.sendJoystick(releaseTouch.control.id, 0f, 0f);
+                    } else if ("dpad".equals(releaseTouch.control.type)) {
+                        if (releaseTouch.lastDpadDirection != null) {
+                            inputSender.sendDpadDirection(releaseTouch.lastDpadDirection, false);
+                        }
+                    } else {
+                        inputSender.sendButton(releaseTouch.control, false);
+                    }
+                }
                 invalidate();
                 return true;
         }
@@ -335,34 +358,84 @@ public class GameHubTouchView extends View {
 
     private void handleToolbarClick(float x, int w) {
         triggerHaptic();
-        if (x < w * 0.39f) {
+        if (x < w * 0.35f) {
             toggleEditMode();
-        } else if (x < w * 0.51f) {
+        } else if (x < w * 0.47f) {
+            cycleOpacityInternal();
             if (toolbarListener != null) toolbarListener.onOpacityCycle();
-        } else if (x < w * 0.61f) {
+        } else if (x < w * 0.60f) {
+            cyclePresetInternal();
             if (toolbarListener != null) toolbarListener.onPresetCycle();
-        } else if (x < w * 0.69f) {
+        } else if (x < w * 0.71f) {
             HudConfig.saveControls(getContext(), controls);
+            Toast.makeText(getContext(), "Layout Saved!", Toast.LENGTH_SHORT).show();
             if (toolbarListener != null) toolbarListener.onSaveLayout();
         } else {
             if (toolbarListener != null) toolbarListener.onCollapse();
         }
     }
 
+    private void cycleOpacityInternal() {
+        int level = HudConfig.getPrefs(getContext()).getInt(HudConfig.KEY_OPACITY, 1);
+        level = (level + 1) % 4;
+        HudConfig.getPrefs(getContext()).edit().putInt(HudConfig.KEY_OPACITY, level).apply();
+        setHudAlpha(HudConfig.getOpacity(getContext()));
+    }
+
+    private void cyclePresetInternal() {
+        String cur = HudConfig.getPrefs(getContext()).getString(HudConfig.KEY_PRESET, HudConfig.PRESET_STEAM_LINK);
+        String next;
+        if (HudConfig.PRESET_STEAM_LINK.equals(cur)) {
+            next = HudConfig.PRESET_ACTION_RPG;
+        } else if (HudConfig.PRESET_ACTION_RPG.equals(cur)) {
+            next = HudConfig.PRESET_FPS;
+        } else {
+            next = HudConfig.PRESET_STEAM_LINK;
+        }
+        HudConfig.getPrefs(getContext()).edit().putString(HudConfig.KEY_PRESET, next).apply();
+        HudConfig.resetControls(getContext());
+        reloadControls();
+        Toast.makeText(getContext(), "Preset: " + next, Toast.LENGTH_SHORT).show();
+    }
+
     private void updateStickDelta(ActiveTouch touch, HudConfig.ControlDef def, float px, float py, int w, int h) {
-        if ("stick".equals(def.type)) {
-            float cx = def.xRatio * w;
-            float cy = def.yRatio * h;
-            float maxR = dpToPx(def.sizeDp) * 0.45f;
-            float dx = px - cx;
-            float dy = py - cy;
-            float dist = (float) Math.sqrt(dx * dx + dy * dy);
-            if (dist > maxR && dist > 0) {
-                dx = (dx / dist) * maxR;
-                dy = (dy / dist) * maxR;
+        float cx = def.xRatio * w;
+        float cy = def.yRatio * h;
+        float maxR = dpToPx(def.sizeDp) * 0.45f;
+        float dx = px - cx;
+        float dy = py - cy;
+        float dist = (float) Math.sqrt(dx * dx + dy * dy);
+        if (dist > maxR && dist > 0) {
+            dx = (dx / dist) * maxR;
+            dy = (dy / dist) * maxR;
+        }
+        touch.stickDeltaX = dx;
+        touch.stickDeltaY = dy;
+
+        float normX = dx / maxR;
+        float normY = dy / maxR;
+        inputSender.sendJoystick(def.id, normX, normY);
+    }
+
+    private void updateDpadDirection(ActiveTouch touch, HudConfig.ControlDef def, float px, float py, int w, int h) {
+        float cx = def.xRatio * w;
+        float cy = def.yRatio * h;
+        float dx = px - cx;
+        float dy = py - cy;
+        String dir = null;
+
+        if (Math.abs(dy) > Math.abs(dx)) {
+            dir = dy < 0 ? "UP" : "DOWN";
+        } else {
+            dir = dx < 0 ? "LEFT" : "RIGHT";
+        }
+
+        if (dir != null && !dir.equals(touch.lastDpadDirection)) {
+            if (touch.lastDpadDirection != null) {
+                inputSender.sendDpadDirection(touch.lastDpadDirection, false);
             }
-            touch.stickDeltaX = dx;
-            touch.stickDeltaY = dy;
+            touch.lastDpadDirection = dir;
+            inputSender.sendDpadDirection(dir, true);
         }
     }
 
