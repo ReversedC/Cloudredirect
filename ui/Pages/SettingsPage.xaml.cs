@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using CloudRedirect.Resources;
 using CloudRedirect.Services;
 
@@ -67,6 +68,8 @@ public partial class SettingsPage : Page
         {
             MillenniumBadge.Visibility = Visibility.Collapsed;
         }
+
+        _ = LoadPlatformStatusAsync();
     }
 
     private void ApplySyncToggles(bool? achievements, bool? playtime, bool? luas, bool? autoUpdateDll,
@@ -394,6 +397,7 @@ public partial class SettingsPage : Page
         {
             var steamPath = Services.SteamDetector.FindSteamPath();
             var (success, msg) = Services.SteamWebUiPatcher.ApplyPatch(steamPath);
+            await LoadPlatformStatusAsync();
             if (success)
             {
                 await Services.Dialog.ShowInfoAsync(S.Get("Settings_Done"), msg);
@@ -407,5 +411,62 @@ public partial class SettingsPage : Page
         {
             await Services.Dialog.ShowErrorAsync(S.Get("Common_Error"), ex.Message);
         }
+    }
+
+    private async Task LoadPlatformStatusAsync()
+    {
+        try
+        {
+            var steamPath = SteamDetector.FindSteamPath();
+            var steamDetails = SteamDetector.GetSteamVersionDetails(steamPath);
+
+            SteamVersionText.Text = steamDetails.DisplayVersion;
+            SteamBranchText.Text = steamDetails.Branch;
+
+            if (steamDetails.IsBeta)
+            {
+                SteamBranchBadge.Background = new SolidColorBrush(Color.FromRgb(0x3D, 0x2B, 0x16));
+                SteamBranchBadge.BorderBrush = new SolidColorBrush(Color.FromRgb(0xFF, 0x99, 0x00));
+                SteamBranchText.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x99, 0x00));
+            }
+            else
+            {
+                SteamBranchBadge.Background = new SolidColorBrush(Color.FromRgb(0x16, 0x2B, 0x3D));
+                SteamBranchBadge.BorderBrush = new SolidColorBrush(Color.FromRgb(0x00, 0xD2, 0xFF));
+                SteamBranchText.Foreground = new SolidColorBrush(Color.FromRgb(0x00, 0xD2, 0xFF));
+            }
+
+            var suoInfo = await SuoDetector.DetectAsync();
+            if (suoInfo.IsInstalled)
+            {
+                SuoVersionText.Text = $"{suoInfo.Version} • {(suoInfo.IsOnline ? "Local daemon active" : "Daemon offline")}";
+                if (suoInfo.IsOnline)
+                {
+                    SuoStatusBadge.Background = new SolidColorBrush(Color.FromRgb(0x14, 0x32, 0x24));
+                    SuoStatusBadge.BorderBrush = new SolidColorBrush(Color.FromRgb(0x5B, 0xA3, 0x2B));
+                    SuoStatusDot.Fill = new SolidColorBrush(Color.FromRgb(0xA4, 0xD0, 0x07));
+                    SuoStatusText.Text = "Online";
+                    SuoStatusText.Foreground = new SolidColorBrush(Color.FromRgb(0xA4, 0xD0, 0x07));
+                }
+                else
+                {
+                    SuoStatusBadge.Background = new SolidColorBrush(Color.FromRgb(0x32, 0x14, 0x14));
+                    SuoStatusBadge.BorderBrush = new SolidColorBrush(Color.FromRgb(0xA3, 0x3B, 0x3B));
+                    SuoStatusDot.Fill = new SolidColorBrush(Color.FromRgb(0xE0, 0x50, 0x50));
+                    SuoStatusText.Text = "Offline";
+                    SuoStatusText.Foreground = new SolidColorBrush(Color.FromRgb(0xE0, 0x50, 0x50));
+                }
+            }
+            else
+            {
+                SuoVersionText.Text = "Not detected or installed";
+                SuoStatusBadge.Background = new SolidColorBrush(Color.FromRgb(0x20, 0x24, 0x28));
+                SuoStatusBadge.BorderBrush = new SolidColorBrush(Color.FromRgb(0x4B, 0x55, 0x63));
+                SuoStatusDot.Fill = new SolidColorBrush(Color.FromRgb(0x9C, 0xA3, 0xAF));
+                SuoStatusText.Text = "Not Detected";
+                SuoStatusText.Foreground = new SolidColorBrush(Color.FromRgb(0x9C, 0xA3, 0xAF));
+            }
+        }
+        catch { }
     }
 }

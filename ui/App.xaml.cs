@@ -76,8 +76,7 @@ public partial class App : System.Windows.Application
             var steamPath = Services.SteamDetector.FindSteamPath();
             var (success, msg) = Services.SteamWebUiPatcher.ApplyPatch(steamPath);
             Console.WriteLine(msg);
-            ShutdownMode = ShutdownMode.OnExplicitShutdown;
-            Shutdown(success ? 0 : 1);
+            Environment.Exit(success ? 0 : 1);
             return;
         }
 
@@ -86,8 +85,19 @@ public partial class App : System.Windows.Application
             var steamPath = Services.SteamDetector.FindSteamPath();
             var (success, msg) = Services.SteamWebUiPatcher.RemovePatch(steamPath);
             Console.WriteLine(msg);
-            ShutdownMode = ShutdownMode.OnExplicitShutdown;
-            Shutdown(success ? 0 : 1);
+            Environment.Exit(success ? 0 : 1);
+            return;
+        }
+
+        if (e.Args.Any(a => string.Equals(a, "--test-status", StringComparison.OrdinalIgnoreCase)))
+        {
+            var steamPath = Services.SteamDetector.FindSteamPath();
+            var steamDetails = Services.SteamDetector.GetSteamVersionDetails(steamPath);
+            var suoInfo = Services.SuoDetector.Detect();
+            var statusStr = $"Steam: {steamDetails.DisplayVersion} [{steamDetails.Branch}] | SUO: {suoInfo.Version} [{(suoInfo.IsOnline ? "Online" : "Offline")}]";
+            LogStartup("CLI Test Status: " + statusStr);
+            Console.WriteLine(statusStr);
+            Environment.Exit(0);
             return;
         }
 

@@ -113,6 +113,95 @@ public static class SteamDetector
         return null;
     }
 
+    public sealed record SteamVersionDetails(
+        string DisplayVersion,
+        string Branch,
+        bool IsBeta,
+        long? BuildTimestamp,
+        DateTime? BuildDate,
+        string? ExeVersion);
+
+    /// <summary>
+    /// Detects Steam's client version, build date, and branch (Stable or Beta).
+    /// </summary>
+    public static SteamVersionDetails GetSteamVersionDetails(string? steamPath = null)
+    {
+        steamPath ??= FindSteamPath();
+        if (string.IsNullOrEmpty(steamPath) || !Directory.Exists(steamPath))
+        {
+            return new SteamVersionDetails("Not Found", "Unknown", false, null, null, null);
+        }
+
+        // 1. Exe File Version
+        string? exeVersion = null;
+        var exePath = Path.Combine(steamPath, "steam.exe");
+        if (File.Exists(exePath))
+        {
+            try
+            {
+                var vi = FileVersionInfo.GetVersionInfo(exePath);
+                exeVersion = vi.FileVersion;
+            }
+            catch { }
+        }
+
+        // 2. Build Timestamp from manifest
+        long? buildTimestamp = GetSteamVersion(steamPath);
+        DateTime? buildDate = null;
+        string? dateStr = null;
+        if (buildTimestamp.HasValue && buildTimestamp.Value > 0)
+        {
+            try
+            {
+                var dto = DateTimeOffset.FromUnixTimeSeconds(buildTimestamp.Value).ToLocalTime();
+                buildDate = dto.DateTime;
+                dateStr = dto.ToString("MMM dd, yyyy");
+            }
+            catch { }
+        }
+
+        // 3. Channel (Stable vs Beta)
+        bool isBeta = false;
+        var betaFile = Path.Combine(steamPath, "package", "beta");
+        if (File.Exists(betaFile))
+        {
+            try
+            {
+                var text = File.ReadAllText(betaFile).Trim();
+                if (!string.IsNullOrEmpty(text))
+                    isBeta = true;
+            }
+            catch { isBeta = true; }
+        }
+
+        if (!isBeta)
+        {
+            try
+            {
+                using var key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Valve\Steam");
+                var betaVal = key?.GetValue("Beta") as string;
+                if (!string.IsNullOrEmpty(betaVal))
+                    isBeta = true;
+            }
+            catch { }
+        }
+
+        string branch = isBeta ? "Beta" : "Stable";
+
+        // Formatted display version
+        string displayVersion;
+        if (!string.IsNullOrEmpty(exeVersion) && !string.IsNullOrEmpty(dateStr))
+            displayVersion = $"{exeVersion} ({dateStr})";
+        else if (!string.IsNullOrEmpty(exeVersion))
+            displayVersion = exeVersion;
+        else if (!string.IsNullOrEmpty(dateStr))
+            displayVersion = $"Build {buildTimestamp} ({dateStr})";
+        else
+            displayVersion = "Detected";
+
+        return new SteamVersionDetails(displayVersion, branch, isBeta, buildTimestamp, buildDate, exeVersion);
+    }
+
     /// <summary>Walks up from <paramref name="path"/> to find the directory containing steam.exe, or null.</summary>
     private static string? NormalizeToSteamRoot(string? path)
     {
