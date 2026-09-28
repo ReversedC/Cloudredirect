@@ -1,17 +1,21 @@
 package com.cloudredirect.gamehub;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
-import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
+import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -26,6 +30,13 @@ public class MainActivity extends Activity {
     private Button btnResetLayout;
     private CheckBox cbHaptics;
     private TextView statusPill;
+
+    // PC Connection UI
+    private TextView tvPcStatusBadge;
+    private TextView tvHostPcName;
+    private TextView tvHostPcIp;
+    private Button btnScanPc;
+    private Button btnSetIp;
 
     private GameHubInputSender inputSender;
 
@@ -44,6 +55,13 @@ public class MainActivity extends Activity {
         btnResetLayout = (Button) findViewById(R.id.btnResetLayout);
         cbHaptics = (CheckBox) findViewById(R.id.cbHaptics);
         statusPill = (TextView) findViewById(R.id.statusPill);
+
+        // PC Connection Views
+        tvPcStatusBadge = (TextView) findViewById(R.id.tvPcStatusBadge);
+        tvHostPcName = (TextView) findViewById(R.id.tvHostPcName);
+        tvHostPcIp = (TextView) findViewById(R.id.tvHostPcIp);
+        btnScanPc = (Button) findViewById(R.id.btnScanPc);
+        btnSetIp = (Button) findViewById(R.id.btnSetIp);
 
         Button btnCheckUpdates = (Button) findViewById(R.id.btnCheckUpdates);
         if (btnCheckUpdates != null) {
@@ -71,6 +89,26 @@ public class MainActivity extends Activity {
                 requestOverlayPermission();
             }
         });
+
+        // PC Auto-Scan
+        if (btnScanPc != null) {
+            btnScanPc.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    triggerPcScan();
+                }
+            });
+        }
+
+        // Set IP Dialog
+        if (btnSetIp != null) {
+            btnSetIp.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    showSetIpDialog();
+                }
+            });
+        }
 
         btnCyclePreset.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -117,16 +155,8 @@ public class MainActivity extends Activity {
             }
         });
 
-        // Silent automatic PC discovery on WiFi in the background
-        inputSender.startDiscovery(new GameHubInputSender.DiscoveryCallback() {
-            @Override
-            public void onDeviceFound(String hostName, String ipAddress) {
-                inputSender.setHostIp(ipAddress);
-            }
-
-            @Override
-            public void onTimeout() {}
-        });
+        // Background initial scan
+        triggerPcScan();
 
         updateUI();
     }
@@ -136,7 +166,167 @@ public class MainActivity extends Activity {
         super.onResume();
         applyOrientation();
         updateUI();
+        updateConnectionUI();
         AutoUpdateService.checkPendingInstallOnResume(this);
+    }
+
+    private void triggerPcScan() {
+        if (btnScanPc != null) {
+            btnScanPc.setText("🔍 Scanning...");
+            btnScanPc.setEnabled(false);
+        }
+        if (tvPcStatusBadge != null) {
+            tvPcStatusBadge.setText("SCANNING...");
+            tvPcStatusBadge.setTextColor(0xFF00D2FF);
+        }
+
+        inputSender.startDiscovery(new GameHubInputSender.DiscoveryCallback() {
+            @Override
+            public void onDeviceFound(String hostName, String ipAddress) {
+                if (btnScanPc != null) {
+                    btnScanPc.setText("🔍 Auto-Scan PC");
+                    btnScanPc.setEnabled(true);
+                }
+                updateConnectionUI();
+                Toast.makeText(MainActivity.this, "Connected to: " + hostName + " (" + ipAddress + ")", Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onTimeout() {
+                if (btnScanPc != null) {
+                    btnScanPc.setText("🔍 Auto-Scan PC");
+                    btnScanPc.setEnabled(true);
+                }
+                updateConnectionUI();
+            }
+        });
+    }
+
+    private void updateConnectionUI() {
+        String ip = inputSender.getHostIp();
+        String name = inputSender.getLastPcName();
+
+        if (tvHostPcName != null) {
+            tvHostPcName.setText(name != null && !name.isEmpty() ? name : "CloudRedirect PC");
+        }
+
+        if (tvHostPcIp != null) {
+            tvHostPcIp.setText("IP: " + (ip != null ? ip : "Not Configured") + " • UDP Port 48999");
+        }
+
+        if (ip != null && !ip.isEmpty()) {
+            inputSender.testPing(ip, new GameHubInputSender.PingCallback() {
+                @Override
+                public void onSuccess(int latencyMs) {
+                    if (tvPcStatusBadge != null) {
+                        tvPcStatusBadge.setText("🟢 " + latencyMs + "ms");
+                        tvPcStatusBadge.setTextColor(0xFF66D18F);
+                    }
+                    if (tvHostPcIp != null) {
+                        tvHostPcIp.setText("IP: " + ip + " • Connected (" + latencyMs + "ms) • Port 48999");
+                    }
+                }
+
+                @Override
+                public void onFailure(String error) {
+                    if (tvPcStatusBadge != null) {
+                        tvPcStatusBadge.setText("🔴 OFFLINE");
+                        tvPcStatusBadge.setTextColor(0xFFFF6B6B);
+                    }
+                }
+            });
+        } else {
+            if (tvPcStatusBadge != null) {
+                tvPcStatusBadge.setText("🔴 UNSET");
+                tvPcStatusBadge.setTextColor(0xFFFF6B6B);
+            }
+        }
+    }
+
+    private void showSetIpDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this, AlertDialog.THEME_DEVICE_DEFAULT_DARK);
+        builder.setTitle("Configure Host PC IP");
+
+        LinearLayout container = new LinearLayout(this);
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.setPadding(dpToPx(20), dpToPx(12), dpToPx(20), dpToPx(12));
+
+        TextView tvDesc = new TextView(this);
+        tvDesc.setText("Enter the local IP address of your Windows PC running CloudRedirect (e.g. 192.168.1.15):");
+        tvDesc.setTextColor(0xFFC7D5E0);
+        tvDesc.setTextSize(13f);
+        tvDesc.setPadding(0, 0, 0, dpToPx(8));
+        container.addView(tvDesc);
+
+        final EditText etIp = new EditText(this);
+        etIp.setText(inputSender.getHostIp());
+        etIp.setTextColor(0xFFFFFFFF);
+        etIp.setTextSize(15f);
+        etIp.setSingleLine(true);
+        container.addView(etIp);
+
+        final TextView tvPingResult = new TextView(this);
+        tvPingResult.setTextSize(12f);
+        tvPingResult.setTextColor(0xFF00D2FF);
+        tvPingResult.setPadding(0, dpToPx(8), 0, 0);
+        container.addView(tvPingResult);
+
+        builder.setView(container);
+
+        builder.setPositiveButton("SAVE & CONNECT", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                String newIp = etIp.getText().toString().trim();
+                if (!newIp.isEmpty()) {
+                    inputSender.setHostIp(newIp);
+                    updateConnectionUI();
+                    Toast.makeText(MainActivity.this, "Host IP set to: " + newIp, Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+        builder.setNeutralButton("TEST PING", null); // Override below to keep dialog open
+
+        builder.setNegativeButton("CANCEL", null);
+
+        final AlertDialog dialog = builder.create();
+        dialog.show();
+
+        // Custom listener for TEST PING to prevent automatic dialog dismiss
+        Button btnPing = dialog.getButton(AlertDialog.BUTTON_NEUTRAL);
+        if (btnPing != null) {
+            btnPing.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    final String testIp = etIp.getText().toString().trim();
+                    if (testIp.isEmpty()) {
+                        tvPingResult.setText("Please enter an IP address first");
+                        tvPingResult.setTextColor(0xFFFF6B6B);
+                        return;
+                    }
+                    tvPingResult.setText("Pinging " + testIp + "...");
+                    tvPingResult.setTextColor(0xFF00D2FF);
+
+                    inputSender.testPing(testIp, new GameHubInputSender.PingCallback() {
+                        @Override
+                        public void onSuccess(int latencyMs) {
+                            tvPingResult.setText("✓ Success! PC responded in " + latencyMs + "ms");
+                            tvPingResult.setTextColor(0xFF66D18F);
+                        }
+
+                        @Override
+                        public void onFailure(String error) {
+                            tvPingResult.setText("✗ No response from PC on port 48999 (" + error + ")");
+                            tvPingResult.setTextColor(0xFFFF6B6B);
+                        }
+                    });
+                }
+            });
+        }
+    }
+
+    private int dpToPx(int dp) {
+        return (int) (dp * getResources().getDisplayMetrics().density + 0.5f);
     }
 
     private void applyOrientation() {
@@ -184,6 +374,8 @@ public class MainActivity extends Activity {
         if (btnCycleOrientation != null) {
             btnCycleOrientation.setText("Orientation: " + HudConfig.getOrientationMode(this));
         }
+
+        updateConnectionUI();
     }
 
     private boolean hasOverlayPermission() {
@@ -246,4 +438,3 @@ public class MainActivity extends Activity {
         updateUI();
     }
 }
-

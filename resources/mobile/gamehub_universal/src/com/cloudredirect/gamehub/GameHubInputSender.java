@@ -2,19 +2,25 @@ package com.cloudredirect.gamehub;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.net.wifi.WifiManager;
 import android.os.Handler;
 import android.os.Looper;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.InterfaceAddress;
+import java.net.NetworkInterface;
 import java.nio.charset.StandardCharsets;
+import java.util.Enumeration;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class GameHubInputSender {
     public static final int UDP_PORT = 48999;
-    private static final String KEY_HOST_IP = "host_pc_ip";
+    public static final String KEY_HOST_IP = "host_pc_ip";
+    public static final String KEY_LAST_PC_NAME = "host_pc_name";
 
     private static GameHubInputSender instance;
 
@@ -24,10 +30,16 @@ public class GameHubInputSender {
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private DatagramSocket udpSocket;
     private String hostIp;
+    private String lastPcName;
 
     public interface DiscoveryCallback {
         void onDeviceFound(String hostName, String ipAddress);
         void onTimeout();
+    }
+
+    public interface PingCallback {
+        void onSuccess(int latencyMs);
+        void onFailure(String error);
     }
 
     public static synchronized GameHubInputSender getInstance(Context context) {
@@ -41,6 +53,7 @@ public class GameHubInputSender {
         this.context = context;
         this.prefs = HudConfig.getPrefs(context);
         this.hostIp = prefs.getString(KEY_HOST_IP, "192.168.1.100");
+        this.lastPcName = prefs.getString(KEY_LAST_PC_NAME, "CloudRedirect PC");
         try {
             udpSocket = new DatagramSocket();
         } catch (Exception e) {
@@ -52,9 +65,18 @@ public class GameHubInputSender {
         return hostIp;
     }
 
+    public String getLastPcName() {
+        return lastPcName;
+    }
+
     public void setHostIp(String ip) {
-        this.hostIp = ip;
-        prefs.edit().putString(KEY_HOST_IP, ip).apply();
+        this.hostIp = ip != null ? ip.trim() : "";
+        prefs.edit().putString(KEY_HOST_IP, this.hostIp).apply();
+    }
+
+    public void setLastPcName(String name) {
+        this.lastPcName = name;
+        prefs.edit().putString(KEY_LAST_PC_NAME, name).apply();
     }
 
     public void sendButton(final HudConfig.ControlDef def, final boolean down) {
@@ -70,7 +92,6 @@ public class GameHubInputSender {
                     } else if (def.keyCode > 0) {
                         payload = "K:" + (down ? "1" : "0") + ":" + def.keyCode + ":" + def.label;
                     } else {
-                        // Gamepad button label fallback
                         payload = "PAD:" + (down ? "1" : "0") + ":" + def.label;
                     }
                     sendUdp(payload);
@@ -100,8 +121,22 @@ public class GameHubInputSender {
             public void run() {
                 try {
                     String prefix = "stick_right".equals(stickId) ? "JR:" : "J:";
-                    String payload = prefix + String.format(java.util.Locale.US, "%.3f:%.3f", x, y);
+                    String payload = prefix + String.format(Locale.US, "%.3f:%.3f", x, y);
                     sendUdp(payload);
+                } catch (Throwable t) {
+                    t.printStackTrace();
+                }
+            }
+        });
+    }
+
+    public void sendText(final String text, final boolean pressEnter) {
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    String prefix = pressEnter ? "TEXT_ENTER:" : "TEXT:";
+                    sendUdp(prefix + text);
                 } catch (Throwable t) {
                     t.printStackTrace();
                 }
@@ -125,6 +160,45 @@ public class GameHubInputSender {
         });
     }
 
+    public void testPing(final String targetIp, final PingCallback callback) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                DatagramSocket socket = null;
+                try {
+                    socket = new DatagramSocket();
+                    socket.setSoTimeout(2000);
+                    long start = System.currentTimeMillis();
+                    byte[] ping = "PING".getBytes(StandardCharsets.UTF_8);
+                    InetAddress dest = InetAddress.getByName(targetIp.trim());
+                    DatagramPacket packet = new DatagramPacket(ping, ping.length, dest, UDP_PORT);
+                    socket.send(packet);
+
+                    byte[] buf = new byte[256];
+                    DatagramPacket recv = new DatagramPacket(buf, buf.length);
+                    socket.receive(recv);
+                    final int latency = (int) (System.currentTimeMillis() - start);
+
+                    mainHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (callback != null) callback.onSuccess(latency);
+                        }
+                    });
+                } catch (final Exception e) {
+                    mainHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (callback != null) callback.onFailure(e.getMessage());
+                        }
+                    });
+                } finally {
+                    if (socket != null && !socket.isClosed()) socket.close();
+                }
+            }
+        }).start();
+    }
+
     private void sendUdp(String msg) {
         if (hostIp == null || hostIp.trim().isEmpty()) return;
         try {
@@ -142,6 +216,16 @@ public class GameHubInputSender {
         new Thread(new Runnable() {
             @Override
             public void run() {
+                WifiManager wifi = (WifiManager) context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+                WifiManager.MulticastLock lock = null;
+                if (wifi != null) {
+                    try {
+                        lock = wifi.createMulticastLock("gamehub_discovery");
+                        lock.setReferenceCounted(true);
+                        lock.acquire();
+                    } catch (Throwable ignored) {}
+                }
+
                 DatagramSocket scanSocket = null;
                 try {
                     scanSocket = new DatagramSocket();
@@ -149,11 +233,37 @@ public class GameHubInputSender {
                     scanSocket.setSoTimeout(2500);
 
                     byte[] sendData = "DISCOVER_GAMEHUB".getBytes(StandardCharsets.UTF_8);
-                    DatagramPacket sendPacket = new DatagramPacket(
-                            sendData, sendData.length,
-                            InetAddress.getByName("255.255.255.255"), UDP_PORT);
-                    scanSocket.send(sendPacket);
 
+                    // 1. Send to 255.255.255.255
+                    try {
+                        scanSocket.send(new DatagramPacket(sendData, sendData.length, InetAddress.getByName("255.255.255.255"), UDP_PORT));
+                    } catch (Exception ignored) {}
+
+                    // 2. Broadcast on all network interface subnets
+                    try {
+                        Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+                        while (interfaces != null && interfaces.hasMoreElements()) {
+                            NetworkInterface ni = interfaces.nextElement();
+                            if (ni.isLoopback() || !ni.isUp()) continue;
+                            for (InterfaceAddress addr : ni.getInterfaceAddresses()) {
+                                InetAddress broadcast = addr.getBroadcast();
+                                if (broadcast != null) {
+                                    try {
+                                        scanSocket.send(new DatagramPacket(sendData, sendData.length, broadcast, UDP_PORT));
+                                    } catch (Exception ignored) {}
+                                }
+                            }
+                        }
+                    } catch (Exception ignored) {}
+
+                    // 3. Send to current hostIp if configured
+                    if (hostIp != null && !hostIp.trim().isEmpty()) {
+                        try {
+                            scanSocket.send(new DatagramPacket(sendData, sendData.length, InetAddress.getByName(hostIp.trim()), UDP_PORT));
+                        } catch (Exception ignored) {}
+                    }
+
+                    // Await response
                     byte[] recvBuf = new byte[1024];
                     DatagramPacket recvPacket = new DatagramPacket(recvBuf, recvBuf.length);
                     scanSocket.receive(recvPacket);
@@ -172,6 +282,7 @@ public class GameHubInputSender {
                         @Override
                         public void run() {
                             setHostIp(pcIp);
+                            setLastPcName(pcName);
                             if (callback != null) {
                                 callback.onDeviceFound(pcName, pcIp);
                             }
@@ -187,6 +298,9 @@ public class GameHubInputSender {
                 } finally {
                     if (scanSocket != null && !scanSocket.isClosed()) {
                         scanSocket.close();
+                    }
+                    if (lock != null && lock.isHeld()) {
+                        try { lock.release(); } catch (Throwable ignored) {}
                     }
                 }
             }

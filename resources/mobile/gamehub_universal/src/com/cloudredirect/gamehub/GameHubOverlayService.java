@@ -20,7 +20,9 @@ import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
@@ -28,6 +30,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
@@ -37,16 +40,24 @@ public class GameHubOverlayService extends Service {
     private static GameHubOverlayService instance;
 
     private WindowManager windowManager;
+
+    // 1. Initial Floating Pill Badge
     private TextView floatingPill;
+    private WindowManager.LayoutParams pillParams;
+
+    // 2. Play Mode: Discrete, individual views allowing 100% native touch pass-through to Steam Link
+    private final List<SinglePlayControlView> activePlayViews = new ArrayList<>();
+    private LinearLayout miniPlayDock;
+    private WindowManager.LayoutParams miniPlayDockParams;
+
+    // 3. Edit Mode: Fullscreen interactive layout for drag, resize, add, remove
     private FrameLayout hudRootLayout;
+    private WindowManager.LayoutParams hudParams;
     private GameHubTouchView touchHudView;
 
-    // Edit Dock & Floating Trigger
+    // Edit Dock & Resize Bar
     private HorizontalScrollView dockScroll;
     private LinearLayout dockBar;
-    private TextView btnOpenEdit;
-
-    // Bottom Resize Controller Bar
     private HorizontalScrollView sizeScroll;
     private LinearLayout sizeBar;
     private TextView tvSizeInfo;
@@ -60,6 +71,7 @@ public class GameHubOverlayService extends Service {
     // Dock Buttons
     private Button btnDockSavePlay;
     private Button btnDockDone;
+    private Button btnDockKeyboard;
     private Button btnDockAdd;
     private Button btnDockRemove;
     private Button btnDockMove;
@@ -68,9 +80,12 @@ public class GameHubOverlayService extends Service {
     private Button btnDockPreset;
     private Button btnDockHideAll;
 
-    private WindowManager.LayoutParams pillParams;
-    private WindowManager.LayoutParams hudParams;
+    // 4. In-Game Keyboard Modal
+    private View keyboardModalView;
+    private WindowManager.LayoutParams keyboardModalParams;
+
     private boolean isHudExpanded = false;
+    private boolean isEditModeActive = false;
     private final Random random = new Random();
 
     public static boolean isRunning() {
@@ -139,6 +154,9 @@ public class GameHubOverlayService extends Service {
             .build();
     }
 
+    // ==========================================
+    // FLOATING PILL (Initial Compact Badge)
+    // ==========================================
     private void createFloatingPill() {
         floatingPill = new TextView(this);
         floatingPill.setText("🎮 HUD");
@@ -187,7 +205,9 @@ public class GameHubOverlayService extends Service {
                         if (Math.abs(dx) > 10 || Math.abs(dy) > 10) isDrag = true;
                         pillParams.x = initialX + dx;
                         pillParams.y = initialY + dy;
-                        windowManager.updateViewLayout(floatingPill, pillParams);
+                        try {
+                            windowManager.updateViewLayout(floatingPill, pillParams);
+                        } catch (Throwable ignored) {}
                         return true;
 
                     case MotionEvent.ACTION_UP:
@@ -208,6 +228,9 @@ public class GameHubOverlayService extends Service {
         windowManager.addView(floatingPill, pillParams);
     }
 
+    // ==========================================
+    // EXPAND & COLLAPSE HUD
+    // ==========================================
     private void expandHud() {
         if (isHudExpanded) return;
         isHudExpanded = true;
@@ -215,6 +238,184 @@ public class GameHubOverlayService extends Service {
         if (floatingPill != null) {
             floatingPill.setVisibility(View.GONE);
         }
+
+        // Start directly in Play Mode with discrete floating controls
+        spawnPlayModeViews();
+    }
+
+    private void collapseHud() {
+        isHudExpanded = false;
+        isEditModeActive = false;
+
+        clearPlayModeViews();
+        hideKeyboardModal();
+
+        if (hudRootLayout != null) {
+            hudRootLayout.setVisibility(View.GONE);
+        }
+        if (floatingPill != null) {
+            floatingPill.setVisibility(View.VISIBLE);
+        }
+    }
+
+    // =========================================================================
+    // PLAY MODE: DISCRETE FLOATING CONTROLS (SOLVES TOUCH BLOCKING COMPLETELY!)
+    // =========================================================================
+    private void spawnPlayModeViews() {
+        clearPlayModeViews();
+        isEditModeActive = false;
+
+        if (hudRootLayout != null) {
+            hudRootLayout.setVisibility(View.GONE);
+        }
+
+        float opacity = HudConfig.getOpacity(this);
+        List<HudConfig.ControlDef> controls = HudConfig.getControls(this);
+        DisplayMetrics dm = getResources().getDisplayMetrics();
+        int screenW = dm.widthPixels;
+        int screenH = dm.heightPixels;
+
+        int windowType = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+            ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            : WindowManager.LayoutParams.TYPE_PHONE;
+
+        // 1. Spawn each button/dpad/joystick as its own separate tiny floating window
+        for (HudConfig.ControlDef def : controls) {
+            SinglePlayControlView ctrlView = new SinglePlayControlView(this, def, opacity);
+            int sizePx = (int) (def.sizeDp * dm.density);
+            int cx = (int) (def.xRatio * screenW);
+            int cy = (int) (def.yRatio * screenH);
+            int x = cx - sizePx / 2;
+            int y = cy - sizePx / 2;
+
+            WindowManager.LayoutParams params = new WindowManager.LayoutParams(
+                sizePx, sizePx,
+                windowType,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                PixelFormat.TRANSLUCENT
+            );
+            params.gravity = Gravity.TOP | Gravity.START;
+            params.x = x;
+            params.y = y;
+
+            try {
+                windowManager.addView(ctrlView, params);
+                activePlayViews.add(ctrlView);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        // 2. Spawn compact Mini Play Dock at top: [ ⌨ KEYBOARD ] [ ⚙ EDIT HUD ] [ ✕ ]
+        createMiniPlayDock(windowType);
+    }
+
+    private void clearPlayModeViews() {
+        for (SinglePlayControlView v : activePlayViews) {
+            try {
+                windowManager.removeView(v);
+            } catch (Exception ignored) {}
+        }
+        activePlayViews.clear();
+
+        if (miniPlayDock != null) {
+            try {
+                windowManager.removeView(miniPlayDock);
+            } catch (Exception ignored) {}
+            miniPlayDock = null;
+        }
+    }
+
+    private void createMiniPlayDock(int windowType) {
+        if (miniPlayDock != null) {
+            try { windowManager.removeView(miniPlayDock); } catch (Exception ignored) {}
+        }
+
+        float opacity = HudConfig.getOpacity(this);
+
+        miniPlayDock = new LinearLayout(this);
+        miniPlayDock.setOrientation(LinearLayout.HORIZONTAL);
+        miniPlayDock.setGravity(Gravity.CENTER_VERTICAL);
+        miniPlayDock.setPadding(dpToPx(8), dpToPx(4), dpToPx(8), dpToPx(4));
+        applyRoundedCardBg(miniPlayDock, 0xD90B131D, 0xAA00D2FF, dpToPx(16));
+        miniPlayDock.setAlpha(opacity);
+
+        // [ ⌨ KEYBOARD ] Button
+        TextView btnKb = new TextView(this);
+        btnKb.setText("⌨ KEYBOARD");
+        btnKb.setTextSize(11f);
+        btnKb.setTextColor(0xFFFFFFFF);
+        btnKb.setTypeface(null, Typeface.BOLD);
+        btnKb.setPadding(dpToPx(10), dpToPx(5), dpToPx(10), dpToPx(5));
+        applyRoundedCardBg(btnKb, 0xEE1E4466, 0xFF00D2FF, dpToPx(12));
+        btnKb.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showKeyboardModal();
+            }
+        });
+        miniPlayDock.addView(btnKb);
+
+        // [ ⚙ EDIT HUD ] Button
+        TextView btnEdit = new TextView(this);
+        btnEdit.setText("⚙ EDIT HUD");
+        btnEdit.setTextSize(11f);
+        btnEdit.setTextColor(0xFF00D2FF);
+        btnEdit.setTypeface(null, Typeface.BOLD);
+        btnEdit.setPadding(dpToPx(10), dpToPx(5), dpToPx(10), dpToPx(5));
+        LinearLayout.LayoutParams editLp = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        editLp.leftMargin = dpToPx(6);
+        btnEdit.setLayoutParams(editLp);
+        applyRoundedCardBg(btnEdit, 0xAA0E1824, 0x8800D2FF, dpToPx(12));
+        btnEdit.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                enterEditMode();
+            }
+        });
+        miniPlayDock.addView(btnEdit);
+
+        // [ ✕ ] Hide Button
+        TextView btnClose = new TextView(this);
+        btnClose.setText("✕");
+        btnClose.setTextSize(12f);
+        btnClose.setTextColor(0xFF9EABB8);
+        btnClose.setTypeface(null, Typeface.BOLD);
+        btnClose.setPadding(dpToPx(8), dpToPx(5), dpToPx(8), dpToPx(5));
+        LinearLayout.LayoutParams closeLp = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        closeLp.leftMargin = dpToPx(6);
+        btnClose.setLayoutParams(closeLp);
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                collapseHud();
+            }
+        });
+        miniPlayDock.addView(btnClose);
+
+        miniPlayDockParams = new WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            windowType,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            PixelFormat.TRANSLUCENT
+        );
+        miniPlayDockParams.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+        miniPlayDockParams.y = dpToPx(8);
+
+        windowManager.addView(miniPlayDock, miniPlayDockParams);
+    }
+
+    // ==========================================
+    // EDIT MODE: FULLSCREEN INTERACTIVE CANVAS
+    // ==========================================
+    private void enterEditMode() {
+        isEditModeActive = true;
+
+        // Remove discrete play views so full drag-and-drop canvas has complete control
+        clearPlayModeViews();
 
         if (hudRootLayout == null) {
             buildHudViewHierarchy();
@@ -231,36 +432,14 @@ public class GameHubOverlayService extends Service {
                 PixelFormat.TRANSLUCENT
             );
             hudParams.gravity = Gravity.TOP | Gravity.START;
-
             windowManager.addView(hudRootLayout, hudParams);
         } else {
             hudRootLayout.setVisibility(View.VISIBLE);
         }
 
-        // When expanding HUD, open in Play Mode with buttons active and small [⚙ EDIT HUD] visible!
-        exitEditModeToPlay();
-    }
-
-    private void collapseHud() {
-        if (!isHudExpanded) return;
-        isHudExpanded = false;
-
-        if (hudRootLayout != null) {
-            hudRootLayout.setVisibility(View.GONE);
-        }
-        if (floatingPill != null) {
-            floatingPill.setVisibility(View.VISIBLE);
-        }
-    }
-
-    private void enterEditMode() {
-        if (btnOpenEdit != null) {
-            btnOpenEdit.setVisibility(View.GONE);
-        }
-        if (dockScroll != null) {
-            dockScroll.setVisibility(View.VISIBLE);
-        }
+        if (dockScroll != null) dockScroll.setVisibility(View.VISIBLE);
         if (touchHudView != null) {
+            touchHudView.reloadControls();
             touchHudView.setEditMode(true);
             touchHudView.setRemoveMode(false);
         }
@@ -269,34 +448,14 @@ public class GameHubOverlayService extends Service {
             updateSelectedControlSizeLabel();
         }
         updateDockButtonStates();
-        Toast.makeText(this, "Edit Mode: Drag to move, pinch or use bottom bar to RESIZE! Tap [SAVE & PLAY] to lock.", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "Edit Mode: Drag to move, use bottom bar to RESIZE! Tap [SAVE & PLAY] to lock.", Toast.LENGTH_SHORT).show();
     }
 
     private void exitEditModeToPlay() {
-        // 1. Turn off edit & remove mode on canvas
         if (touchHudView != null) {
-            touchHudView.setEditMode(false);
-            touchHudView.setRemoveMode(false);
-            // Ensure touchHudView is VISIBLE so all buttons STAY on screen!
-            touchHudView.setVisibility(View.VISIBLE);
+            touchHudView.saveControls();
         }
-
-        // 2. Hide edit toolbar, size bar, and add card
-        if (dockScroll != null) {
-            dockScroll.setVisibility(View.GONE);
-        }
-        if (sizeScroll != null) {
-            sizeScroll.setVisibility(View.GONE);
-        }
-        if (addControlOverlay != null) {
-            addControlOverlay.setVisibility(View.GONE);
-        }
-
-        // 3. Show small discreet [⚙ EDIT HUD] button at top matching button transparency!
-        if (btnOpenEdit != null) {
-            btnOpenEdit.setVisibility(View.VISIBLE);
-            btnOpenEdit.setAlpha(HudConfig.getOpacity(this));
-        }
+        spawnPlayModeViews();
     }
 
     private void updateSelectedControlSizeLabel() {
@@ -312,14 +471,12 @@ public class GameHubOverlayService extends Service {
     private void buildHudViewHierarchy() {
         hudRootLayout = new FrameLayout(this);
 
-        // 1. Fullscreen Touch HUD View (Game buttons stay here)
+        // 1. Fullscreen Touch HUD View for Edit / Drag / Resize
         touchHudView = new GameHubTouchView(this);
         touchHudView.setOnControlSelectedListener(new GameHubTouchView.OnControlSelectedListener() {
             @Override
             public void onControlSelected(HudConfig.ControlDef def) {
-                if (sizeScroll != null) {
-                    sizeScroll.setVisibility(View.VISIBLE);
-                }
+                if (sizeScroll != null) sizeScroll.setVisibility(View.VISIBLE);
                 updateSelectedControlSizeLabel();
             }
         });
@@ -330,48 +487,11 @@ public class GameHubOverlayService extends Service {
         );
         hudRootLayout.addView(touchHudView, touchLp);
 
-        // 2. Small discreet [⚙ EDIT HUD] pill button (Visible in Play Mode, follows button opacity)
-        btnOpenEdit = new TextView(this);
-        btnOpenEdit.setText("⚙ EDIT HUD");
-        btnOpenEdit.setTextSize(11f);
-        btnOpenEdit.setTextColor(0xFF00D2FF);
-        btnOpenEdit.setTypeface(null, Typeface.BOLD);
-        btnOpenEdit.setPadding(dpToPx(12), dpToPx(5), dpToPx(12), dpToPx(5));
-        btnOpenEdit.setGravity(Gravity.CENTER);
-        applyRoundedCardBg(btnOpenEdit, 0x440B121B, 0x6600D2FF, dpToPx(14));
-        btnOpenEdit.setAlpha(HudConfig.getOpacity(this));
-
-        FrameLayout.LayoutParams openEditLp = new FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.WRAP_CONTENT,
-            FrameLayout.LayoutParams.WRAP_CONTENT
-        );
-        openEditLp.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
-        openEditLp.topMargin = dpToPx(8);
-        btnOpenEdit.setLayoutParams(openEditLp);
-        btnOpenEdit.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                enterEditMode();
-            }
-        });
-        btnOpenEdit.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                    btnOpenEdit.setAlpha(1.0f);
-                } else if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL) {
-                    btnOpenEdit.setAlpha(HudConfig.getOpacity(GameHubOverlayService.this));
-                }
-                return false;
-            }
-        });
-        hudRootLayout.addView(btnOpenEdit);
-
-        // 3. Responsive Top GameHub Controller Dock inside HorizontalScrollView (Visible in Edit Mode)
+        // 2. Responsive Top GameHub Controller Dock inside HorizontalScrollView
         dockScroll = new HorizontalScrollView(this);
         dockScroll.setHorizontalScrollBarEnabled(false);
         dockScroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
-        dockScroll.setVisibility(View.GONE); // Hidden initially until Edit is opened
+        dockScroll.setVisibility(View.VISIBLE);
 
         dockBar = new LinearLayout(this);
         dockBar.setOrientation(LinearLayout.HORIZONTAL);
@@ -379,9 +499,9 @@ public class GameHubOverlayService extends Service {
         dockBar.setPadding(dpToPx(10), dpToPx(6), dpToPx(10), dpToPx(6));
         applyRoundedCardBg(dockBar, 0xF00B121B, 0xFF00D2FF, dpToPx(24));
 
-        // Dock Buttons
         btnDockSavePlay = createDockButton("💾 SAVE & PLAY", 0xFFFFFFFF, 0xFF2E7D32, 0xFF00E676);
-        btnDockDone = createDockButton("✔ DONE", 0xFF00D2FF, 0xDD121F2D, 0xFF00D2FF);
+        btnDockDone = createDockButton("✔ PLAY", 0xFF00D2FF, 0xDD121F2D, 0xFF00D2FF);
+        btnDockKeyboard = createDockButton("⌨ KEYBOARD", 0xFFFFFFFF, 0xEE1E4466, 0xFF00D2FF);
         btnDockAdd = createDockButton("➕ ADD", 0xFF00D2FF, 0xDD121F2D, 0xFF00D2FF);
         btnDockRemove = createDockButton("🗑 REMOVE", 0xFFFF6B6B, 0xDD281418, 0xFFD83B3B);
         btnDockMove = createDockButton("📐 MOVE", 0xFF66C0F4, 0xDD121F2D, 0xFF284868);
@@ -392,6 +512,7 @@ public class GameHubOverlayService extends Service {
 
         dockBar.addView(btnDockSavePlay);
         dockBar.addView(btnDockDone);
+        dockBar.addView(btnDockKeyboard);
         dockBar.addView(btnDockAdd);
         dockBar.addView(btnDockRemove);
         dockBar.addView(btnDockMove);
@@ -410,10 +531,10 @@ public class GameHubOverlayService extends Service {
         dockLp.topMargin = dpToPx(8);
         hudRootLayout.addView(dockScroll, dockLp);
 
-        // 4. Bottom Floating Size Controller Bar (Visible in Edit Mode)
+        // 3. Bottom Floating Size Controller Bar
         buildSizeBarHierarchy();
 
-        // 5. Add Control Modal Overlay
+        // 4. Add Control Modal Overlay
         buildAddControlOverlay();
 
         // Setup Dock Click Listeners
@@ -422,7 +543,7 @@ public class GameHubOverlayService extends Service {
             public void onClick(View v) {
                 touchHudView.saveControls();
                 exitEditModeToPlay();
-                Toast.makeText(GameHubOverlayService.this, "Layout Saved! Buttons Locked & Ready to Play 🎮", Toast.LENGTH_SHORT).show();
+                Toast.makeText(GameHubOverlayService.this, "Layout Saved! Touch pass-through is active for Steam Link 🎮", Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -430,7 +551,13 @@ public class GameHubOverlayService extends Service {
             @Override
             public void onClick(View v) {
                 exitEditModeToPlay();
-                Toast.makeText(GameHubOverlayService.this, "Returned to Game Mode 🎮", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        btnDockKeyboard.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showKeyboardModal();
             }
         });
 
@@ -448,7 +575,7 @@ public class GameHubOverlayService extends Service {
                 touchHudView.setRemoveMode(nextRemove);
                 updateDockButtonStates();
                 if (nextRemove) {
-                    Toast.makeText(GameHubOverlayService.this, "Tap any button (or red ✕) to delete it!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(GameHubOverlayService.this, "Tap any button to delete it!", Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -461,7 +588,6 @@ public class GameHubOverlayService extends Service {
                 updateDockButtonStates();
                 if (nextEdit) {
                     if (sizeScroll != null) sizeScroll.setVisibility(View.VISIBLE);
-                    Toast.makeText(GameHubOverlayService.this, "Drag any button to reposition. Tap [SAVE & PLAY] when done!", Toast.LENGTH_SHORT).show();
                 } else {
                     if (sizeScroll != null) sizeScroll.setVisibility(View.GONE);
                 }
@@ -485,12 +611,8 @@ public class GameHubOverlayService extends Service {
                 HudConfig.getPrefs(GameHubOverlayService.this).edit().putInt(HudConfig.KEY_OPACITY, cur).apply();
                 float newAlpha = HudConfig.getOpacity(GameHubOverlayService.this);
                 touchHudView.setHudAlpha(newAlpha);
-                if (btnOpenEdit != null) {
-                    btnOpenEdit.setAlpha(newAlpha);
-                }
-                if (floatingPill != null) {
-                    floatingPill.setAlpha(newAlpha);
-                }
+                if (floatingPill != null) floatingPill.setAlpha(newAlpha);
+                if (miniPlayDock != null) miniPlayDock.setAlpha(newAlpha);
                 updateDockButtonStates();
             }
         });
@@ -565,7 +687,6 @@ public class GameHubOverlayService extends Service {
         sizeBar.addView(btnSizeMinus);
         sizeBar.addView(btnSizePlus);
 
-        // Quick Preset Size Pills
         Button btnS = createDockButton("S (42dp)", 0xFF8FA5B8, 0xDD1A2736, 0xFF2A425A);
         Button btnM = createDockButton("M (56dp)", 0xFF8FA5B8, 0xDD1A2736, 0xFF2A425A);
         Button btnL = createDockButton("L (72dp)", 0xFF8FA5B8, 0xDD1A2736, 0xFF2A425A);
@@ -619,18 +740,212 @@ public class GameHubOverlayService extends Service {
         updateDockOrientationButton();
     }
 
+    // ==========================================
+    // IN-GAME FLOATING KEYBOARD MODAL
+    // ==========================================
+    private void showKeyboardModal() {
+        if (keyboardModalView != null) {
+            try { windowManager.removeView(keyboardModalView); } catch (Exception ignored) {}
+            keyboardModalView = null;
+        }
+
+        DisplayMetrics dm = getResources().getDisplayMetrics();
+        int width = Math.min((int)(dm.widthPixels * 0.90f), dpToPx(480));
+
+        FrameLayout container = new FrameLayout(this);
+        container.setBackgroundColor(0x00000000);
+
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
+        applyRoundedCardBg(card, 0xF4101A26, 0xFF00D2FF, dpToPx(16));
+
+        // Header
+        LinearLayout header = new LinearLayout(this);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+
+        TextView tvTitle = new TextView(this);
+        tvTitle.setText("⌨ IN-GAME TEXT / CHAT");
+        tvTitle.setTextSize(13f);
+        tvTitle.setTypeface(null, Typeface.BOLD);
+        tvTitle.setTextColor(0xFF00D2FF);
+        LinearLayout.LayoutParams tLp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        header.addView(tvTitle, tLp);
+
+        TextView btnClose = new TextView(this);
+        btnClose.setText("✕");
+        btnClose.setTextSize(16f);
+        btnClose.setTypeface(null, Typeface.BOLD);
+        btnClose.setTextColor(0xFF888888);
+        btnClose.setPadding(dpToPx(8), dpToPx(4), dpToPx(8), dpToPx(4));
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hideKeyboardModal();
+            }
+        });
+        header.addView(btnClose);
+        card.addView(header);
+
+        TextView tvSub = new TextView(this);
+        tvSub.setText("Type character name, password, or chat directly into PC game");
+        tvSub.setTextSize(10.5f);
+        tvSub.setTextColor(0xFF8F98A0);
+        tvSub.setPadding(0, dpToPx(2), 0, dpToPx(8));
+        card.addView(tvSub);
+
+        // EditText Field
+        final EditText etInput = new EditText(this);
+        etInput.setHint("Enter text / name here...");
+        etInput.setHintTextColor(0xFF6B7A8C);
+        etInput.setTextColor(0xFFF5F5F5);
+        etInput.setTextSize(14f);
+        etInput.setSingleLine(true);
+        etInput.setPadding(dpToPx(12), dpToPx(10), dpToPx(12), dpToPx(10));
+        applyRoundedCardBg(etInput, 0xFF172230, 0xFF00D2FF, dpToPx(8));
+        card.addView(etInput);
+
+        // Action Buttons Row: [ ⏎ SEND & ENTER ] and [ 💬 SEND TEXT ]
+        LinearLayout actionRow = new LinearLayout(this);
+        actionRow.setOrientation(LinearLayout.HORIZONTAL);
+        actionRow.setPadding(0, dpToPx(10), 0, dpToPx(8));
+
+        Button btnSendEnter = new Button(this);
+        btnSendEnter.setText("⏎ SEND & ENTER");
+        btnSendEnter.setTextSize(12f);
+        btnSendEnter.setTypeface(null, Typeface.BOLD);
+        btnSendEnter.setTextColor(0xFFFFFFFF);
+        applyRoundedCardBg(btnSendEnter, 0xFF2E7D32, 0xFF00E676, dpToPx(8));
+        LinearLayout.LayoutParams btnEnterLp = new LinearLayout.LayoutParams(0, dpToPx(42), 1.2f);
+        btnEnterLp.rightMargin = dpToPx(8);
+        btnSendEnter.setLayoutParams(btnEnterLp);
+        btnSendEnter.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String text = etInput.getText().toString();
+                GameHubInputSender.getInstance(GameHubOverlayService.this).sendText(text, true);
+                Toast.makeText(GameHubOverlayService.this, "Typed: \"" + text + "\" + [ENTER]", Toast.LENGTH_SHORT).show();
+                hideKeyboardModal();
+            }
+        });
+        actionRow.addView(btnSendEnter);
+
+        Button btnSendOnly = new Button(this);
+        btnSendOnly.setText("💬 SEND TEXT");
+        btnSendOnly.setTextSize(12f);
+        btnSendOnly.setTypeface(null, Typeface.BOLD);
+        btnSendOnly.setTextColor(0xFF00D2FF);
+        applyRoundedCardBg(btnSendOnly, 0xFF1E344A, 0xFF00D2FF, dpToPx(8));
+        LinearLayout.LayoutParams btnSendLp = new LinearLayout.LayoutParams(0, dpToPx(42), 1f);
+        btnSendOnly.setLayoutParams(btnSendLp);
+        btnSendOnly.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String text = etInput.getText().toString();
+                GameHubInputSender.getInstance(GameHubOverlayService.this).sendText(text, false);
+                Toast.makeText(GameHubOverlayService.this, "Typed: \"" + text + "\"", Toast.LENGTH_SHORT).show();
+                hideKeyboardModal();
+            }
+        });
+        actionRow.addView(btnSendOnly);
+        card.addView(actionRow);
+
+        // Quick Gaming Keys Row: [ ⌫ DEL ] [ ENTER ] [ TAB ] [ ESC ] [ SPACE ]
+        LinearLayout keysRow = new LinearLayout(this);
+        keysRow.setOrientation(LinearLayout.HORIZONTAL);
+        keysRow.setGravity(Gravity.CENTER);
+
+        String[] quickKeys = {"⌫ DEL", "ENTER", "TAB", "ESC", "SPACE"};
+        final int[] quickCodes = {67, 66, 61, 111, 62};
+        final String[] quickLabels = {"BACK", "ENTER", "TAB", "ESC", "SPACE"};
+
+        for (int i = 0; i < quickKeys.length; i++) {
+            final int code = quickCodes[i];
+            final String lbl = quickLabels[i];
+            Button btnKey = new Button(this);
+            btnKey.setText(quickKeys[i]);
+            btnKey.setTextSize(10f);
+            btnKey.setTypeface(null, Typeface.BOLD);
+            btnKey.setTextColor(0xFFC7D5E0);
+            applyRoundedCardBg(btnKey, 0xFF14202C, 0xFF2A475E, dpToPx(6));
+            LinearLayout.LayoutParams kLp = new LinearLayout.LayoutParams(0, dpToPx(34), 1f);
+            if (i > 0) kLp.leftMargin = dpToPx(4);
+            btnKey.setLayoutParams(kLp);
+            btnKey.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    final HudConfig.ControlDef kDef = new HudConfig.ControlDef(lbl, "btn", lbl, 0xFF00D2FF, code, 0.5f, 0.5f, 50);
+                    GameHubInputSender.getInstance(GameHubOverlayService.this).sendButton(kDef, true);
+                    v.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            GameHubInputSender.getInstance(GameHubOverlayService.this).sendButton(kDef, false);
+                        }
+                    }, 50);
+                }
+            });
+            keysRow.addView(btnKey);
+        }
+        card.addView(keysRow);
+
+        container.addView(card, new FrameLayout.LayoutParams(width, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER));
+
+        int windowType = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+            ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            : WindowManager.LayoutParams.TYPE_PHONE;
+
+        keyboardModalParams = new WindowManager.LayoutParams(
+            width,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            windowType,
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL, // Allow soft keyboard input focus
+            PixelFormat.TRANSLUCENT
+        );
+        keyboardModalParams.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+        keyboardModalParams.y = dpToPx(30);
+
+        keyboardModalView = container;
+        windowManager.addView(keyboardModalView, keyboardModalParams);
+
+        etInput.requestFocus();
+        etInput.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+                if (imm != null) {
+                    imm.showSoftInput(etInput, InputMethodManager.SHOW_IMPLICIT);
+                }
+            }
+        }, 150);
+    }
+
+    private void hideKeyboardModal() {
+        if (keyboardModalView != null) {
+            try {
+                InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+                if (imm != null) {
+                    imm.hideSoftInputFromWindow(keyboardModalView.getWindowToken(), 0);
+                }
+                windowManager.removeView(keyboardModalView);
+            } catch (Exception ignored) {}
+            keyboardModalView = null;
+        }
+    }
+
+    // ==========================================
+    // ADD CONTROL OVERLAY
+    // ==========================================
     private void buildAddControlOverlay() {
         addControlOverlay = new FrameLayout(this);
-        addControlOverlay.setBackgroundColor(0x99000000); // Dark dimmed backdrop
+        addControlOverlay.setBackgroundColor(0x99000000);
         addControlOverlay.setVisibility(View.GONE);
 
-        // Centered Card Container
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(dpToPx(16), dpToPx(16), dpToPx(16), dpToPx(16));
         applyRoundedCardBg(card, 0xF4101A26, 0xFF00D2FF, dpToPx(20));
 
-        // 1. Header (Title + Close Button)
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
@@ -660,7 +975,6 @@ public class GameHubOverlayService extends Service {
         header.addView(btnClose);
         card.addView(header);
 
-        // Subtitle
         TextView tvSub = new TextView(this);
         tvSub.setText("Tap any component to add on-screen (drag to position):");
         tvSub.setTextColor(0xFF8FA5B8);
@@ -668,7 +982,6 @@ public class GameHubOverlayService extends Service {
         tvSub.setPadding(0, 0, 0, dpToPx(10));
         card.addView(tvSub);
 
-        // 2. Category Tab Filter
         HorizontalScrollView catScroll = new HorizontalScrollView(this);
         catScroll.setHorizontalScrollBarEnabled(false);
         catScroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
@@ -691,7 +1004,6 @@ public class GameHubOverlayService extends Service {
         catScroll.addView(catBar);
         card.addView(catScroll);
 
-        // 3. Scrollable List/Grid of Items
         ScrollView itemScroll = new ScrollView(this);
         itemScroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
 
@@ -705,7 +1017,6 @@ public class GameHubOverlayService extends Service {
         );
         card.addView(itemScroll, scrollLp);
 
-        // Category Switch Listeners
         View.OnClickListener catClickListener = new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -729,10 +1040,8 @@ public class GameHubOverlayService extends Service {
         btnCatNumbers.setOnClickListener(catClickListener);
         btnCatMouse.setOnClickListener(catClickListener);
 
-        // Populate initial Gamepad catalog
         populateCatalogItems(HudConfig.getGamepadCatalog());
 
-        // Center card inside overlay
         FrameLayout.LayoutParams cardLp = new FrameLayout.LayoutParams(
             dpToPx(380),
             FrameLayout.LayoutParams.WRAP_CONTENT
@@ -742,7 +1051,6 @@ public class GameHubOverlayService extends Service {
         cardLp.rightMargin = dpToPx(20);
         addControlOverlay.addView(card, cardLp);
 
-        // Tap backdrop to dismiss
         addControlOverlay.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
@@ -756,7 +1064,7 @@ public class GameHubOverlayService extends Service {
         card.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
-                return true; // Consume taps inside card
+                return true;
             }
         });
 
@@ -774,8 +1082,6 @@ public class GameHubOverlayService extends Service {
 
     private void populateCatalogItems(List<HudConfig.ControlDef> items) {
         addItemsContainer.removeAllViews();
-
-        // Arrange items in rows of 3
         int cols = 3;
         LinearLayout currentRow = null;
         for (int i = 0; i < items.size(); i++) {
@@ -798,7 +1104,6 @@ public class GameHubOverlayService extends Service {
             btnItem.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    // Create new control with offset so it doesn't overlap perfectly
                     HudConfig.ControlDef newDef = template.copy();
                     newDef.id = template.id + "_" + System.currentTimeMillis() % 1000;
                     float jitterX = (random.nextFloat() - 0.5f) * 0.16f;
@@ -807,7 +1112,7 @@ public class GameHubOverlayService extends Service {
                     newDef.yRatio = 0.50f + jitterY;
 
                     touchHudView.addControl(newDef);
-                    touchHudView.setEditMode(true); // Automatically enable Move mode
+                    touchHudView.setEditMode(true);
                     updateDockButtonStates();
                     addControlOverlay.setVisibility(View.GONE);
 
@@ -902,7 +1207,7 @@ public class GameHubOverlayService extends Service {
 
         if (hudParams != null) {
             hudParams.screenOrientation = requested;
-            if (hudRootLayout != null && isHudExpanded) {
+            if (hudRootLayout != null && isEditModeActive) {
                 try {
                     windowManager.updateViewLayout(hudRootLayout, hudParams);
                 } catch (Throwable ignored) {}
@@ -934,19 +1239,24 @@ public class GameHubOverlayService extends Service {
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
-        if (hudRootLayout != null && hudParams != null && isHudExpanded) {
-            try {
-                windowManager.updateViewLayout(hudRootLayout, hudParams);
-            } catch (Throwable ignored) {}
-        }
-        if (touchHudView != null) {
-            touchHudView.post(new Runnable() {
-                @Override
-                public void run() {
-                    touchHudView.requestLayout();
-                    touchHudView.invalidate();
+        if (isHudExpanded) {
+            if (isEditModeActive) {
+                if (hudRootLayout != null && hudParams != null) {
+                    try { windowManager.updateViewLayout(hudRootLayout, hudParams); } catch (Throwable ignored) {}
                 }
-            });
+                if (touchHudView != null) {
+                    touchHudView.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            touchHudView.requestLayout();
+                            touchHudView.invalidate();
+                        }
+                    });
+                }
+            } else {
+                // In play mode, reposition the discrete floating controls for the new orientation dimensions
+                spawnPlayModeViews();
+            }
         }
     }
 
@@ -954,11 +1264,13 @@ public class GameHubOverlayService extends Service {
     public void onDestroy() {
         super.onDestroy();
         instance = null;
+        clearPlayModeViews();
+        hideKeyboardModal();
         if (floatingPill != null && floatingPill.isAttachedToWindow()) {
-            windowManager.removeView(floatingPill);
+            try { windowManager.removeView(floatingPill); } catch (Exception ignored) {}
         }
         if (hudRootLayout != null && hudRootLayout.isAttachedToWindow()) {
-            windowManager.removeView(hudRootLayout);
+            try { windowManager.removeView(hudRootLayout); } catch (Exception ignored) {}
         }
     }
 }

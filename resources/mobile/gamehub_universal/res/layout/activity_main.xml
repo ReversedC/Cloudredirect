@@ -74,6 +74,95 @@
             android:background="@drawable/steam_btn_play"
             android:layout_marginBottom="16dp" />
 
+        <!-- Host PC Connection Card -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/steam_card_bg"
+            android:padding="16dp"
+            android:layout_marginBottom="14dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="8dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="HOST PC CONNECTION"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/steam_cyan" />
+
+                <TextView
+                    android:id="@+id/tvPcStatusBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="CHECKING..."
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/steam_cyan"
+                    android:background="@drawable/steam_pill_bg"
+                    android:paddingLeft="8dp"
+                    android:paddingRight="8dp"
+                    android:paddingTop="2dp"
+                    android:paddingBottom="2dp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvHostPcName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="CloudRedirect PC"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_white" />
+
+            <TextView
+                android:id="@+id/tvHostPcIp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="IP: 192.168.1.100 • UDP Port 48999"
+                android:textSize="12sp"
+                android:textColor="@color/steam_blue_text"
+                android:layout_marginBottom="12dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnScanPc"
+                    android:layout_width="0dp"
+                    android:layout_height="42dp"
+                    android:layout_weight="1"
+                    android:text="🔍 Auto-Scan PC"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/steam_cyan"
+                    android:background="@drawable/steam_btn_secondary"
+                    android:layout_marginEnd="6dp" />
+
+                <Button
+                    android:id="@+id/btnSetIp"
+                    android:layout_width="0dp"
+                    android:layout_height="42dp"
+                    android:layout_weight="1"
+                    android:text="✏ Set IP / Ping"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/steam_blue_text"
+                    android:background="@drawable/steam_btn_secondary"
+                    android:layout_marginStart="6dp" />
+            </LinearLayout>
+        </LinearLayout>
+
         <!-- Permissions Card -->
         <LinearLayout
             android:layout_width="match_parent"
@@ -261,7 +350,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="GAMEHUB CORE v2.9.51"
+                    android:text="GAMEHUB CORE v2.9.52"
                     android:textSize="12sp"
                     android:textStyle="bold"
                     android:textColor="@color/steam_cyan" />

@@ -41,7 +41,61 @@ public class MobileInputReceiverService
     [DllImport("user32.dll")]
     private static extern uint MapVirtualKey(uint uCode, uint uMapType);
 
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern uint SendInput(uint nInputs, [In] INPUT[] pInputs, int cbSize);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct INPUT
+    {
+        public uint type;
+        public InputUnion u;
+    }
+
+    [StructLayout(LayoutKind.Explicit)]
+    private struct InputUnion
+    {
+        [FieldOffset(0)] public MOUSEINPUT mi;
+        [FieldOffset(0)] public KEYBDINPUT ki;
+        [FieldOffset(0)] public HARDWAREINPUT hi;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct KEYBDINPUT
+    {
+        public ushort wVk;
+        public ushort wScan;
+        public uint dwFlags;
+        public uint time;
+        public UIntPtr dwExtraInfo;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MOUSEINPUT
+    {
+        public int dx;
+        public int dy;
+        public uint mouseData;
+        public uint dwFlags;
+        public uint time;
+        public UIntPtr dwExtraInfo;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct HARDWAREINPUT
+    {
+        public uint uMsg;
+        public ushort wParamL;
+        public ushort wParamH;
+    }
+
+    private const uint INPUT_KEYBOARD = 1;
+    private const uint INPUT_MOUSE = 0;
+
+    private const uint KEYEVENTF_EXTENDEDKEY = 0x0001;
     private const uint KEYEVENTF_KEYUP = 0x0002;
+    private const uint KEYEVENTF_UNICODE = 0x0004;
+    private const uint KEYEVENTF_SCANCODE = 0x0008;
+
     private const uint MOUSEEVENTF_MOVE = 0x0001;
     private const uint MOUSEEVENTF_LEFTDOWN = 0x0002;
     private const uint MOUSEEVENTF_LEFTUP = 0x0004;
@@ -72,7 +126,79 @@ public class MobileInputReceiverService
     {
         if (vk == 0) return;
         byte scan = (byte)MapVirtualKey(vk, 0); // MAPVK_VK_TO_VSC = 0
-        keybd_event(vk, scan, down ? 0 : KEYEVENTF_KEYUP, UIntPtr.Zero);
+        uint flags = down ? 0 : KEYEVENTF_KEYUP;
+        bool isExtended = (vk == VK_UP || vk == VK_DOWN || vk == VK_LEFT || vk == VK_RIGHT ||
+                           vk == VK_RETURN || vk == 0x2E /*DEL*/ || vk == 0x2D /*INS*/ ||
+                           vk == 0x24 /*HOME*/ || vk == 0x23 /*END*/ || vk == 0x21 /*PRIOR*/ || vk == 0x22 /*NEXT*/);
+        if (isExtended) flags |= KEYEVENTF_EXTENDEDKEY;
+
+        try
+        {
+            INPUT[] inputs = new INPUT[1];
+            inputs[0].type = INPUT_KEYBOARD;
+            inputs[0].u.ki.wVk = vk;
+            inputs[0].u.ki.wScan = scan;
+            inputs[0].u.ki.dwFlags = flags;
+            inputs[0].u.ki.time = 0;
+            inputs[0].u.ki.dwExtraInfo = UIntPtr.Zero;
+            SendInput(1, inputs, Marshal.SizeOf(typeof(INPUT)));
+        }
+        catch { }
+
+        // Also call legacy keybd_event to maximize compatibility across DirectInput and desktop
+        keybd_event(vk, scan, flags, UIntPtr.Zero);
+    }
+
+    /// <summary>
+    /// Types unicode text directly into Windows games and dialogs (e.g. character name creation, in-game chat)
+    /// </summary>
+    public static void TypeText(string text, bool pressEnter)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            if (pressEnter)
+            {
+                SendKeyEvent(VK_RETURN, true);
+                Thread.Sleep(10);
+                SendKeyEvent(VK_RETURN, false);
+            }
+            return;
+        }
+
+        foreach (char c in text)
+        {
+            try
+            {
+                INPUT[] inputs = new INPUT[2];
+                // Key down
+                inputs[0].type = INPUT_KEYBOARD;
+                inputs[0].u.ki.wVk = 0;
+                inputs[0].u.ki.wScan = (ushort)c;
+                inputs[0].u.ki.dwFlags = KEYEVENTF_UNICODE;
+                inputs[0].u.ki.time = 0;
+                inputs[0].u.ki.dwExtraInfo = UIntPtr.Zero;
+
+                // Key up
+                inputs[1].type = INPUT_KEYBOARD;
+                inputs[1].u.ki.wVk = 0;
+                inputs[1].u.ki.wScan = (ushort)c;
+                inputs[1].u.ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
+                inputs[1].u.ki.time = 0;
+                inputs[1].u.ki.dwExtraInfo = UIntPtr.Zero;
+
+                SendInput(2, inputs, Marshal.SizeOf(typeof(INPUT)));
+                Thread.Sleep(5); // Small delay so game input queues register the keystrokes
+            }
+            catch { }
+        }
+
+        if (pressEnter)
+        {
+            Thread.Sleep(20);
+            SendKeyEvent(VK_RETURN, true);
+            Thread.Sleep(15);
+            SendKeyEvent(VK_RETURN, false);
+        }
     }
     #endregion
 
@@ -168,6 +294,22 @@ public class MobileInputReceiverService
             return;
         }
 
+        // Unicode text input from floating in-game keyboard:
+        // TEXT:<string> or TEXT_ENTER:<string>
+        if (msg.StartsWith("TEXT_ENTER:"))
+        {
+            var text = msg.Substring("TEXT_ENTER:".Length);
+            Task.Run(() => TypeText(text, pressEnter: true));
+            return;
+        }
+
+        if (msg.StartsWith("TEXT:"))
+        {
+            var text = msg.Substring("TEXT:".Length);
+            Task.Run(() => TypeText(text, pressEnter: false));
+            return;
+        }
+
         // Key Command: K:<1|0>:<keyCode>:<label>
         if (msg.StartsWith("K:"))
         {
@@ -251,6 +393,24 @@ public class MobileInputReceiverService
 
     private void DispatchKey(bool down, int androidCode, string label)
     {
+        // 1. Explicit Gamepad and Shoulder Button check
+        // Android KeyCodes:
+        // 96 = BUTTON_A, 97 = BUTTON_B, 98 = BUTTON_C, 99 = BUTTON_X, 100 = BUTTON_Y, 101 = BUTTON_Z,
+        // 102 = BUTTON_L1 (LB), 103 = BUTTON_R1 (RB), 104 = BUTTON_L2 (LT), 105 = BUTTON_R2 (RT),
+        // 106 = BUTTON_THUMBL, 107 = BUTTON_THUMBR, 108 = BUTTON_START, 109 = BUTTON_SELECT, 110 = BUTTON_MODE
+        if ((androidCode >= 96 && androidCode <= 110) ||
+            label == "LB" || label == "RB" || label == "LT" || label == "RT" ||
+            label == "START" || label == "SELECT" || label == "VIEW" || label == "MENU" ||
+            label == "STEAM" || label == "THUMBL" || label == "THUMBR" || label == "LS" || label == "RS" ||
+            (label == "A" && androidCode == 96) ||
+            (label == "B" && androidCode == 97) ||
+            (label == "X" && androidCode == 99) ||
+            (label == "Y" && androidCode == 100))
+        {
+            DispatchGamepadButton(down, label);
+            return;
+        }
+
         byte vk = ResolveVirtualKey(androidCode, label);
         if (vk != 0)
         {
@@ -335,11 +495,21 @@ public class MobileInputReceiverService
             case "RT":
                 DispatchMouse(down, 1); // Left mouse (Shoot)
                 break;
+            case "START":
+            case "MENU":
+                SendKeyEvent(VK_ESCAPE, down);
+                break;
+            case "SELECT":
             case "VIEW":
                 SendKeyEvent(VK_TAB, down);
                 break;
-            case "MENU":
-                SendKeyEvent(VK_ESCAPE, down);
+            case "THUMBL":
+            case "LS":
+                SendKeyEvent(VK_SHIFT, down); // Sprint
+                break;
+            case "THUMBR":
+            case "RS":
+                SendKeyEvent(0x56, down); // V (Melee)
                 break;
             case "STEAM":
                 // Shift + Tab for Steam Overlay
@@ -347,7 +517,8 @@ public class MobileInputReceiverService
                 SendKeyEvent(VK_TAB, down);
                 break;
             default:
-                DispatchKey(down, 0, label);
+                byte vk = ResolveVirtualKey(0, label);
+                if (vk != 0) SendKeyEvent(vk, down);
                 break;
         }
     }
