@@ -31,6 +31,15 @@ public class GameHubTouchView extends View {
     private float hudAlpha = 0.75f;
     private final GameHubInputSender inputSender;
 
+    // Selected control for resizing / editing
+    private HudConfig.ControlDef selectedControl = null;
+    private float lastPinchDist = 0f;
+
+    public interface OnControlSelectedListener {
+        void onControlSelected(HudConfig.ControlDef def);
+    }
+    private OnControlSelectedListener controlSelectedListener;
+
     // Paints
     private final Paint basePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint glowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -83,16 +92,86 @@ public class GameHubTouchView extends View {
         tickPaint.setStyle(Paint.Style.STROKE);
     }
 
+    public void setOnControlSelectedListener(OnControlSelectedListener listener) {
+        this.controlSelectedListener = listener;
+    }
+
     public List<HudConfig.ControlDef> getControls() {
         return controls;
     }
 
+    public HudConfig.ControlDef getSelectedControl() {
+        return selectedControl;
+    }
+
+    public void setSelectedControl(HudConfig.ControlDef def) {
+        this.selectedControl = def;
+        invalidate();
+        if (controlSelectedListener != null && def != null) {
+            controlSelectedListener.onControlSelected(def);
+        }
+    }
+
+    public void resizeSelectedControl(int deltaDp) {
+        if (selectedControl == null) {
+            if (!controls.isEmpty()) {
+                selectedControl = controls.get(0);
+            } else {
+                return;
+            }
+        }
+
+        boolean isStick = "stick".equals(selectedControl.type) || "stick_right".equals(selectedControl.type);
+        boolean isDpad = "dpad".equals(selectedControl.type) || "dpad_arrow".equals(selectedControl.type);
+        int min = (isStick || isDpad) ? 70 : 32;
+        int max = (isStick || isDpad) ? 220 : 160;
+
+        int newSize = Math.max(min, Math.min(max, selectedControl.sizeDp + deltaDp));
+        if (newSize != selectedControl.sizeDp) {
+            selectedControl.sizeDp = newSize;
+            triggerHaptic();
+            invalidate();
+            if (controlSelectedListener != null) {
+                controlSelectedListener.onControlSelected(selectedControl);
+            }
+        }
+    }
+
+    public void setSelectedControlSize(int sizeDp) {
+        if (selectedControl == null) {
+            if (!controls.isEmpty()) {
+                selectedControl = controls.get(0);
+            } else {
+                return;
+            }
+        }
+
+        boolean isStick = "stick".equals(selectedControl.type) || "stick_right".equals(selectedControl.type);
+        boolean isDpad = "dpad".equals(selectedControl.type) || "dpad_arrow".equals(selectedControl.type);
+        int min = (isStick || isDpad) ? 70 : 32;
+        int max = (isStick || isDpad) ? 220 : 160;
+
+        selectedControl.sizeDp = Math.max(min, Math.min(max, sizeDp));
+        triggerHaptic();
+        invalidate();
+        if (controlSelectedListener != null) {
+            controlSelectedListener.onControlSelected(selectedControl);
+        }
+    }
+
     public void addControl(HudConfig.ControlDef def) {
         controls.add(def);
+        selectedControl = def;
         invalidate();
+        if (controlSelectedListener != null) {
+            controlSelectedListener.onControlSelected(def);
+        }
     }
 
     public boolean removeControl(HudConfig.ControlDef def) {
+        if (selectedControl == def) {
+            selectedControl = null;
+        }
         boolean removed = controls.remove(def);
         if (removed) invalidate();
         return removed;
@@ -110,6 +189,7 @@ public class GameHubTouchView extends View {
     public void reloadControls() {
         controls.clear();
         controls.addAll(HudConfig.getControls(getContext()));
+        selectedControl = null;
         invalidate();
     }
 
@@ -119,7 +199,17 @@ public class GameHubTouchView extends View {
 
     public void setEditMode(boolean edit) {
         this.isEditMode = edit;
-        if (edit) this.isRemoveMode = false;
+        if (edit) {
+            this.isRemoveMode = false;
+            if (selectedControl == null && !controls.isEmpty()) {
+                selectedControl = controls.get(0);
+                if (controlSelectedListener != null) {
+                    controlSelectedListener.onControlSelected(selectedControl);
+                }
+            }
+        } else {
+            selectedControl = null;
+        }
         invalidate();
     }
 
@@ -129,7 +219,10 @@ public class GameHubTouchView extends View {
 
     public void setRemoveMode(boolean remove) {
         this.isRemoveMode = remove;
-        if (remove) this.isEditMode = false;
+        if (remove) {
+            this.isEditMode = false;
+            this.selectedControl = null;
+        }
         invalidate();
     }
 
@@ -402,15 +495,27 @@ public class GameHubTouchView extends View {
         float half = sizePx / 2f + dpToPx(6);
         RectF bounds = new RectF(cx - half, cy - half, cx + half, cy + half);
 
-        // Cyan frame with corner handles
-        editPaint.setColor(0xFF00D2FF);
-        editPaint.setStrokeWidth(2.5f);
+        boolean isSelected = (def == selectedControl);
+
+        // Highlight frame: selected is glowing amber/gold, others cyan
+        editPaint.setColor(isSelected ? 0xFFFFD600 : 0xFF00D2FF);
+        editPaint.setStrokeWidth(isSelected ? 3.5f : 2.0f);
         canvas.drawRoundRect(bounds, 12, 12, editPaint);
 
-        // Drag handle hint
-        textPaint.setTextSize(spToPx(9.5f));
-        textPaint.setColor(0xFF00D2FF);
-        canvas.drawText("DRAG", cx, cy + half + dpToPx(13), textPaint);
+        if (isSelected) {
+            // Draw prominent corner grip dots
+            basePaint.setStyle(Paint.Style.FILL);
+            basePaint.setColor(0xFFFFD600);
+            canvas.drawCircle(bounds.left, bounds.top, dpToPx(4), basePaint);
+            canvas.drawCircle(bounds.right, bounds.top, dpToPx(4), basePaint);
+            canvas.drawCircle(bounds.left, bounds.bottom, dpToPx(4), basePaint);
+            canvas.drawCircle(bounds.right, bounds.bottom, dpToPx(4), basePaint);
+        }
+
+        // Live Size indicator badge
+        textPaint.setTextSize(spToPx(10f));
+        textPaint.setColor(isSelected ? 0xFFFFD600 : 0xFF00D2FF);
+        canvas.drawText("📐 " + def.sizeDp + "dp", cx, cy + half + dpToPx(13), textPaint);
     }
 
     private void drawRemoveBadge(Canvas canvas, HudConfig.ControlDef def, float cx, float cy, float sizePx) {
@@ -443,17 +548,43 @@ public class GameHubTouchView extends View {
         int w = getWidth();
         int h = getHeight();
 
+        // Multi-touch Pinch to Resize in Edit Mode
+        if (isEditMode && event.getPointerCount() >= 2) {
+            float p0x = event.getX(0);
+            float p0y = event.getY(0);
+            float p1x = event.getX(1);
+            float p1y = event.getY(1);
+            float currentPinchDist = (float) Math.hypot(p0x - p1x, p0y - p1y);
+
+            if (action == MotionEvent.ACTION_MOVE && lastPinchDist > 0) {
+                float diff = (currentPinchDist - lastPinchDist) / dpToPx(6);
+                if (Math.abs(diff) >= 1f) {
+                    resizeSelectedControl((int) diff);
+                    lastPinchDist = currentPinchDist;
+                }
+            } else {
+                lastPinchDist = currentPinchDist;
+            }
+            return true;
+        }
+
         switch (action) {
             case MotionEvent.ACTION_DOWN:
             case MotionEvent.ACTION_POINTER_DOWN:
+                lastPinchDist = 0f;
                 HudConfig.ControlDef hit = findHitControl(x, y, w, h);
                 if (hit != null) {
                     if (isRemoveMode) {
                         controls.remove(hit);
+                        if (selectedControl == hit) selectedControl = null;
                         triggerHaptic();
                         Toast.makeText(getContext(), "Removed: " + hit.label, Toast.LENGTH_SHORT).show();
                         invalidate();
                         return true;
+                    }
+
+                    if (isEditMode) {
+                        setSelectedControl(hit);
                     }
 
                     ActiveTouch touch = new ActiveTouch(hit, x, y);
@@ -502,6 +633,7 @@ public class GameHubTouchView extends View {
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_POINTER_UP:
             case MotionEvent.ACTION_CANCEL:
+                lastPinchDist = 0f;
                 ActiveTouch releaseTouch = activeTouches.remove(pointerId);
                 if (releaseTouch != null && !isEditMode && !isRemoveMode) {
                     if ("stick".equals(releaseTouch.control.type) || "stick_right".equals(releaseTouch.control.type)) {

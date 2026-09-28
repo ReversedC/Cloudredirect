@@ -7,13 +7,10 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
-import android.text.Editable;
-import android.text.TextWatcher;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
-import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -22,18 +19,11 @@ public class MainActivity extends Activity {
 
     private Button btnToggleOverlay;
     private Button btnGrantOverlay;
-    private Button btnLaunchSteamLink;
-    private Button btnLaunchMoonlight;
     private Button btnCyclePreset;
     private Button btnCycleOpacity;
     private Button btnResetLayout;
     private CheckBox cbHaptics;
     private TextView statusPill;
-
-    private EditText editHostIp;
-    private Button btnScanPc;
-    private Button btnTestPing;
-    private TextView textPcStatus;
 
     private GameHubInputSender inputSender;
 
@@ -46,8 +36,6 @@ public class MainActivity extends Activity {
 
         btnToggleOverlay = (Button) findViewById(R.id.btnToggleOverlay);
         btnGrantOverlay = (Button) findViewById(R.id.btnGrantOverlay);
-        btnLaunchSteamLink = (Button) findViewById(R.id.btnLaunchSteamLink);
-        btnLaunchMoonlight = (Button) findViewById(R.id.btnLaunchMoonlight);
         btnCyclePreset = (Button) findViewById(R.id.btnCyclePreset);
         btnCycleOpacity = (Button) findViewById(R.id.btnCycleOpacity);
         btnResetLayout = (Button) findViewById(R.id.btnResetLayout);
@@ -67,11 +55,6 @@ public class MainActivity extends Activity {
         // Automatic background update check on app launch
         AutoUpdateService.checkOnLaunch(this);
 
-        editHostIp = (EditText) findViewById(R.id.editHostIp);
-        btnScanPc = (Button) findViewById(R.id.btnScanPc);
-        btnTestPing = (Button) findViewById(R.id.btnTestPing);
-        textPcStatus = (TextView) findViewById(R.id.textPcStatus);
-
         btnToggleOverlay.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -83,20 +66,6 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(View v) {
                 requestOverlayPermission();
-            }
-        });
-
-        btnLaunchSteamLink.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                launchApp("com.valvesoftware.steamlink", "Steam Link");
-            }
-        });
-
-        btnLaunchMoonlight.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                launchApp("com.limelight", "Moonlight / CloudRedirect Stream");
             }
         });
 
@@ -130,78 +99,11 @@ public class MainActivity extends Activity {
             }
         });
 
-        // Setup PC Direct UDP listeners
-        if (editHostIp != null) {
-            editHostIp.setText(inputSender.getHostIp());
-            editHostIp.addTextChangedListener(new TextWatcher() {
-                @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-                @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
-                @Override
-                public void afterTextChanged(Editable s) {
-                    inputSender.setHostIp(s.toString().trim());
-                }
-            });
-        }
-
-        if (btnScanPc != null) {
-            btnScanPc.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (textPcStatus != null) {
-                        textPcStatus.setText("Scanning WiFi...");
-                        textPcStatus.setTextColor(0xFF00D2FF);
-                    }
-                    inputSender.startDiscovery(new GameHubInputSender.DiscoveryCallback() {
-                        @Override
-                        public void onDeviceFound(String hostName, String ipAddress) {
-                            if (editHostIp != null) editHostIp.setText(ipAddress);
-                            if (textPcStatus != null) {
-                                textPcStatus.setText("Connected: " + hostName + " (" + ipAddress + ")");
-                                textPcStatus.setTextColor(0xFF66D18F);
-                            }
-                        }
-
-                        @Override
-                        public void onTimeout() {
-                            if (textPcStatus != null) {
-                                textPcStatus.setText("Scan timed out. Enter IP manually.");
-                                textPcStatus.setTextColor(0xFFF0AD4E);
-                            }
-                        }
-                    });
-                }
-            });
-        }
-
-        if (btnTestPing != null) {
-            btnTestPing.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (textPcStatus != null) {
-                        textPcStatus.setText("Pinging PC UDP 48999...");
-                    }
-                    inputSender.sendPing(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (textPcStatus != null) {
-                                textPcStatus.setText("UDP Ping Sent (<1ms latency)!");
-                                textPcStatus.setTextColor(0xFF66D18F);
-                            }
-                        }
-                    });
-                }
-            });
-        }
-
-        // Auto-discover host PC on app launch
+        // Silent automatic PC discovery on WiFi in the background
         inputSender.startDiscovery(new GameHubInputSender.DiscoveryCallback() {
             @Override
             public void onDeviceFound(String hostName, String ipAddress) {
-                if (editHostIp != null) editHostIp.setText(ipAddress);
-                if (textPcStatus != null) {
-                    textPcStatus.setText("Connected: " + hostName + " (" + ipAddress + ")");
-                    textPcStatus.setTextColor(0xFF66D18F);
-                }
+                inputSender.setHostIp(ipAddress);
             }
 
             @Override
@@ -308,20 +210,5 @@ public class MainActivity extends Activity {
         HudConfig.getPrefs(this).edit().putInt(HudConfig.KEY_OPACITY, cur).apply();
         updateUI();
     }
-
-    private void launchApp(String packageName, String appName) {
-        PackageManager pm = getPackageManager();
-        Intent launchIntent = pm.getLaunchIntentForPackage(packageName);
-        if (launchIntent != null) {
-            startActivity(launchIntent);
-        } else {
-            try {
-                Intent marketIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + packageName));
-                startActivity(marketIntent);
-            } catch (Exception e) {
-                Intent webIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=" + packageName));
-                startActivity(webIntent);
-            }
-        }
-    }
 }
+

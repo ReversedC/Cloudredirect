@@ -38,17 +38,32 @@ public class GameHubOverlayService extends Service {
     private TextView floatingPill;
     private FrameLayout hudRootLayout;
     private GameHubTouchView touchHudView;
+
+    // Edit Dock & Floating Trigger
+    private HorizontalScrollView dockScroll;
     private LinearLayout dockBar;
+    private TextView btnOpenEdit;
+
+    // Bottom Resize Controller Bar
+    private HorizontalScrollView sizeScroll;
+    private LinearLayout sizeBar;
+    private TextView tvSizeInfo;
+    private Button btnSizeMinus;
+    private Button btnSizePlus;
+
+    // Add Control Overlay
     private FrameLayout addControlOverlay;
     private LinearLayout addItemsContainer;
 
+    // Dock Buttons
+    private Button btnDockSavePlay;
+    private Button btnDockDone;
     private Button btnDockAdd;
     private Button btnDockRemove;
     private Button btnDockMove;
     private Button btnDockOpacity;
     private Button btnDockPreset;
-    private Button btnDockSave;
-    private Button btnDockHide;
+    private Button btnDockHideAll;
 
     private WindowManager.LayoutParams pillParams;
     private WindowManager.LayoutParams hudParams;
@@ -212,7 +227,9 @@ public class GameHubOverlayService extends Service {
         } else {
             hudRootLayout.setVisibility(View.VISIBLE);
         }
-        updateDockButtonStates();
+
+        // When expanding HUD, open in Play Mode with buttons active and small [⚙ EDIT HUD] visible!
+        exitEditModeToPlay();
     }
 
     private void collapseHud() {
@@ -227,44 +244,137 @@ public class GameHubOverlayService extends Service {
         }
     }
 
+    private void enterEditMode() {
+        if (btnOpenEdit != null) {
+            btnOpenEdit.setVisibility(View.GONE);
+        }
+        if (dockScroll != null) {
+            dockScroll.setVisibility(View.VISIBLE);
+        }
+        if (touchHudView != null) {
+            touchHudView.setEditMode(true);
+            touchHudView.setRemoveMode(false);
+        }
+        if (sizeScroll != null) {
+            sizeScroll.setVisibility(View.VISIBLE);
+            updateSelectedControlSizeLabel();
+        }
+        updateDockButtonStates();
+        Toast.makeText(this, "Edit Mode: Drag to move, pinch or use bottom bar to RESIZE! Tap [SAVE & PLAY] to lock.", Toast.LENGTH_SHORT).show();
+    }
+
+    private void exitEditModeToPlay() {
+        // 1. Turn off edit & remove mode on canvas
+        if (touchHudView != null) {
+            touchHudView.setEditMode(false);
+            touchHudView.setRemoveMode(false);
+            // Ensure touchHudView is VISIBLE so all buttons STAY on screen!
+            touchHudView.setVisibility(View.VISIBLE);
+        }
+
+        // 2. Hide edit toolbar, size bar, and add card
+        if (dockScroll != null) {
+            dockScroll.setVisibility(View.GONE);
+        }
+        if (sizeScroll != null) {
+            sizeScroll.setVisibility(View.GONE);
+        }
+        if (addControlOverlay != null) {
+            addControlOverlay.setVisibility(View.GONE);
+        }
+
+        // 3. Show small discreet [⚙ EDIT HUD] button at top
+        if (btnOpenEdit != null) {
+            btnOpenEdit.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void updateSelectedControlSizeLabel() {
+        if (tvSizeInfo == null || touchHudView == null) return;
+        HudConfig.ControlDef selected = touchHudView.getSelectedControl();
+        if (selected != null) {
+            tvSizeInfo.setText("📐 [" + selected.label + "] " + selected.sizeDp + "dp");
+        } else {
+            tvSizeInfo.setText("📐 Select a button to resize");
+        }
+    }
+
     private void buildHudViewHierarchy() {
         hudRootLayout = new FrameLayout(this);
 
-        // 1. Fullscreen Touch HUD View
+        // 1. Fullscreen Touch HUD View (Game buttons stay here)
         touchHudView = new GameHubTouchView(this);
+        touchHudView.setOnControlSelectedListener(new GameHubTouchView.OnControlSelectedListener() {
+            @Override
+            public void onControlSelected(HudConfig.ControlDef def) {
+                if (sizeScroll != null) {
+                    sizeScroll.setVisibility(View.VISIBLE);
+                }
+                updateSelectedControlSizeLabel();
+            }
+        });
+
         FrameLayout.LayoutParams touchLp = new FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
             FrameLayout.LayoutParams.MATCH_PARENT
         );
         hudRootLayout.addView(touchHudView, touchLp);
 
-        // 2. Responsive Top GameHub Controller Dock inside HorizontalScrollView
-        HorizontalScrollView dockScroll = new HorizontalScrollView(this);
+        // 2. Small discreet [⚙ EDIT HUD] pill button (Visible in Play Mode)
+        btnOpenEdit = new TextView(this);
+        btnOpenEdit.setText("⚙ EDIT HUD");
+        btnOpenEdit.setTextSize(11f);
+        btnOpenEdit.setTextColor(0xFF00D2FF);
+        btnOpenEdit.setTypeface(null, Typeface.BOLD);
+        btnOpenEdit.setPadding(dpToPx(12), dpToPx(5), dpToPx(12), dpToPx(5));
+        btnOpenEdit.setGravity(Gravity.CENTER);
+        applyRoundedCardBg(btnOpenEdit, 0x880B121B, 0xAA00D2FF, dpToPx(14));
+
+        FrameLayout.LayoutParams openEditLp = new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        );
+        openEditLp.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+        openEditLp.topMargin = dpToPx(8);
+        btnOpenEdit.setLayoutParams(openEditLp);
+        btnOpenEdit.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                enterEditMode();
+            }
+        });
+        hudRootLayout.addView(btnOpenEdit);
+
+        // 3. Responsive Top GameHub Controller Dock inside HorizontalScrollView (Visible in Edit Mode)
+        dockScroll = new HorizontalScrollView(this);
         dockScroll.setHorizontalScrollBarEnabled(false);
         dockScroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        dockScroll.setVisibility(View.GONE); // Hidden initially until Edit is opened
 
         dockBar = new LinearLayout(this);
         dockBar.setOrientation(LinearLayout.HORIZONTAL);
         dockBar.setGravity(Gravity.CENTER_VERTICAL);
         dockBar.setPadding(dpToPx(10), dpToPx(6), dpToPx(10), dpToPx(6));
-        applyRoundedCardBg(dockBar, 0xEE0B121B, 0xFF2A425A, dpToPx(24));
+        applyRoundedCardBg(dockBar, 0xF00B121B, 0xFF00D2FF, dpToPx(24));
 
         // Dock Buttons
+        btnDockSavePlay = createDockButton("💾 SAVE & PLAY", 0xFFFFFFFF, 0xFF2E7D32, 0xFF00E676);
+        btnDockDone = createDockButton("✔ DONE", 0xFF00D2FF, 0xDD121F2D, 0xFF00D2FF);
         btnDockAdd = createDockButton("➕ ADD", 0xFF00D2FF, 0xDD121F2D, 0xFF00D2FF);
         btnDockRemove = createDockButton("🗑 REMOVE", 0xFFFF6B6B, 0xDD281418, 0xFFD83B3B);
         btnDockMove = createDockButton("📐 MOVE", 0xFF66C0F4, 0xDD121F2D, 0xFF284868);
         btnDockOpacity = createDockButton("👁 75%", 0xFF66C0F4, 0xDD121F2D, 0xFF284868);
         btnDockPreset = createDockButton("🎮 PRESET", 0xFF66C0F4, 0xDD121F2D, 0xFF284868);
-        btnDockSave = createDockButton("💾 SAVE", 0xFFFFD600, 0xDD2B2212, 0xFFFFB300);
-        btnDockHide = createDockButton("➖ HIDE", 0xFF9EABB8, 0xDD18202A, 0xFF3A4B5E);
+        btnDockHideAll = createDockButton("🚫 HIDE ALL", 0xFF9EABB8, 0xDD18202A, 0xFF3A4B5E);
 
+        dockBar.addView(btnDockSavePlay);
+        dockBar.addView(btnDockDone);
         dockBar.addView(btnDockAdd);
         dockBar.addView(btnDockRemove);
         dockBar.addView(btnDockMove);
         dockBar.addView(btnDockOpacity);
         dockBar.addView(btnDockPreset);
-        dockBar.addView(btnDockSave);
-        dockBar.addView(btnDockHide);
+        dockBar.addView(btnDockHideAll);
 
         dockScroll.addView(dockBar);
 
@@ -273,13 +383,33 @@ public class GameHubOverlayService extends Service {
             FrameLayout.LayoutParams.WRAP_CONTENT
         );
         dockLp.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
-        dockLp.topMargin = dpToPx(12);
+        dockLp.topMargin = dpToPx(8);
         hudRootLayout.addView(dockScroll, dockLp);
 
-        // 3. Add Control Modal Overlay
+        // 4. Bottom Floating Size Controller Bar (Visible in Edit Mode)
+        buildSizeBarHierarchy();
+
+        // 5. Add Control Modal Overlay
         buildAddControlOverlay();
 
         // Setup Dock Click Listeners
+        btnDockSavePlay.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                touchHudView.saveControls();
+                exitEditModeToPlay();
+                Toast.makeText(GameHubOverlayService.this, "Layout Saved! Buttons Locked & Ready to Play 🎮", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        btnDockDone.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                exitEditModeToPlay();
+                Toast.makeText(GameHubOverlayService.this, "Returned to Game Mode 🎮", Toast.LENGTH_SHORT).show();
+            }
+        });
+
         btnDockAdd.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -306,7 +436,10 @@ public class GameHubOverlayService extends Service {
                 touchHudView.setEditMode(nextEdit);
                 updateDockButtonStates();
                 if (nextEdit) {
-                    Toast.makeText(GameHubOverlayService.this, "Drag any button to reposition. Tap Save when done!", Toast.LENGTH_SHORT).show();
+                    if (sizeScroll != null) sizeScroll.setVisibility(View.VISIBLE);
+                    Toast.makeText(GameHubOverlayService.this, "Drag any button to reposition. Tap [SAVE & PLAY] when done!", Toast.LENGTH_SHORT).show();
+                } else {
+                    if (sizeScroll != null) sizeScroll.setVisibility(View.GONE);
                 }
             }
         });
@@ -338,28 +471,89 @@ public class GameHubOverlayService extends Service {
                 HudConfig.getPrefs(GameHubOverlayService.this).edit().putString(HudConfig.KEY_PRESET, nextPreset).apply();
                 HudConfig.resetControls(GameHubOverlayService.this);
                 touchHudView.reloadControls();
+                updateSelectedControlSizeLabel();
                 Toast.makeText(GameHubOverlayService.this, "Loaded Preset: " + nextPreset, Toast.LENGTH_SHORT).show();
             }
         });
 
-        btnDockSave.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                touchHudView.saveControls();
-                Toast.makeText(GameHubOverlayService.this, "Controller Layout Saved! 🎮", Toast.LENGTH_SHORT).show();
-                // Turn off edit and remove modes once saved
-                touchHudView.setEditMode(false);
-                touchHudView.setRemoveMode(false);
-                updateDockButtonStates();
-            }
-        });
-
-        btnDockHide.setOnClickListener(new View.OnClickListener() {
+        btnDockHideAll.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 collapseHud();
             }
         });
+    }
+
+    private void buildSizeBarHierarchy() {
+        sizeScroll = new HorizontalScrollView(this);
+        sizeScroll.setHorizontalScrollBarEnabled(false);
+        sizeScroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        sizeScroll.setVisibility(View.GONE);
+
+        sizeBar = new LinearLayout(this);
+        sizeBar.setOrientation(LinearLayout.HORIZONTAL);
+        sizeBar.setGravity(Gravity.CENTER_VERTICAL);
+        sizeBar.setPadding(dpToPx(12), dpToPx(6), dpToPx(12), dpToPx(6));
+        applyRoundedCardBg(sizeBar, 0xF20B131D, 0xFFFFD600, dpToPx(24));
+
+        tvSizeInfo = new TextView(this);
+        tvSizeInfo.setText("📐 RESIZE BUTTON");
+        tvSizeInfo.setTextColor(0xFFFFD600);
+        tvSizeInfo.setTextSize(12f);
+        tvSizeInfo.setTypeface(null, Typeface.BOLD);
+        tvSizeInfo.setPadding(dpToPx(4), 0, dpToPx(10), 0);
+        sizeBar.addView(tvSizeInfo);
+
+        btnSizeMinus = createDockButton("➖ SMALLER (-6)", 0xFFFFFFFF, 0xDD28181A, 0xFFFF5252);
+        btnSizePlus = createDockButton("➕ LARGER (+6)", 0xFFFFFFFF, 0xDD18281A, 0xFF00E676);
+
+        btnSizeMinus.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                touchHudView.resizeSelectedControl(-6);
+                updateSelectedControlSizeLabel();
+            }
+        });
+
+        btnSizePlus.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                touchHudView.resizeSelectedControl(+6);
+                updateSelectedControlSizeLabel();
+            }
+        });
+
+        sizeBar.addView(btnSizeMinus);
+        sizeBar.addView(btnSizePlus);
+
+        // Quick Preset Size Pills
+        Button btnS = createDockButton("S (42dp)", 0xFF8FA5B8, 0xDD1A2736, 0xFF2A425A);
+        Button btnM = createDockButton("M (56dp)", 0xFF8FA5B8, 0xDD1A2736, 0xFF2A425A);
+        Button btnL = createDockButton("L (72dp)", 0xFF8FA5B8, 0xDD1A2736, 0xFF2A425A);
+        Button btnXL = createDockButton("XL (96dp)", 0xFF8FA5B8, 0xDD1A2736, 0xFF2A425A);
+        Button btnMax = createDockButton("STICK (130dp)", 0xFF8FA5B8, 0xDD1A2736, 0xFF2A425A);
+
+        btnS.setOnClickListener(new View.OnClickListener() { @Override public void onClick(View v) { touchHudView.setSelectedControlSize(42); updateSelectedControlSizeLabel(); } });
+        btnM.setOnClickListener(new View.OnClickListener() { @Override public void onClick(View v) { touchHudView.setSelectedControlSize(56); updateSelectedControlSizeLabel(); } });
+        btnL.setOnClickListener(new View.OnClickListener() { @Override public void onClick(View v) { touchHudView.setSelectedControlSize(72); updateSelectedControlSizeLabel(); } });
+        btnXL.setOnClickListener(new View.OnClickListener() { @Override public void onClick(View v) { touchHudView.setSelectedControlSize(96); updateSelectedControlSizeLabel(); } });
+        btnMax.setOnClickListener(new View.OnClickListener() { @Override public void onClick(View v) { touchHudView.setSelectedControlSize(130); updateSelectedControlSizeLabel(); } });
+
+        sizeBar.addView(btnS);
+        sizeBar.addView(btnM);
+        sizeBar.addView(btnL);
+        sizeBar.addView(btnXL);
+        sizeBar.addView(btnMax);
+
+        sizeScroll.addView(sizeBar);
+
+        FrameLayout.LayoutParams sizeLp = new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        );
+        sizeLp.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
+        sizeLp.bottomMargin = dpToPx(14);
+        hudRootLayout.addView(sizeScroll, sizeLp);
     }
 
     private void updateDockButtonStates() {
@@ -577,8 +771,11 @@ public class GameHubOverlayService extends Service {
                     updateDockButtonStates();
                     addControlOverlay.setVisibility(View.GONE);
 
+                    if (sizeScroll != null) sizeScroll.setVisibility(View.VISIBLE);
+                    updateSelectedControlSizeLabel();
+
                     Toast.makeText(GameHubOverlayService.this, 
-                        "Added [" + newDef.label + "]! Drag to place, tap Save when done.", 
+                        "Added [" + newDef.label + "]! Drag to place, resize at bottom, tap [SAVE & PLAY] when done.", 
                         Toast.LENGTH_SHORT).show();
                 }
             });
