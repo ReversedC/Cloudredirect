@@ -87,7 +87,7 @@ $releaseId = $release.id
 $existingAssetsUrl = "https://api.github.com/repos/$repoOwner/$repoName/releases/$releaseId/assets"
 $currentAssets = Invoke-RestMethod -Uri $existingAssetsUrl -Headers $headers -Method Get
 foreach ($asset in $currentAssets) {
-    if ($asset.name -eq "CloudRedirect.exe" -or $asset.name -eq "CloudRedirect.exe.sha256" -or $asset.name -eq "CloudRedirect-Setup.exe") {
+    if ($asset.name -eq "CloudRedirect.exe" -or $asset.name -eq "CloudRedirect.exe.sha256" -or $asset.name -eq "CloudRedirect-Setup.exe" -or $asset.name -eq "cloud_redirect.dll" -or $asset.name -eq "cloud_redirect.dll.sha256") {
         Write-Host "Deleting old asset: $($asset.name)..."
         Invoke-RestMethod -Uri $asset.url -Headers $headers -Method Delete
     }
@@ -119,5 +119,21 @@ function Upload-Asset($filePath, $assetName, $contentType) {
 Upload-Asset $exePath "CloudRedirect.exe" "application/octet-stream"
 Upload-Asset $shaPath "CloudRedirect.exe.sha256" "text/plain"
 
+$dllPath = Join-Path $PSScriptRoot "..\build\Release\cloud_redirect.dll"
+if (-not (Test-Path $dllPath)) {
+    $dllPath = Join-Path $PSScriptRoot "..\ui\Resources\cloud_redirect.dll"
+}
+if (Test-Path $dllPath) {
+    $dllHasher = [System.Security.Cryptography.SHA256]::Create()
+    $dllStream = [System.IO.File]::OpenRead($dllPath)
+    $dllHashBytes = $dllHasher.ComputeHash($dllStream)
+    $dllStream.Close()
+    $dllSha256 = [System.BitConverter]::ToString($dllHashBytes).Replace("-", "").ToLowerInvariant()
+    $dllShaPath = "$dllPath.sha256"
+    [System.IO.File]::WriteAllText($dllShaPath, $dllSha256)
+
+    Upload-Asset $dllPath "cloud_redirect.dll" "application/octet-stream"
+    Upload-Asset $dllShaPath "cloud_redirect.dll.sha256" "text/plain"
+}
 
 Write-Host "Release $tagName published successfully with assets!"
