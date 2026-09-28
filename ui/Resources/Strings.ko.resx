@@ -2342,6 +2342,32 @@ Steam 클라우드가 활성화된 경우 Steam이 복원된 파일을 덮어쓸
   <data name="Dashboard_ActiveGame_SubLua" xml:space="preserve">
     <value>Steam AppID: {0} • CloudRedirect 활성 (Lua 잠금 해제됨)</value>
   </data>
+  <data name="Dashboard_ActiveGame_BadgeZeroLua" xml:space="preserve">
+    <value>ZERO-LUA 리다이렉트 활성</value>
+  </data>
+  <data name="Dashboard_ActiveGame_SubZeroLua" xml:space="preserve">
+    <value>Steam AppID: {0} • CloudRedirect 활성 (DLL 직접 가로채기 • .lua 불필요)</value>
+  </data>
+  <data name="Dashboard_ActiveGame_BadgeCloudDenied" xml:space="preserve">
+    <value>STEAM 클라우드 차단됨 • 언락 게임</value>
+  </data>
+  <data name="Dashboard_ActiveGame_SubCloudDenied" xml:space="preserve">
+    <value>Steam AppID: {0} • Valve에서 클라우드 업로드 거부 (라이선스 없음). 세이브 손실 위험!</value>
+  </data>
+  <data name="Dashboard_ActiveGame_PillCloudDenied" xml:space="preserve">
+    <value>클라우드 차단됨</value>
+  </data>
+  <data name="Dashboard_ActiveGame_FixSync" xml:space="preserve">
+    <value>클라우드 동기화 복구</value>
+  </data>
+  <data name="Dashboard_ActiveGame_FixSuccessTitle" xml:space="preserve">
+    <value>클라우드 동기화 복구 활성화됨</value>
+  </data>
+  <data name="Dashboard_ActiveGame_FixSuccessPrompt" xml:space="preserve">
+    <value>{0}에 대한 CloudRedirect Zero-Lua 가로채기가 활성화되었으며 세이브 파일이 보호됩니다!
+
+Steam의 '동기화할 수 없음' 오류를 지우기 위해 지금 Steam을 재시작하시겠습니까?</value>
+  </data>
   <data name="Dashboard_ActiveGame_PillHooked" xml:space="preserve">
     <value>CloudRedirect 후킹됨</value>
   </data>
