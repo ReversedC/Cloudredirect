@@ -27,7 +27,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 public class AutoUpdateService {
-    public static final String APP_VERSION = "2.9.49";
+    public static final String APP_VERSION = "2.9.50";
     private static final String PREFS_NAME = "GameHubUpdatePrefs";
     private static final String KEY_LAST_CHECK = "last_check_timestamp";
     private static final String GITHUB_LATEST_RELEASE = 
@@ -103,8 +103,7 @@ public class AutoUpdateService {
 
     private static void performCheck(final Context context, final boolean isManual) {
         try {
-            HttpURLConnection conn = openConnectionWithRedirects(GITHUB_LATEST_RELEASE);
-            conn.setRequestProperty("Accept", "application/vnd.github.v3+json");
+            HttpURLConnection conn = openConnectionWithRedirects(GITHUB_LATEST_RELEASE, "application/vnd.github.v3+json");
 
             if (conn.getResponseCode() == 200) {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
@@ -270,7 +269,7 @@ public class AutoUpdateService {
                 HttpURLConnection conn = null;
 
                 try {
-                    conn = openConnectionWithRedirects(downloadUrl);
+                    conn = openConnectionWithRedirects(downloadUrl, null);
                     int responseCode = conn.getResponseCode();
                     if (responseCode != HttpURLConnection.HTTP_OK) {
                         throw new Exception("Server returned HTTP " + responseCode);
@@ -370,6 +369,17 @@ public class AutoUpdateService {
             installIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             installIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             installIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+
+            // Explicitly grant URI read permissions to any package installers on the device (MIUI/HyperOS/Samsung/AOSP)
+            try {
+                java.util.List<android.content.pm.ResolveInfo> resInfoList = 
+                    context.getPackageManager().queryIntentActivities(installIntent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY);
+                for (android.content.pm.ResolveInfo resolveInfo : resInfoList) {
+                    String packageName = resolveInfo.activityInfo.packageName;
+                    context.grantUriPermission(packageName, apkUri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                }
+            } catch (Throwable ignored) {}
+
             context.startActivity(installIntent);
         } catch (Throwable t) {
             t.printStackTrace();
@@ -382,16 +392,23 @@ public class AutoUpdateService {
         if (dir == null || !dir.canWrite()) {
             dir = context.getCacheDir();
         }
-        return new File(dir, UPDATE_FILENAME);
+        File file = new File(dir, UPDATE_FILENAME);
+        try {
+            file.setReadable(true, false);
+        } catch (Throwable ignored) {}
+        return file;
     }
 
-    private static HttpURLConnection openConnectionWithRedirects(String urlString) throws Exception {
+    private static HttpURLConnection openConnectionWithRedirects(String urlString, String acceptHeader) throws Exception {
         int redirects = 0;
         while (redirects < 8) {
             URL url = new URL(urlString);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setInstanceFollowRedirects(true);
             conn.setRequestProperty("User-Agent", "GameHubMobileHUD/" + APP_VERSION);
+            if (acceptHeader != null && !acceptHeader.isEmpty()) {
+                conn.setRequestProperty("Accept", acceptHeader);
+            }
             conn.setConnectTimeout(12000);
             conn.setReadTimeout(20000);
 
