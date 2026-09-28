@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.cloudredirect.gamehub"
-    android:versionCode="3"
-    android:versionName="2.9.48">
+    android:versionCode="4"
+    android:versionName="2.9.49">
 
     <uses-sdk
         android:minSdkVersion="24"
@@ -17,6 +17,7 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
         android:allowBackup="true"
@@ -25,6 +26,12 @@
         android:roundIcon="@drawable/ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/Theme.SteamGameHub">
+
+        <provider
+            android:name=".GameHubFileProvider"
+            android:authorities="com.cloudredirect.gamehub.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true" />
 
         <activity
             android:name=".MainActivity"

@@ -117,6 +117,7 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         updateUI();
+        AutoUpdateService.checkPendingInstallOnResume(this);
     }
 
     private void updateUI() {
