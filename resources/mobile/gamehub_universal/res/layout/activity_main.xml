@@ -350,7 +350,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="GAMEHUB CORE v2.9.52"
+                    android:text="GAMEHUB CORE v2.9.53"
                     android:textSize="12sp"
                     android:textStyle="bold"
                     android:textColor="@color/steam_cyan" />

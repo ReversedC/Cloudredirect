@@ -12,7 +12,9 @@ import java.net.InetAddress;
 import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -31,6 +33,8 @@ public class GameHubInputSender {
     private DatagramSocket udpSocket;
     private String hostIp;
     private String lastPcName;
+    private volatile boolean isHostConfirmed = false;
+    private long lastDiscoveryAttempt = 0;
 
     public interface DiscoveryCallback {
         void onDeviceFound(String hostName, String ipAddress);
@@ -41,6 +45,12 @@ public class GameHubInputSender {
         void onSuccess(int latencyMs);
         void onFailure(String error);
     }
+
+    public interface ConnectionListener {
+        void onConnectionUpdated(String ip, String pcName, boolean isOnline);
+    }
+
+    private final List<ConnectionListener> connectionListeners = new ArrayList<ConnectionListener>();
 
     public static synchronized GameHubInputSender getInstance(Context context) {
         if (instance == null) {
@@ -54,11 +64,80 @@ public class GameHubInputSender {
         this.prefs = HudConfig.getPrefs(context);
         this.hostIp = prefs.getString(KEY_HOST_IP, "192.168.1.100");
         this.lastPcName = prefs.getString(KEY_LAST_PC_NAME, "CloudRedirect PC");
+        initSocketAndReceiver();
+        startAutoDiscovery();
+    }
+
+    private void initSocketAndReceiver() {
         try {
-            udpSocket = new DatagramSocket();
+            if (udpSocket == null || udpSocket.isClosed()) {
+                udpSocket = new DatagramSocket();
+                udpSocket.setBroadcast(true);
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+        // Start background ACK receiver thread
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                byte[] buf = new byte[1024];
+                while (true) {
+                    try {
+                        if (udpSocket == null || udpSocket.isClosed()) {
+                            try { Thread.sleep(500); } catch (Exception ignored) {}
+                            continue;
+                        }
+                        DatagramPacket p = new DatagramPacket(buf, buf.length);
+                        udpSocket.receive(p);
+                        String msg = new String(p.getData(), 0, p.getLength(), StandardCharsets.UTF_8).trim();
+                        if (msg.startsWith("GAMEHUB_PC_ACK|") || msg.equals("PONG")) {
+                            final String pcIp = p.getAddress().getHostAddress();
+                            String name = "CloudRedirect PC";
+                            if (msg.startsWith("GAMEHUB_PC_ACK|")) {
+                                String[] parts = msg.split("\\|");
+                                if (parts.length > 1 && !parts[1].isEmpty()) name = parts[1];
+                            }
+                            final String finalName = name;
+                            isHostConfirmed = true;
+                            setHostIp(pcIp);
+                            setLastPcName(finalName);
+                            notifyConnectionUpdated(pcIp, finalName, true);
+                        }
+                    } catch (Throwable t) {
+                        try { Thread.sleep(200); } catch (Exception ignored) {}
+                    }
+                }
+            }
+        }, "GameHubAckReceiver").start();
+    }
+
+    public synchronized void addConnectionListener(ConnectionListener listener) {
+        if (listener != null && !connectionListeners.contains(listener)) {
+            connectionListeners.add(listener);
+            // Immediately notify with current state
+            listener.onConnectionUpdated(hostIp, lastPcName, isHostConfirmed);
+        }
+    }
+
+    public synchronized void removeConnectionListener(ConnectionListener listener) {
+        connectionListeners.remove(listener);
+    }
+
+    private void notifyConnectionUpdated(final String ip, final String name, final boolean online) {
+        mainHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                synchronized (GameHubInputSender.this) {
+                    for (ConnectionListener l : connectionListeners) {
+                        try {
+                            l.onConnectionUpdated(ip, name, online);
+                        } catch (Throwable ignored) {}
+                    }
+                }
+            }
+        });
     }
 
     public String getHostIp() {
@@ -67,6 +146,10 @@ public class GameHubInputSender {
 
     public String getLastPcName() {
         return lastPcName;
+    }
+
+    public boolean isHostConfirmed() {
+        return isHostConfirmed;
     }
 
     public void setHostIp(String ip) {
@@ -89,6 +172,8 @@ public class GameHubInputSender {
                         payload = "M:" + (down ? "1" : "0") + ":1";
                     } else if (def.keyCode == HudConfig.KEYCODE_MOUSE_RIGHT) {
                         payload = "M:" + (down ? "1" : "0") + ":2";
+                    } else if (def.keyCode == HudConfig.KEYCODE_MOUSE_MIDDLE) {
+                        payload = "M:" + (down ? "1" : "0") + ":3";
                     } else if (def.keyCode > 0) {
                         payload = "K:" + (down ? "1" : "0") + ":" + def.keyCode + ":" + def.label;
                     } else {
@@ -179,6 +264,10 @@ public class GameHubInputSender {
                     socket.receive(recv);
                     final int latency = (int) (System.currentTimeMillis() - start);
 
+                    isHostConfirmed = true;
+                    setHostIp(targetIp);
+                    notifyConnectionUpdated(targetIp, lastPcName, true);
+
                     mainHandler.post(new Runnable() {
                         @Override
                         public void run() {
@@ -200,16 +289,62 @@ public class GameHubInputSender {
     }
 
     private void sendUdp(String msg) {
-        if (hostIp == null || hostIp.trim().isEmpty()) return;
         try {
             if (udpSocket == null || udpSocket.isClosed()) {
                 udpSocket = new DatagramSocket();
+                udpSocket.setBroadcast(true);
             }
             byte[] data = msg.getBytes(StandardCharsets.UTF_8);
-            InetAddress address = InetAddress.getByName(hostIp.trim());
-            DatagramPacket packet = new DatagramPacket(data, data.length, address, UDP_PORT);
-            udpSocket.send(packet);
+
+            // 1. Send unicast to current host IP
+            if (hostIp != null && !hostIp.trim().isEmpty()) {
+                try {
+                    InetAddress address = InetAddress.getByName(hostIp.trim());
+                    DatagramPacket packet = new DatagramPacket(data, data.length, address, UDP_PORT);
+                    udpSocket.send(packet);
+                } catch (Throwable ignored) {}
+            }
+
+            // 2. If host IP is unconfirmed, ALSO broadcast to 255.255.255.255 and subnet
+            // so CloudRedirect receives the touches with zero packet loss even if IP was wrong!
+            if (!isHostConfirmed) {
+                try {
+                    DatagramPacket bcast = new DatagramPacket(data, data.length, InetAddress.getByName("255.255.255.255"), UDP_PORT);
+                    udpSocket.send(bcast);
+                } catch (Throwable ignored) {}
+
+                sendSubnetBroadcast(data);
+
+                // Quick background discovery trigger
+                if (System.currentTimeMillis() - lastDiscoveryAttempt > 3000) {
+                    lastDiscoveryAttempt = System.currentTimeMillis();
+                    startAutoDiscovery();
+                }
+            }
         } catch (Throwable ignored) {}
+    }
+
+    private void sendSubnetBroadcast(byte[] data) {
+        try {
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            while (interfaces != null && interfaces.hasMoreElements()) {
+                NetworkInterface ni = interfaces.nextElement();
+                if (ni.isLoopback() || !ni.isUp()) continue;
+                for (InterfaceAddress addr : ni.getInterfaceAddresses()) {
+                    InetAddress broadcast = addr.getBroadcast();
+                    if (broadcast != null) {
+                        try {
+                            DatagramPacket p = new DatagramPacket(data, data.length, broadcast, UDP_PORT);
+                            udpSocket.send(p);
+                        } catch (Throwable ignored) {}
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+    }
+
+    public void startAutoDiscovery() {
+        startDiscovery(null);
     }
 
     public void startDiscovery(final DiscoveryCallback callback) {
@@ -278,11 +413,14 @@ public class GameHubInputSender {
                         pcName = "CloudRedirect PC";
                     }
 
+                    isHostConfirmed = true;
+                    setHostIp(pcIp);
+                    setLastPcName(pcName);
+                    notifyConnectionUpdated(pcIp, pcName, true);
+
                     mainHandler.post(new Runnable() {
                         @Override
                         public void run() {
-                            setHostIp(pcIp);
-                            setLastPcName(pcName);
                             if (callback != null) {
                                 callback.onDeviceFound(pcName, pcIp);
                             }

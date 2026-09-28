@@ -118,6 +118,7 @@ public class GameHubOverlayService extends Service {
         startForeground(NOTIF_ID, createNotification());
         createFloatingPill();
         applyOrientationMode();
+        GameHubInputSender.getInstance(this).startAutoDiscovery();
     }
 
     private Notification createNotification() {
@@ -291,7 +292,9 @@ public class GameHubOverlayService extends Service {
             WindowManager.LayoutParams params = new WindowManager.LayoutParams(
                 sizePx, sizePx,
                 windowType,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE 
+                | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL 
+                | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                 PixelFormat.TRANSLUCENT
             );
             params.gravity = Gravity.TOP | Gravity.START;
@@ -306,7 +309,7 @@ public class GameHubOverlayService extends Service {
             }
         }
 
-        // 2. Spawn compact Mini Play Dock at top: [ ⌨ KEYBOARD ] [ ⚙ EDIT HUD ] [ ✕ ]
+        // 2. Spawn compact Mini Play Dock at top: [ 🟢 PC ] [ ⌨ KEYBOARD ] [ ⚙ EDIT HUD ] [ ✕ ]
         createMiniPlayDock(windowType);
     }
 
@@ -340,6 +343,55 @@ public class GameHubOverlayService extends Service {
         applyRoundedCardBg(miniPlayDock, 0xD90B131D, 0xAA00D2FF, dpToPx(16));
         miniPlayDock.setAlpha(opacity);
 
+        // [ ⋮⋮ ] Drag handle
+        TextView tvHandle = new TextView(this);
+        tvHandle.setText("⋮⋮");
+        tvHandle.setTextSize(13f);
+        tvHandle.setTextColor(0xFF00D2FF);
+        tvHandle.setPadding(dpToPx(4), 0, dpToPx(6), 0);
+        miniPlayDock.addView(tvHandle);
+
+        // [ 🟢 PC IP ] Live Status Badge
+        final TextView tvPcBadge = new TextView(this);
+        GameHubInputSender sender = GameHubInputSender.getInstance(this);
+        String currentIp = sender.getHostIp();
+        boolean confirmed = sender.isHostConfirmed();
+        tvPcBadge.setText(confirmed ? "🟢 " + currentIp : ("🟡 " + (currentIp != null && !currentIp.isEmpty() ? currentIp : "AUTO-SCAN")));
+        tvPcBadge.setTextSize(10.5f);
+        tvPcBadge.setTypeface(null, Typeface.BOLD);
+        tvPcBadge.setTextColor(confirmed ? 0xFF66D18F : 0xFFFFD600);
+        tvPcBadge.setPadding(dpToPx(8), dpToPx(4), dpToPx(8), dpToPx(4));
+        applyRoundedCardBg(tvPcBadge, 0xEE142130, 0xFF00D2FF, dpToPx(10));
+        tvPcBadge.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                GameHubInputSender is = GameHubInputSender.getInstance(GameHubOverlayService.this);
+                is.startAutoDiscovery();
+                Toast.makeText(GameHubOverlayService.this, "Searching local network for CloudRedirect PC...", Toast.LENGTH_SHORT).show();
+            }
+        });
+        miniPlayDock.addView(tvPcBadge);
+
+        sender.addConnectionListener(new GameHubInputSender.ConnectionListener() {
+            @Override
+            public void onConnectionUpdated(final String ip, final String pcName, final boolean isOnline) {
+                if (miniPlayDock != null) {
+                    miniPlayDock.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (isOnline) {
+                                tvPcBadge.setText("🟢 " + ip);
+                                tvPcBadge.setTextColor(0xFF66D18F);
+                            } else {
+                                tvPcBadge.setText("🟡 " + (ip != null ? ip : "AUTO-SCAN"));
+                                tvPcBadge.setTextColor(0xFFFFD600);
+                            }
+                        }
+                    });
+                }
+            }
+        });
+
         // [ ⌨ KEYBOARD ] Button
         TextView btnKb = new TextView(this);
         btnKb.setText("⌨ KEYBOARD");
@@ -347,6 +399,10 @@ public class GameHubOverlayService extends Service {
         btnKb.setTextColor(0xFFFFFFFF);
         btnKb.setTypeface(null, Typeface.BOLD);
         btnKb.setPadding(dpToPx(10), dpToPx(5), dpToPx(10), dpToPx(5));
+        LinearLayout.LayoutParams kbLp = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        kbLp.leftMargin = dpToPx(6);
+        btnKb.setLayoutParams(kbLp);
         applyRoundedCardBg(btnKb, 0xEE1E4466, 0xFF00D2FF, dpToPx(12));
         btnKb.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -399,11 +455,46 @@ public class GameHubOverlayService extends Service {
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
             windowType,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE 
+            | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL 
+            | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT
         );
         miniPlayDockParams.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
         miniPlayDockParams.y = dpToPx(8);
+
+        // Draggable Mini Play Dock
+        miniPlayDock.setOnTouchListener(new View.OnTouchListener() {
+            private int initialX, initialY;
+            private float initialTouchX, initialTouchY;
+            private boolean isDrag = false;
+
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        initialX = miniPlayDockParams.x;
+                        initialY = miniPlayDockParams.y;
+                        initialTouchX = event.getRawX();
+                        initialTouchY = event.getRawY();
+                        isDrag = false;
+                        return false;
+
+                    case MotionEvent.ACTION_MOVE:
+                        int dx = (int) (event.getRawX() - initialTouchX);
+                        int dy = (int) (event.getRawY() - initialTouchY);
+                        if (Math.abs(dx) > 12 || Math.abs(dy) > 12) isDrag = true;
+                        if (isDrag) {
+                            miniPlayDockParams.x = initialX + dx;
+                            miniPlayDockParams.y = initialY + dy;
+                            try { windowManager.updateViewLayout(miniPlayDock, miniPlayDockParams); } catch (Throwable ignored) {}
+                            return true;
+                        }
+                        break;
+                }
+                return false;
+            }
+        });
 
         windowManager.addView(miniPlayDock, miniPlayDockParams);
     }
@@ -452,10 +543,14 @@ public class GameHubOverlayService extends Service {
     }
 
     private void exitEditModeToPlay() {
+        if (addControlOverlay != null) {
+            addControlOverlay.setVisibility(View.GONE);
+        }
         if (touchHudView != null) {
             touchHudView.saveControls();
         }
         spawnPlayModeViews();
+        Toast.makeText(this, "HUD Saved & Active! Ready for Steam Link gameplay.", Toast.LENGTH_SHORT).show();
     }
 
     private void updateSelectedControlSizeLabel() {
@@ -699,11 +794,28 @@ public class GameHubOverlayService extends Service {
         btnXL.setOnClickListener(new View.OnClickListener() { @Override public void onClick(View v) { touchHudView.setSelectedControlSize(96); updateSelectedControlSizeLabel(); } });
         btnMax.setOnClickListener(new View.OnClickListener() { @Override public void onClick(View v) { touchHudView.setSelectedControlSize(130); updateSelectedControlSizeLabel(); } });
 
+        Button btnDelete = createDockButton("🗑 DELETE", 0xFFFFFFFF, 0xDD3A181C, 0xFFFF5252);
+        btnDelete.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                HudConfig.ControlDef selected = touchHudView.getSelectedControl();
+                if (selected != null) {
+                    String lbl = selected.label;
+                    touchHudView.removeControl(selected);
+                    updateSelectedControlSizeLabel();
+                    Toast.makeText(GameHubOverlayService.this, "Deleted: " + lbl, Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(GameHubOverlayService.this, "Tap a button on screen to select it first!", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
         sizeBar.addView(btnS);
         sizeBar.addView(btnM);
         sizeBar.addView(btnL);
         sizeBar.addView(btnXL);
         sizeBar.addView(btnMax);
+        sizeBar.addView(btnDelete);
 
         sizeScroll.addView(sizeBar);
 

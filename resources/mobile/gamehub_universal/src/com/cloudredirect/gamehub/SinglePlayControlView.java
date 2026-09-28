@@ -41,6 +41,8 @@ public class SinglePlayControlView extends View {
         this.inputSender = GameHubInputSender.getInstance(context);
         this.vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
 
+        setClickable(true);
+        setFocusable(false);
         initPaints();
     }
 

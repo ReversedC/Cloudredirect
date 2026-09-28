@@ -28,6 +28,7 @@ public class MobileInputReceiverService
 
     // Track active joystick WASD states to only fire on change
     private bool _wActive, _sActive, _aActive, _dActive;
+    private DateTime _lastAckTime = DateTime.MinValue;
 
     public bool IsRunning => _isRunning;
 
@@ -126,27 +127,44 @@ public class MobileInputReceiverService
     {
         if (vk == 0) return;
         byte scan = (byte)MapVirtualKey(vk, 0); // MAPVK_VK_TO_VSC = 0
-        uint flags = down ? 0 : KEYEVENTF_KEYUP;
         bool isExtended = (vk == VK_UP || vk == VK_DOWN || vk == VK_LEFT || vk == VK_RIGHT ||
                            vk == VK_RETURN || vk == 0x2E /*DEL*/ || vk == 0x2D /*INS*/ ||
                            vk == 0x24 /*HOME*/ || vk == 0x23 /*END*/ || vk == 0x21 /*PRIOR*/ || vk == 0x22 /*NEXT*/);
-        if (isExtended) flags |= KEYEVENTF_EXTENDEDKEY;
 
+        // 1. DirectInput hardware scan code (Required by Steam games, DirectX, Unreal, Unity)
         try
         {
-            INPUT[] inputs = new INPUT[1];
-            inputs[0].type = INPUT_KEYBOARD;
-            inputs[0].u.ki.wVk = vk;
-            inputs[0].u.ki.wScan = scan;
-            inputs[0].u.ki.dwFlags = flags;
-            inputs[0].u.ki.time = 0;
-            inputs[0].u.ki.dwExtraInfo = UIntPtr.Zero;
-            SendInput(1, inputs, Marshal.SizeOf(typeof(INPUT)));
+            INPUT[] scancodeInputs = new INPUT[1];
+            scancodeInputs[0].type = INPUT_KEYBOARD;
+            scancodeInputs[0].u.ki.wVk = 0; // Must be 0 when KEYEVENTF_SCANCODE is set
+            scancodeInputs[0].u.ki.wScan = scan;
+            scancodeInputs[0].u.ki.dwFlags = KEYEVENTF_SCANCODE | (down ? 0 : KEYEVENTF_KEYUP);
+            if (isExtended) scancodeInputs[0].u.ki.dwFlags |= KEYEVENTF_EXTENDEDKEY;
+            scancodeInputs[0].u.ki.time = 0;
+            scancodeInputs[0].u.ki.dwExtraInfo = UIntPtr.Zero;
+            SendInput(1, scancodeInputs, Marshal.SizeOf(typeof(INPUT)));
         }
         catch { }
 
-        // Also call legacy keybd_event to maximize compatibility across DirectInput and desktop
-        keybd_event(vk, scan, flags, UIntPtr.Zero);
+        // 2. Standard Virtual Key (Required by Windows UI, dialogs, desktop apps)
+        try
+        {
+            INPUT[] vkInputs = new INPUT[1];
+            vkInputs[0].type = INPUT_KEYBOARD;
+            vkInputs[0].u.ki.wVk = vk;
+            vkInputs[0].u.ki.wScan = scan;
+            vkInputs[0].u.ki.dwFlags = down ? 0 : KEYEVENTF_KEYUP;
+            if (isExtended) vkInputs[0].u.ki.dwFlags |= KEYEVENTF_EXTENDEDKEY;
+            vkInputs[0].u.ki.time = 0;
+            vkInputs[0].u.ki.dwExtraInfo = UIntPtr.Zero;
+            SendInput(1, vkInputs, Marshal.SizeOf(typeof(INPUT)));
+        }
+        catch { }
+
+        // 3. Legacy keybd_event for maximum driver-level fallback
+        uint legacyFlags = down ? 0 : KEYEVENTF_KEYUP;
+        if (isExtended) legacyFlags |= KEYEVENTF_EXTENDEDKEY;
+        keybd_event(vk, scan, legacyFlags, UIntPtr.Zero);
     }
 
     /// <summary>
@@ -294,6 +312,18 @@ public class MobileInputReceiverService
             return;
         }
 
+        // Auto-reply with ACK periodically so mobile HUD auto-discovers PC connection on any button touch
+        if ((DateTime.UtcNow - _lastAckTime).TotalSeconds >= 4)
+        {
+            _lastAckTime = DateTime.UtcNow;
+            try
+            {
+                var ack = Encoding.UTF8.GetBytes($"GAMEHUB_PC_ACK|{Environment.MachineName}|CloudRedirect");
+                client.Send(ack, ack.Length, sender);
+            }
+            catch { }
+        }
+
         // Unicode text input from floating in-game keyboard:
         // TEXT:<string> or TEXT_ENTER:<string>
         if (msg.StartsWith("TEXT_ENTER:"))
@@ -432,18 +462,29 @@ public class MobileInputReceiverService
 
     private void DispatchMouse(bool down, int button)
     {
-        if (button == 1) // Left click
+        uint flag = button switch
         {
-            mouse_event(down ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_LEFTUP, 0, 0, 0, UIntPtr.Zero);
-        }
-        else if (button == 2) // Right click
+            1 => down ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_LEFTUP,
+            2 => down ? MOUSEEVENTF_RIGHTDOWN : MOUSEEVENTF_RIGHTUP,
+            3 => down ? MOUSEEVENTF_MIDDLEDOWN : MOUSEEVENTF_MIDDLEUP,
+            _ => down ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_LEFTUP
+        };
+
+        try
         {
-            mouse_event(down ? MOUSEEVENTF_RIGHTDOWN : MOUSEEVENTF_RIGHTUP, 0, 0, 0, UIntPtr.Zero);
+            INPUT[] inputs = new INPUT[1];
+            inputs[0].type = INPUT_MOUSE;
+            inputs[0].u.mi.dx = 0;
+            inputs[0].u.mi.dy = 0;
+            inputs[0].u.mi.mouseData = 0;
+            inputs[0].u.mi.dwFlags = flag;
+            inputs[0].u.mi.time = 0;
+            inputs[0].u.mi.dwExtraInfo = UIntPtr.Zero;
+            SendInput(1, inputs, Marshal.SizeOf(typeof(INPUT)));
         }
-        else if (button == 3) // Middle click
-        {
-            mouse_event(down ? MOUSEEVENTF_MIDDLEDOWN : MOUSEEVENTF_MIDDLEUP, 0, 0, 0, UIntPtr.Zero);
-        }
+        catch { }
+
+        mouse_event(flag, 0, 0, 0, UIntPtr.Zero);
     }
 
     private void DispatchDpad(bool down, string direction)
@@ -517,8 +558,23 @@ public class MobileInputReceiverService
                 SendKeyEvent(VK_TAB, down);
                 break;
             default:
-                byte vk = ResolveVirtualKey(0, label);
-                if (vk != 0) SendKeyEvent(vk, down);
+                if (label == "M-CLK" || label == "MOUSE_MIDDLE")
+                {
+                    DispatchMouse(down, 3);
+                }
+                else if (label == "L-CLK" || label == "MOUSE_LEFT" || label == "FIRE")
+                {
+                    DispatchMouse(down, 1);
+                }
+                else if (label == "R-CLK" || label == "MOUSE_RIGHT" || label == "AIM" || label == "ADS")
+                {
+                    DispatchMouse(down, 2);
+                }
+                else
+                {
+                    byte vk = ResolveVirtualKey(0, label);
+                    if (vk != 0) SendKeyEvent(vk, down);
+                }
                 break;
         }
     }

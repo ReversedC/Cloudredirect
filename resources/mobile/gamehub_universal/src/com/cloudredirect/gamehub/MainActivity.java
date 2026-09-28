@@ -155,6 +155,13 @@ public class MainActivity extends Activity {
             }
         });
 
+        inputSender.addConnectionListener(new GameHubInputSender.ConnectionListener() {
+            @Override
+            public void onConnectionUpdated(String ip, String pcName, boolean isOnline) {
+                updateConnectionUI();
+            }
+        });
+
         // Background initial scan
         triggerPcScan();
 
