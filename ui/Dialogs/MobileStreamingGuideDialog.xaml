@@ -235,8 +235,9 @@
                             <!-- QR Selector Header -->
                             <StackPanel Grid.Row="0">
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8">
-                                    <ui:Button x:Name="QrModeApkBtn" Content="Stream APK" Appearance="Primary" Padding="10,4" Margin="0,0,4,0" Click="QrModeApk_Click" Cursor="Hand" />
-                                    <ui:Button x:Name="QrModePinBtn" Content="Pairing PIN" Appearance="Secondary" Padding="10,4" Click="QrModePin_Click" Cursor="Hand" />
+                                    <ui:Button x:Name="QrModeApkBtn" Content="Stream APK" Appearance="Primary" Padding="8,4" Margin="0,0,4,0" Click="QrModeApk_Click" Cursor="Hand" />
+                                    <ui:Button x:Name="QrModeGameHubBtn" Content="GameHub HUD" Appearance="Secondary" Padding="8,4" Margin="0,0,4,0" Click="QrModeGameHub_Click" Cursor="Hand" />
+                                    <ui:Button x:Name="QrModePinBtn" Content="Pair PIN" Appearance="Secondary" Padding="8,4" Click="QrModePin_Click" Cursor="Hand" />
                                 </StackPanel>
                             </StackPanel>
 
@@ -351,46 +352,98 @@
                         </StackPanel>
                     </TabItem>
 
-                    <!-- TAB 2: GAMEHUB & STANDARD CLIENTS -->
-                    <TabItem Header="Stock Moonlight &amp; GameHub">
+                    <!-- TAB 2: GAMEHUB UNIVERSAL HUD & STEAM LINK -->
+                    <TabItem Header="GameHub Universal HUD (Steam Link &amp; All Games)">
                         <StackPanel Margin="0,10,0,0">
-                            <Border Background="#14202D" BorderBrush="#253D52" BorderThickness="1" CornerRadius="8" Padding="16,14">
-                                <StackPanel>
-                                    <TextBlock Text="Connecting via Official Moonlight or GameHub:" FontWeight="Bold" FontSize="14" Foreground="#66C0F4" Margin="0,0,0,12" />
-
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                                        <Border Width="24" Height="24" Background="#1A2D3E" CornerRadius="12" Margin="0,0,10,0">
-                                            <TextBlock Text="1" FontWeight="Bold" Foreground="#66C0F4" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        </Border>
-                                        <TextBlock Text="Download official Moonlight Game Streaming from Google Play Store or use the GameHub emulator." VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                    </StackPanel>
-
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                                        <Border Width="24" Height="24" Background="#1A2D3E" CornerRadius="12" Margin="0,0,10,0">
-                                            <TextBlock Text="2" FontWeight="Bold" Foreground="#66C0F4" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        </Border>
-                                        <TextBlock Text="Open Moonlight: your PC will appear automatically with a lock icon. Tap it to see a 4-digit PIN." VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                    </StackPanel>
-
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                                        <Border Width="24" Height="24" Background="#1A2D3E" CornerRadius="12" Margin="0,0,10,0">
-                                            <TextBlock Text="3" FontWeight="Bold" Foreground="#66C0F4" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        </Border>
-                                        <TextBlock Text="Click 'Enter 4-Digit PIN' above to pair." VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                    </StackPanel>
-
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                        <Border Width="24" Height="24" Background="#1A2D3E" CornerRadius="12" Margin="0,0,10,0" VerticalAlignment="Top">
-                                            <TextBlock Text="4" FontWeight="Bold" Foreground="#66C0F4" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        </Border>
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="Select any game or 'Steam Big Picture' to stream." FontWeight="SemiBold" Foreground="#66D18F" />
-                                            <TextBlock Text="In Moonlight Settings -> On-Screen Controls, you can drag, drop, and resize default gamepad controls." 
-                                                       FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0" />
+                            
+                            <!-- Hero Banner -->
+                            <Border Background="#111B25" BorderBrush="#00D2FF" BorderThickness="1.5" CornerRadius="8" Padding="16,14" Margin="0,0,0,12">
+                                <DockPanel LastChildFill="False">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <TextBlock Text="GameHub Universal HUD &amp; Touch Controls" FontWeight="Bold" FontSize="14" Foreground="#00D2FF" />
+                                            <Border Background="#183B25" CornerRadius="4" Padding="6,2" Margin="10,0,0,0">
+                                                <TextBlock Text="Universal for Steam Link" FontSize="11" Foreground="#66D18F" FontWeight="SemiBold" />
+                                            </Border>
                                         </StackPanel>
+                                        <TextBlock Text="Standalone Android overlay that floats on top of Steam Link, Moonlight, Game Pass, or any game. Includes draggable D-pad, 360° thumbsticks, ABXY, bumpers/triggers, haptics &amp; edit mode."
+                                                   FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,4,0,0" TextWrapping="Wrap" MaxWidth="520" />
                                     </StackPanel>
-                                </StackPanel>
+                                    <ui:Button DockPanel.Dock="Right"
+                                               Appearance="Primary"
+                                               Content="Locate GameHub APK"
+                                               Icon="{ui:SymbolIcon Folder24}"
+                                               Click="OpenGameHubUniversalApk_Click"
+                                               Padding="14,7"
+                                               VerticalAlignment="Center"
+                                               Cursor="Hand" />
+                                </DockPanel>
                             </Border>
+
+                            <!-- 4 Visual Step Cards -->
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="12" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Step 1 -->
+                                <Border Grid.Row="0" Grid.Column="0" Background="#14202D" BorderBrush="#233B4F" BorderThickness="1" CornerRadius="8" Padding="14,12" Margin="0,0,0,12">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                            <Border Width="22" Height="22" Background="#1C384F" CornerRadius="11" Margin="0,0,8,0">
+                                                <TextBlock Text="1" FontWeight="Bold" Foreground="#00D2FF" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+                                            <TextBlock Text="Install GameHub-TouchHUD.apk" FontWeight="Bold" FontSize="13" Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <TextBlock Text="Install GameHub-TouchHUD.apk on your Android phone and grant the 'Display Over Other Apps' permission." FontSize="11.5" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Step 2 -->
+                                <Border Grid.Row="0" Grid.Column="2" Background="#14202D" BorderBrush="#233B4F" BorderThickness="1" CornerRadius="8" Padding="14,12" Margin="0,0,0,12">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                            <Border Width="22" Height="22" Background="#1C384F" CornerRadius="11" Margin="0,0,8,0">
+                                                <TextBlock Text="2" FontWeight="Bold" Foreground="#00D2FF" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+                                            <TextBlock Text="Start GameHub Overlay" FontWeight="Bold" FontSize="13" Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <TextBlock Text="Tap the big green 'START GAMEHUB OVERLAY' button. A floating [🎮 HUD] badge will appear on your screen." FontSize="11.5" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Step 3 -->
+                                <Border Grid.Row="1" Grid.Column="0" Background="#14202D" BorderBrush="#233B4F" BorderThickness="1" CornerRadius="8" Padding="14,12">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                            <Border Width="22" Height="22" Background="#1C384F" CornerRadius="11" Margin="0,0,8,0">
+                                                <TextBlock Text="3" FontWeight="Bold" Foreground="#00D2FF" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+                                            <TextBlock Text="Launch Steam Link (or Game)" FontWeight="Bold" FontSize="13" Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <TextBlock Text="Open Steam Link, connect to your PC, and start streaming your game. The GameHub badge floats on top!" FontSize="11.5" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Step 4 -->
+                                <Border Grid.Row="1" Grid.Column="2" Background="#14202D" BorderBrush="#233B4F" BorderThickness="1" CornerRadius="8" Padding="14,12">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                            <Border Width="22" Height="22" Background="#1C384F" CornerRadius="11" Margin="0,0,8,0">
+                                                <TextBlock Text="4" FontWeight="Bold" Foreground="#00D2FF" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+                                            <TextBlock Text="Tap HUD Badge &amp; Play!" FontWeight="Bold" FontSize="13" Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <TextBlock Text="Tap the [🎮 HUD] badge to expand the full controller. Tap [✎ EDIT] to move any button, or [👁] to adjust opacity to 40% ghost mode." FontSize="11.5" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
                         </StackPanel>
                     </TabItem>
 

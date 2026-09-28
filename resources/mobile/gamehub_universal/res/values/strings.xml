@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">GameHub Mobile HUD</string>
+    <string name="accessibility_desc">Allows GameHub to dispatch touch gestures to games and streaming apps like Steam Link when touch buttons are pressed.</string>
+</resources>

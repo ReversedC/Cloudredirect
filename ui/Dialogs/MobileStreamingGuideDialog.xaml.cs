@@ -11,7 +11,7 @@ namespace CloudRedirect.Dialogs;
 public partial class MobileStreamingGuideDialog : FluentWindow
 {
     private bool _isPasswordRevealed = true;
-    private bool _qrModeApk = true;
+    private int _qrMode = 0; // 0 = Stream APK, 1 = GameHub APK, 2 = Pin
 
     public MobileStreamingGuideDialog()
     {
@@ -78,9 +78,19 @@ public partial class MobileStreamingGuideDialog : FluentWindow
         try
         {
             var lanIp = SunshineSyncService.GetLocalLanIp() ?? "127.0.0.1";
-            string payload = _qrModeApk
-                ? "https://github.com/mirzaarsyad74-cmyk/Cloudredirect/releases/latest/download/CloudRedirect-Stream.apk"
-                : $"https://{lanIp}:47990/pin";
+            string payload;
+            if (_qrMode == 0)
+            {
+                payload = "https://github.com/mirzaarsyad74-cmyk/Cloudredirect/releases/latest/download/CloudRedirect-Stream.apk";
+            }
+            else if (_qrMode == 1)
+            {
+                payload = "https://github.com/mirzaarsyad74-cmyk/Cloudredirect/releases/latest/download/GameHub-TouchHUD.apk";
+            }
+            else
+            {
+                payload = $"https://{lanIp}:47990/pin";
+            }
 
             QrCodeImage.Source = QrCodeHelper.GenerateQrCode(payload, 5);
         }
@@ -92,17 +102,29 @@ public partial class MobileStreamingGuideDialog : FluentWindow
 
     private void QrModeApk_Click(object sender, RoutedEventArgs e)
     {
-        _qrModeApk = true;
+        _qrMode = 0;
         QrModeApkBtn.Appearance = ControlAppearance.Primary;
+        QrModeGameHubBtn.Appearance = ControlAppearance.Secondary;
         QrModePinBtn.Appearance = ControlAppearance.Secondary;
-        QrModeDescription.Text = "Scan with phone camera to download CloudRedirect-Stream.apk directly.";
+        QrModeDescription.Text = "Scan with phone camera to download CloudRedirect-Stream.apk (Moonlight Custom Edition).";
+        UpdateQrCode();
+    }
+
+    private void QrModeGameHub_Click(object sender, RoutedEventArgs e)
+    {
+        _qrMode = 1;
+        QrModeApkBtn.Appearance = ControlAppearance.Secondary;
+        QrModeGameHubBtn.Appearance = ControlAppearance.Primary;
+        QrModePinBtn.Appearance = ControlAppearance.Secondary;
+        QrModeDescription.Text = "Scan with phone camera to download GameHub-TouchHUD.apk (Universal Overlay for Steam Link & Games).";
         UpdateQrCode();
     }
 
     private void QrModePin_Click(object sender, RoutedEventArgs e)
     {
-        _qrModeApk = false;
+        _qrMode = 2;
         QrModeApkBtn.Appearance = ControlAppearance.Secondary;
+        QrModeGameHubBtn.Appearance = ControlAppearance.Secondary;
         QrModePinBtn.Appearance = ControlAppearance.Primary;
         QrModeDescription.Text = "Scan to open the Sunshine PIN pairing web page on your phone.";
         UpdateQrCode();
@@ -303,6 +325,38 @@ public partial class MobileStreamingGuideDialog : FluentWindow
             if (!File.Exists(localApk))
             {
                 var resPath = Path.GetFullPath(Path.Combine(baseDir, @"..\..\..\resources\mobile\CloudRedirect-Stream.apk"));
+                if (File.Exists(resPath)) localApk = resPath;
+            }
+
+            if (File.Exists(localApk))
+            {
+                Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{localApk}\"") { UseShellExecute = true });
+            }
+            else
+            {
+                Process.Start(new ProcessStartInfo("https://github.com/mirzaarsyad74-cmyk/Cloudredirect/releases/latest") { UseShellExecute = true });
+            }
+        }
+        catch (Exception ex)
+        {
+            Dialog.ShowErrorAsync("Open APK Error", ex.Message);
+        }
+    }
+
+    private void OpenGameHubUniversalApk_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            var localApk = Path.Combine(baseDir, "GameHub-TouchHUD.apk");
+            if (!File.Exists(localApk))
+            {
+                var pubPath = Path.GetFullPath(Path.Combine(baseDir, @"..\..\..\ui\bin\publish\GameHub-TouchHUD.apk"));
+                if (File.Exists(pubPath)) localApk = pubPath;
+            }
+            if (!File.Exists(localApk))
+            {
+                var resPath = Path.GetFullPath(Path.Combine(baseDir, @"..\..\..\resources\mobile\GameHub-TouchHUD.apk"));
                 if (File.Exists(resPath)) localApk = resPath;
             }
 

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="steam_dark_bg">#0E141D</color>
+    <color name="steam_card_bg">#171F2C</color>
+    <color name="steam_card_border">#283A4E</color>
+    <color name="steam_cyan">#00D2FF</color>
+    <color name="steam_blue_text">#66C0F4</color>
+    <color name="steam_green">#A4D007</color>
+    <color name="steam_green_dark">#4C7515</color>
+    <color name="text_white">#F5F5F5</color>
+    <color name="text_secondary">#8F98A0</color>
+</resources>

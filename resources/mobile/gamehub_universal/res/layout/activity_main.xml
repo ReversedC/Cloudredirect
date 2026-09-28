@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/steam_dark_bg"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <!-- Steam Header -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="16dp">
+
+            <ImageView
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:src="@drawable/ic_launcher"
+                android:layout_marginEnd="14dp" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="GAMEHUB MOBILE HUD"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_white" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Universal Touch Controller for Steam Link &amp; Games"
+                    android:textSize="12sp"
+                    android:textColor="@color/steam_blue_text" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/statusPill"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="READY"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="@color/steam_green"
+                android:background="@drawable/steam_pill_bg"
+                android:paddingLeft="12dp"
+                android:paddingRight="12dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp" />
+        </LinearLayout>
+
+        <!-- Big Steam Play / Stop Button -->
+        <Button
+            android:id="@+id/btnToggleOverlay"
+            android:layout_width="match_parent"
+            android:layout_height="58dp"
+            android:text="▶  START GAMEHUB OVERLAY"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF"
+            android:background="@drawable/steam_btn_play"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Permissions Card -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/steam_card_bg"
+            android:padding="16dp"
+            android:layout_marginBottom="14dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="REQUIRED PERMISSION"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="@color/steam_cyan"
+                android:layout_marginBottom="6dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Display Over Other Apps (Overlay)"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_white" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Required to float custom HUD touch controls on top of Steam Link or other games."
+                android:textSize="12sp"
+                android:textColor="@color/text_secondary"
+                android:layout_marginBottom="12dp" />
+
+            <Button
+                android:id="@+id/btnGrantOverlay"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:text="Grant Overlay Permission"
+                android:textSize="13sp"
+                android:textColor="@color/steam_blue_text"
+                android:background="@drawable/steam_btn_secondary" />
+        </LinearLayout>
+
+        <!-- Quick Launch Apps Card -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/steam_card_bg"
+            android:padding="16dp"
+            android:layout_marginBottom="14dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ONE-CLICK GAME STREAMING"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="@color/steam_cyan"
+                android:layout_marginBottom="8dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnLaunchSteamLink"
+                    android:layout_width="0dp"
+                    android:layout_height="46dp"
+                    android:layout_weight="1"
+                    android:text="🎮 Steam Link"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:textColor="#FFFFFF"
+                    android:background="@drawable/steam_btn_secondary"
+                    android:layout_marginEnd="6dp" />
+
+                <Button
+                    android:id="@+id/btnLaunchMoonlight"
+                    android:layout_width="0dp"
+                    android:layout_height="46dp"
+                    android:layout_weight="1"
+                    android:text="🚀 Moonlight"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:textColor="#FFFFFF"
+                    android:background="@drawable/steam_btn_secondary"
+                    android:layout_marginStart="6dp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- HUD Options Card -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/steam_card_bg"
+            android:padding="16dp"
+            android:layout_marginBottom="14dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="TOUCH CONTROLS SETTINGS"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="@color/steam_cyan"
+                android:layout_marginBottom="10dp" />
+
+            <!-- Preset Selector -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Controller Layout Preset"
+                android:textSize="13sp"
+                android:textColor="@color/text_white"
+                android:layout_marginBottom="4dp" />
+
+            <Button
+                android:id="@+id/btnCyclePreset"
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:text="Preset: Steam Link Universal"
+                android:textSize="13sp"
+                android:textColor="@color/steam_blue_text"
+                android:background="@drawable/steam_btn_secondary"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Opacity Selector -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="HUD Default Transparency"
+                android:textSize="13sp"
+                android:textColor="@color/text_white"
+                android:layout_marginBottom="4dp" />
+
+            <Button
+                android:id="@+id/btnCycleOpacity"
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:text="Opacity: 75% (Balanced)"
+                android:textSize="13sp"
+                android:textColor="@color/steam_blue_text"
+                android:background="@drawable/steam_btn_secondary"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Vibration / Haptics Toggle -->
+            <CheckBox
+                android:id="@+id/cbHaptics"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Vibration Haptic Feedback on Touch"
+                android:textSize="13sp"
+                android:textColor="@color/text_white"
+                android:checked="true"
+                android:layout_marginBottom="8dp" />
+
+            <!-- Reset Button -->
+            <Button
+                android:id="@+id/btnResetLayout"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:text="Reset Layout to Default Positions"
+                android:textSize="12sp"
+                android:textColor="@color/text_secondary"
+                android:background="@drawable/steam_btn_secondary" />
+        </LinearLayout>
+
+        <!-- Instructions & Tips Card -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/steam_card_bg"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="HOW TO USE WITH STEAM LINK"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="@color/steam_green"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="1. Tap START GAMEHUB OVERLAY above.\n2. Open Steam Link and start streaming your PC.\n3. The floating [🎮 HUD] badge appears on your screen.\n4. Tap the badge to expand the touch controls.\n5. Tap [✎ Edit] on the HUD to drag and resize buttons to match your grip!"
+                android:textSize="12.5sp"
+                android:lineSpacingExtra="4dp"
+                android:textColor="@color/text_white" />
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>

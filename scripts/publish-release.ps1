@@ -87,7 +87,7 @@ $releaseId = $release.id
 $existingAssetsUrl = "https://api.github.com/repos/$repoOwner/$repoName/releases/$releaseId/assets"
 $currentAssets = Invoke-RestMethod -Uri $existingAssetsUrl -Headers $headers -Method Get
 foreach ($asset in $currentAssets) {
-    if ($asset.name -eq "CloudRedirect.exe" -or $asset.name -eq "CloudRedirect.exe.sha256" -or $asset.name -eq "CloudRedirect-Setup.exe" -or $asset.name -eq "CloudRedirect-Stream.apk") {
+    if ($asset.name -eq "CloudRedirect.exe" -or $asset.name -eq "CloudRedirect.exe.sha256" -or $asset.name -eq "CloudRedirect-Setup.exe" -or $asset.name -eq "CloudRedirect-Stream.apk" -or $asset.name -eq "GameHub-TouchHUD.apk") {
         Write-Host "Deleting old asset: $($asset.name)..."
         Invoke-RestMethod -Uri $asset.url -Headers $headers -Method Delete
     }
@@ -122,6 +122,11 @@ Upload-Asset $shaPath "CloudRedirect.exe.sha256" "text/plain"
 $apkPath = Join-Path $PSScriptRoot "..\ui\bin\publish\CloudRedirect-Stream.apk"
 if (Test-Path $apkPath) {
     Upload-Asset $apkPath "CloudRedirect-Stream.apk" "application/vnd.android.package-archive"
+}
+
+$gamehubApkPath = Join-Path $PSScriptRoot "..\ui\bin\publish\GameHub-TouchHUD.apk"
+if (Test-Path $gamehubApkPath) {
+    Upload-Asset $gamehubApkPath "GameHub-TouchHUD.apk" "application/vnd.android.package-archive"
 }
 
 
