@@ -69,6 +69,28 @@ public partial class App : System.Windows.Application
     {
         LogStartup("OnStartup started. Process: " + Environment.ProcessPath + " Args: " + string.Join(" ", e.Args));
 
+        // CLI flags for Steam GUI / Millennium integration
+        if (e.Args.Any(a => string.Equals(a, "--patch-steam", StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(a, "--refresh-steam", StringComparison.OrdinalIgnoreCase)))
+        {
+            var steamPath = Services.SteamDetector.FindSteamPath();
+            var (success, msg) = Services.SteamWebUiPatcher.ApplyPatch(steamPath);
+            Console.WriteLine(msg);
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            Shutdown(success ? 0 : 1);
+            return;
+        }
+
+        if (e.Args.Any(a => string.Equals(a, "--unpatch-steam", StringComparison.OrdinalIgnoreCase)))
+        {
+            var steamPath = Services.SteamDetector.FindSteamPath();
+            var (success, msg) = Services.SteamWebUiPatcher.RemovePatch(steamPath);
+            Console.WriteLine(msg);
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            Shutdown(success ? 0 : 1);
+            return;
+        }
+
         AppDomain.CurrentDomain.UnhandledException += (s, args) =>
         {
             try

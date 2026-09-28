@@ -162,7 +162,7 @@ public static class SteamWebUiPatcher
 
     /// <summary>
     /// Scans Steam's steamui directory JavaScript files for dynamic React/CSS-module class mappings.
-    /// Returns discovered class names (e.g. CloudIconSVG, PlayBarCloudStatusContainer, PlayBar, Container).
+    /// Returns discovered class names (e.g. CloudIconSVG, PlayBarCloudStatusContainer, PlayBar, Container, GameListEntryContainer).
     /// </summary>
     public static Dictionary<string, string> ScanDynamicClasses(string steamPath)
     {
@@ -170,7 +170,11 @@ public static class SteamWebUiPatcher
         var steamuiDir = Path.Combine(steamPath, "steamui");
         if (!Directory.Exists(steamuiDir)) return result;
 
-        var targetKeys = new[] { "CloudIconSVG", "PlayBarCloudStatusContainer", "CloudStatusIcon", "CloudStatusRow", "PlayBar", "Container" };
+        var targetKeys = new[]
+        {
+            "CloudIconSVG", "PlayBarCloudStatusContainer", "CloudStatusIcon", "CloudStatusRow",
+            "PlayBar", "Container", "CapsuleContainer", "GridItem", "GameListEntryContainer"
+        };
         var regexes = new Dictionary<string, Regex>();
         foreach (var key in targetKeys)
         {
@@ -250,7 +254,7 @@ public static class SteamWebUiPatcher
         if (dynamicClasses.TryGetValue("Container", out var ct) && !string.IsNullOrWhiteSpace(ct))
             containers.Add($"div.{ct}");
 
-        var containerStr = string.Join(", ", containers);
+        var containerStr = string.Join(", ", containers.Distinct());
 
         // Targets: Cloud status SVG icon elements
         var targets = new List<string>
@@ -266,7 +270,21 @@ public static class SteamWebUiPatcher
         if (dynamicClasses.TryGetValue("CloudStatusIcon", out var csIcon) && !string.IsNullOrWhiteSpace(csIcon))
             targets.Add($"span.{csIcon} svg");
 
-        var targetStr = string.Join(", ", targets);
+        var targetStr = string.Join(", ", targets.Distinct());
+
+        // Capsules
+        var capsuleContainers = new List<string> { "div[class*=\"CapsuleContainer\"]", "div[class*=\"Capsule\"]", "div[class*=\"GridItem\"]" };
+        if (dynamicClasses.TryGetValue("CapsuleContainer", out var cc) && !string.IsNullOrWhiteSpace(cc))
+            capsuleContainers.Add($"div.{cc}");
+        if (dynamicClasses.TryGetValue("GridItem", out var gi) && !string.IsNullOrWhiteSpace(gi))
+            capsuleContainers.Add($"div.{gi}");
+        var capsuleStr = string.Join(", ", capsuleContainers.Distinct());
+
+        // Sidebar game list entries
+        var sidebarContainers = new List<string> { "div[class*=\"GameListEntryContainer\"]", "div[class*=\"_1vO6BoiVslZgs1kqDGdUs8\"]" };
+        if (dynamicClasses.TryGetValue("GameListEntryContainer", out var glec) && !string.IsNullOrWhiteSpace(glec))
+            sidebarContainers.Add($"div.{glec}");
+        var sidebarStr = string.Join(", ", sidebarContainers.Distinct());
 
         return $@"{MarkerStart}
 /* 1. PlayBar & Dialogs: Custom Cloud Status Icon */
@@ -297,7 +315,7 @@ public static class SteamWebUiPatcher
 }}
 
 /* 2. Steam Library Grid: Visual Glow & Cloud Badge for Redirected/SUO Games */
-:is(div[class*=""CapsuleContainer""], div[class*=""Capsule""], div[class*=""GridItem""]):has(
+:is({capsuleStr}):has(
     :is(
         {hasClause}
     )
@@ -305,16 +323,16 @@ public static class SteamWebUiPatcher
     position: relative !important;
 }}
 
-:is(div[class*=""CapsuleContainer""], div[class*=""Capsule""], div[class*=""GridItem""]):has(
+:is({capsuleStr}):has(
     :is(
         {hasClause}
     )
 ):hover {{
-    box-shadow: 0 0 14px rgba(0, 210, 255, 0.45) !important;
+    box-shadow: 0 0 16px rgba(0, 210, 255, 0.45) !important;
     transition: box-shadow 0.2s ease-in-out !important;
 }}
 
-:is(div[class*=""CapsuleContainer""], div[class*=""Capsule""], div[class*=""GridItem""]):has(
+:is({capsuleStr}):has(
     :is(
         {hasClause}
     )
@@ -323,7 +341,7 @@ public static class SteamWebUiPatcher
     position: absolute !important;
     top: 6px !important;
     right: 6px !important;
-    background: rgba(16, 26, 38, 0.88) !important;
+    background: rgba(16, 26, 38, 0.92) !important;
     color: #00d2ff !important;
     font-size: 9px !important;
     font-weight: 700 !important;
@@ -337,95 +355,129 @@ public static class SteamWebUiPatcher
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6) !important;
     text-shadow: 0 0 4px rgba(0, 210, 255, 0.6) !important;
 }}
+
+/* 3. Steam Library Sidebar: Subtle Highlight & Left Accent for Redirected/SUO Games */
+:is({sidebarStr}):has(
+    :is(
+        {hasClause}
+    )
+) {{
+    border-left: 2px solid #00d2ff !important;
+}}
+
+:is({sidebarStr}):has(
+    :is(
+        {hasClause}
+    )
+):hover {{
+    background: rgba(0, 210, 255, 0.08) !important;
+}}
 {MarkerEnd}
 ";
     }
 
+    private static readonly object _patchLock = new();
+    private static volatile bool _isWriting = false;
+
     /// <summary>
-    /// Injects the custom icon and capsule rules into Steam's library.css and Millennium's quick.css.
-    /// Also saves custom_cloud_icon: true in config.json.
+    /// Injects the custom icon, capsule badges, and sidebar rules into Steam's library.css and Millennium's quick.css.
+    /// Also saves custom_cloud_icon: true in config.json. Thread-safe and loop-prevented.
     /// </summary>
     public static (bool Success, string Message) ApplyPatch(string? steamPath = null)
     {
-        try
+        lock (_patchLock)
         {
-            steamPath ??= SteamDetector.FindSteamPath();
-            if (string.IsNullOrEmpty(steamPath) || !Directory.Exists(steamPath))
-                return (false, "Steam installation path could not be located.");
-
-            var cssDir = Path.Combine(steamPath, "steamui", "css");
-            var cssPath = Path.Combine(cssDir, "library.css");
-            if (!File.Exists(cssPath))
-                return (false, $"Steam library stylesheet not found at: {cssPath}");
-
-            // Create backup if not already present
-            var bakPath = cssPath + ".bak";
-            if (!File.Exists(bakPath))
+            _isWriting = true;
+            try
             {
-                try { File.Copy(cssPath, bakPath, false); }
-                catch { }
-            }
+                steamPath ??= SteamDetector.FindSteamPath();
+                if (string.IsNullOrEmpty(steamPath) || !Directory.Exists(steamPath))
+                    return (false, "Steam installation path could not be located.");
 
-            var dynamicClasses = ScanDynamicClasses(steamPath);
-            var luaAppIds = GetLuaAppIds(steamPath);
+                var cssDir = Path.Combine(steamPath, "steamui", "css");
+                var cssPath = Path.Combine(cssDir, "library.css");
+                if (!File.Exists(cssPath))
+                    return (false, $"Steam library stylesheet not found at: {cssPath}");
 
-            // Check if user placed a custom cloud_icon.png in cloud_redirect directory
-            var customIcon = Path.Combine(steamPath, "cloud_redirect", "cloud_icon.png");
-            var patchCss = GenerateCss(luaAppIds, dynamicClasses, File.Exists(customIcon) ? customIcon : null);
-
-            // 1. Native Steam library.css
-            var existingContent = File.ReadAllText(cssPath);
-            const string legacyMarkerStart = "/* === BEGIN CLOUDREDIRECT STEAM CLOUD ICON === */";
-            const string legacyMarkerEnd = "/* === END CLOUDREDIRECT STEAM CLOUD ICON === */";
-            existingContent = StripMarkerSection(existingContent, legacyMarkerStart, legacyMarkerEnd);
-            existingContent = StripMarkerSection(existingContent, MarkerStart, MarkerEnd);
-
-            var newContent = string.IsNullOrEmpty(patchCss)
-                ? existingContent.TrimEnd() + "\n"
-                : existingContent.TrimEnd() + "\n\n" + patchCss;
-
-            FileUtils.AtomicWriteAllText(cssPath, newContent);
-
-            // 2. Millennium quick.css (live hot-reload)
-            var quickCss = GetMillenniumQuickCssPath(steamPath);
-            bool millenniumSynced = false;
-            if (quickCss != null)
-            {
-                try
+                // Create backup if not already present
+                var bakPath = cssPath + ".bak";
+                if (!File.Exists(bakPath))
                 {
-                    Directory.CreateDirectory(Path.GetDirectoryName(quickCss)!);
-                    var existingQuick = File.Exists(quickCss) ? File.ReadAllText(quickCss) : "";
-                    existingQuick = StripMarkerSection(existingQuick, legacyMarkerStart, legacyMarkerEnd);
-                    existingQuick = StripMarkerSection(existingQuick, MarkerStart, MarkerEnd);
-
-                    var newQuick = string.IsNullOrEmpty(patchCss)
-                        ? existingQuick.TrimEnd() + "\n"
-                        : (string.IsNullOrWhiteSpace(existingQuick)
-                            ? "/* Quick CSS file managed by Millennium & CloudRedirect */\n\n"
-                            : existingQuick.TrimEnd() + "\n\n") + patchCss;
-
-                    FileUtils.AtomicWriteAllText(quickCss, newQuick);
-                    millenniumSynced = true;
+                    try { File.Copy(cssPath, bakPath, false); }
+                    catch { }
                 }
-                catch (Exception mex)
+
+                var dynamicClasses = ScanDynamicClasses(steamPath);
+                var luaAppIds = GetLuaAppIds(steamPath);
+
+                // Check if user placed a custom cloud_icon.png in cloud_redirect directory
+                var customIcon = Path.Combine(steamPath, "cloud_redirect", "cloud_icon.png");
+                var patchCss = GenerateCss(luaAppIds, dynamicClasses, File.Exists(customIcon) ? customIcon : null);
+
+                // 1. Native Steam library.css
+                var existingContent = File.ReadAllText(cssPath);
+                const string legacyMarkerStart = "/* === BEGIN CLOUDREDIRECT STEAM CLOUD ICON === */";
+                const string legacyMarkerEnd = "/* === END CLOUDREDIRECT STEAM CLOUD ICON === */";
+                existingContent = StripMarkerSection(existingContent, legacyMarkerStart, legacyMarkerEnd);
+                existingContent = StripMarkerSection(existingContent, MarkerStart, MarkerEnd);
+
+                var newContent = string.IsNullOrEmpty(patchCss)
+                    ? existingContent.TrimEnd() + "\n"
+                    : existingContent.TrimEnd() + "\n\n" + patchCss;
+
+                if (File.ReadAllText(cssPath) != newContent)
                 {
-                    Debug.WriteLine($"[SteamWebUiPatcher] Millennium quick.css write warning: {mex.Message}");
+                    FileUtils.AtomicWriteAllText(cssPath, newContent);
                 }
+
+                // 2. Millennium quick.css (live hot-reload)
+                var quickCss = GetMillenniumQuickCssPath(steamPath);
+                bool millenniumSynced = false;
+                if (quickCss != null)
+                {
+                    try
+                    {
+                        Directory.CreateDirectory(Path.GetDirectoryName(quickCss)!);
+                        var existingQuick = File.Exists(quickCss) ? File.ReadAllText(quickCss) : "";
+                        existingQuick = StripMarkerSection(existingQuick, legacyMarkerStart, legacyMarkerEnd);
+                        existingQuick = StripMarkerSection(existingQuick, MarkerStart, MarkerEnd);
+
+                        var newQuick = string.IsNullOrEmpty(patchCss)
+                            ? existingQuick.TrimEnd() + "\n"
+                            : (string.IsNullOrWhiteSpace(existingQuick)
+                                ? "/* Quick CSS file managed by Millennium & CloudRedirect */\n\n"
+                                : existingQuick.TrimEnd() + "\n\n") + patchCss;
+
+                        if (!File.Exists(quickCss) || File.ReadAllText(quickCss) != newQuick)
+                        {
+                            FileUtils.AtomicWriteAllText(quickCss, newQuick);
+                        }
+                        millenniumSynced = true;
+                    }
+                    catch (Exception mex)
+                    {
+                        Debug.WriteLine($"[SteamWebUiPatcher] Millennium quick.css write warning: {mex.Message}");
+                    }
+                }
+
+                // Persist setting in config.json
+                var configPath = SteamDetector.GetConfigFilePath();
+                ConfigHelper.SaveConfig(configPath, new[] { "custom_cloud_icon" }, writer =>
+                {
+                    writer.WriteBoolean("custom_cloud_icon", true);
+                });
+
+                var millMsg = millenniumSynced ? " (Millennium live hot-reload synced)" : "";
+                return (true, $"Successfully applied Steam GUI patch for {luaAppIds.Count} games{millMsg}.");
             }
-
-            // Persist setting in config.json
-            var configPath = SteamDetector.GetConfigFilePath();
-            ConfigHelper.SaveConfig(configPath, new[] { "custom_cloud_icon" }, writer =>
+            catch (Exception ex)
             {
-                writer.WriteBoolean("custom_cloud_icon", true);
-            });
-
-            var millMsg = millenniumSynced ? " (Millennium live hot-reload synced)" : "";
-            return (true, $"Successfully applied Steam GUI patch for {luaAppIds.Count} games{millMsg}.");
-        }
-        catch (Exception ex)
-        {
-            return (false, $"Failed to apply custom icon: {ex.Message}");
+                return (false, $"Failed to apply custom icon: {ex.Message}");
+            }
+            finally
+            {
+                Task.Delay(1000).ContinueWith(_ => _isWriting = false);
+            }
         }
     }
 
@@ -450,52 +502,66 @@ public static class SteamWebUiPatcher
     /// </summary>
     public static (bool Success, string Message) RemovePatch(string? steamPath = null)
     {
-        try
+        lock (_patchLock)
         {
-            steamPath ??= SteamDetector.FindSteamPath();
-            if (string.IsNullOrEmpty(steamPath) || !Directory.Exists(steamPath))
-                return (false, "Steam installation path could not be located.");
-
-            // 1. Remove from library.css
-            var cssPath = Path.Combine(steamPath, "steamui", "css", "library.css");
-            if (File.Exists(cssPath))
+            _isWriting = true;
+            try
             {
-                var existingContent = File.ReadAllText(cssPath);
-                const string legacyMarkerStart = "/* === BEGIN CLOUDREDIRECT STEAM CLOUD ICON === */";
-                const string legacyMarkerEnd = "/* === END CLOUDREDIRECT STEAM CLOUD ICON === */";
-                existingContent = StripMarkerSection(existingContent, legacyMarkerStart, legacyMarkerEnd);
-                existingContent = StripMarkerSection(existingContent, MarkerStart, MarkerEnd);
-                FileUtils.AtomicWriteAllText(cssPath, existingContent);
-            }
+                steamPath ??= SteamDetector.FindSteamPath();
+                if (string.IsNullOrEmpty(steamPath) || !Directory.Exists(steamPath))
+                    return (false, "Steam installation path could not be located.");
 
-            // 2. Remove from Millennium quick.css if present
-            var quickCss = GetMillenniumQuickCssPath(steamPath);
-            if (quickCss != null && File.Exists(quickCss))
-            {
-                try
+                // 1. Remove from library.css
+                var cssPath = Path.Combine(steamPath, "steamui", "css", "library.css");
+                if (File.Exists(cssPath))
                 {
-                    var existingQuick = File.ReadAllText(quickCss);
+                    var existingContent = File.ReadAllText(cssPath);
                     const string legacyMarkerStart = "/* === BEGIN CLOUDREDIRECT STEAM CLOUD ICON === */";
                     const string legacyMarkerEnd = "/* === END CLOUDREDIRECT STEAM CLOUD ICON === */";
-                    existingQuick = StripMarkerSection(existingQuick, legacyMarkerStart, legacyMarkerEnd);
-                    existingQuick = StripMarkerSection(existingQuick, MarkerStart, MarkerEnd);
-                    FileUtils.AtomicWriteAllText(quickCss, existingQuick);
+                    existingContent = StripMarkerSection(existingContent, legacyMarkerStart, legacyMarkerEnd);
+                    existingContent = StripMarkerSection(existingContent, MarkerStart, MarkerEnd);
+                    if (File.ReadAllText(cssPath) != existingContent)
+                    {
+                        FileUtils.AtomicWriteAllText(cssPath, existingContent);
+                    }
                 }
-                catch { }
+
+                // 2. Remove from Millennium quick.css if present
+                var quickCss = GetMillenniumQuickCssPath(steamPath);
+                if (quickCss != null && File.Exists(quickCss))
+                {
+                    try
+                    {
+                        var existingQuick = File.ReadAllText(quickCss);
+                        const string legacyMarkerStart = "/* === BEGIN CLOUDREDIRECT STEAM CLOUD ICON === */";
+                        const string legacyMarkerEnd = "/* === END CLOUDREDIRECT STEAM CLOUD ICON === */";
+                        existingQuick = StripMarkerSection(existingQuick, legacyMarkerStart, legacyMarkerEnd);
+                        existingQuick = StripMarkerSection(existingQuick, MarkerStart, MarkerEnd);
+                        if (File.ReadAllText(quickCss) != existingQuick)
+                        {
+                            FileUtils.AtomicWriteAllText(quickCss, existingQuick);
+                        }
+                    }
+                    catch { }
+                }
+
+                // Persist setting in config.json
+                var configPath = SteamDetector.GetConfigFilePath();
+                ConfigHelper.SaveConfig(configPath, new[] { "custom_cloud_icon" }, writer =>
+                {
+                    writer.WriteBoolean("custom_cloud_icon", false);
+                });
+
+                return (true, "Successfully restored default Steam GUI styles.");
             }
-
-            // Persist setting in config.json
-            var configPath = SteamDetector.GetConfigFilePath();
-            ConfigHelper.SaveConfig(configPath, new[] { "custom_cloud_icon" }, writer =>
+            catch (Exception ex)
             {
-                writer.WriteBoolean("custom_cloud_icon", false);
-            });
-
-            return (true, "Successfully restored default Steam GUI styles.");
-        }
-        catch (Exception ex)
-        {
-            return (false, $"Failed to restore default icon: {ex.Message}");
+                return (false, $"Failed to restore default icon: {ex.Message}");
+            }
+            finally
+            {
+                Task.Delay(1000).ContinueWith(_ => _isWriting = false);
+            }
         }
     }
 
@@ -583,12 +649,16 @@ public static class SteamWebUiPatcher
 
     private static void OnFileChanged(object sender, FileSystemEventArgs e)
     {
-        if ((DateTime.UtcNow - _lastWatcherTrigger).TotalSeconds < 2) return;
+        if (_isWriting) return;
+        if ((DateTime.UtcNow - _lastWatcherTrigger).TotalSeconds < 3) return;
         _lastWatcherTrigger = DateTime.UtcNow;
 
         System.Threading.Tasks.Task.Delay(1500).ContinueWith(_ =>
         {
-            AutoRefreshIfEnabled();
+            if (!_isWriting)
+            {
+                AutoRefreshIfEnabled();
+            }
         });
     }
 }
