@@ -51,6 +51,19 @@ public partial class InteractiveGuideDialog : FluentWindow
         }
 
         FeatureTabsListBox.SelectedIndex = initialIndex;
+
+        Loaded += (_, _) =>
+        {
+            var workArea = SystemParameters.WorkArea;
+            if (Height > workArea.Height * 0.92)
+            {
+                Height = Math.Max(460, workArea.Height * 0.92);
+            }
+            if (Width > workArea.Width * 0.94)
+            {
+                Width = Math.Max(640, workArea.Width * 0.94);
+            }
+        };
     }
 
     private void PopulateLanguageSelector()

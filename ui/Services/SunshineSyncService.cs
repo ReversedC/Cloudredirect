@@ -100,6 +100,37 @@ public static class SunshineSyncService
         return "127.0.0.1";
     }
 
+    public static string? GetTailscaleIp()
+    {
+        try
+        {
+            foreach (var ni in NetworkInterface.GetAllNetworkInterfaces())
+            {
+                if (ni.OperationalStatus != OperationalStatus.Up ||
+                    ni.NetworkInterfaceType == NetworkInterfaceType.Loopback)
+                    continue;
+
+                bool isTailscale = ni.Name.IndexOf("Tailscale", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                   ni.Description.IndexOf("Tailscale", StringComparison.OrdinalIgnoreCase) >= 0;
+
+                var ipProps = ni.GetIPProperties();
+                foreach (var addr in ipProps.UnicastAddresses)
+                {
+                    if (addr.Address.AddressFamily == AddressFamily.InterNetwork)
+                    {
+                        var ipStr = addr.Address.ToString();
+                        if (isTailscale || (ipStr.StartsWith("100.") && !ipStr.StartsWith("100.64.")))
+                        {
+                            return ipStr;
+                        }
+                    }
+                }
+            }
+        }
+        catch { }
+        return null;
+    }
+
     public static void OpenSunshineDashboard()
     {
         try

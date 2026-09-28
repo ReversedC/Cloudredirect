@@ -12,7 +12,7 @@
             <Border x:Name="UpdateBanner" Visibility="Collapsed" />
 
             <!-- Header with Title & Active Status Badge -->
-            <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
+            <Grid DockPanel.Dock="Top" Margin="0,0,0,14">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
@@ -24,7 +24,7 @@
                     <TextBlock Text="{res:Loc Dashboard_Subtitle}"
                                FontSize="12"
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               Margin="0,2,0,0" />
+                               Margin="0,3,0,0" />
                 </StackPanel>
 
                 <!-- Header Controls: Language switcher, Settings button & Live Auto-Save Pulse Badge -->
@@ -108,7 +108,7 @@
                     BorderThickness="1"
                     CornerRadius="8"
                     Padding="14,10"
-                    Margin="0,0,0,10">
+                    Margin="0,4,0,12">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />

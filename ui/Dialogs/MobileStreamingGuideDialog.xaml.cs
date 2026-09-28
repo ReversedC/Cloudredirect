@@ -19,12 +19,42 @@ public partial class MobileStreamingGuideDialog : FluentWindow
         RefreshStatus();
         UpdateQrCode();
         _ = InitializeCredentialsAsync();
+
+        Loaded += (_, _) =>
+        {
+            var workArea = SystemParameters.WorkArea;
+            if (Height > workArea.Height * 0.92)
+            {
+                Height = Math.Max(480, workArea.Height * 0.92);
+            }
+            if (Width > workArea.Width * 0.94)
+            {
+                Width = Math.Max(640, workArea.Width * 0.94);
+            }
+        };
     }
 
     private void RefreshStatus()
     {
         PcNameText.Text = Environment.MachineName;
         LanIpText.Text = SunshineSyncService.GetLocalLanIp() ?? "127.0.0.1";
+
+        var tailscaleIp = SunshineSyncService.GetTailscaleIp();
+        if (!string.IsNullOrEmpty(tailscaleIp))
+        {
+            TailscaleIpText.Text = tailscaleIp;
+            TabTailscaleIpText.Text = tailscaleIp;
+            TailscaleIpBorder.Visibility = Visibility.Visible;
+            TailscaleStatusBadge.Text = "Active & Ready";
+            TailscaleStatusBadge.Foreground = System.Windows.Media.Brushes.LightGreen;
+        }
+        else
+        {
+            TailscaleIpBorder.Visibility = Visibility.Collapsed;
+            TabTailscaleIpText.Text = "Not Detected";
+            TailscaleStatusBadge.Text = "Not Connected";
+            TailscaleStatusBadge.Foreground = System.Windows.Media.Brushes.Orange;
+        }
 
         if (SunshineSyncService.IsSunshineRunning)
         {
@@ -288,6 +318,41 @@ public partial class MobileStreamingGuideDialog : FluentWindow
         catch (Exception ex)
         {
             Dialog.ShowErrorAsync("Open APK Error", ex.Message);
+        }
+    }
+
+    private void CopyTailscaleIp_Click(object sender, RoutedEventArgs e)
+    {
+        var ip = SunshineSyncService.GetTailscaleIp();
+        if (!string.IsNullOrEmpty(ip))
+        {
+            try
+            {
+                Clipboard.SetText(ip);
+                _ = Dialog.ShowInfoAsync("Tailscale IP Copied", $"Host PC Remote IP ({ip}) copied to clipboard!\n\nUse this in Moonlight -> 'Add Computer Manually' when playing from work or mobile data.");
+            }
+            catch { }
+        }
+    }
+
+    private async void StartTailscale_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "tailscale.exe",
+                Arguments = "up --unattended",
+                UseShellExecute = true,
+                CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden
+            });
+            await Task.Delay(2000);
+            RefreshStatus();
+        }
+        catch (Exception ex)
+        {
+            await Dialog.ShowErrorAsync("Tailscale Error", $"Could not launch Tailscale: {ex.Message}");
         }
     }
 

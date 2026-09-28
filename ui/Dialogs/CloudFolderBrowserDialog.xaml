@@ -5,7 +5,9 @@
         xmlns:res="clr-namespace:CloudRedirect.Resources"
         Title="{res:Loc CloudExplorer_Title}"
         Width="780" Height="530"
-        MinWidth="700" MinHeight="450"
+        MinWidth="580" MinHeight="400"
+        MaxWidth="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Width}"
+        MaxHeight="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Height}"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource SteamWindowBackgroundGradient}"
         ExtendsContentIntoTitleBar="True">

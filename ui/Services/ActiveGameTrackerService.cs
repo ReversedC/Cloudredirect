@@ -73,6 +73,11 @@ public static class ActiveGameTrackerService
             }
             catch { }
 
+            if (runningAppId > 0 && !SteamDetector.IsSteamRunning())
+            {
+                runningAppId = 0;
+            }
+
             if (runningAppId > 0)
             {
                 if (_currentGame == null || _currentGame.AppId != runningAppId)
@@ -187,6 +192,12 @@ public static class ActiveGameTrackerService
 
                     OnActiveGameChanged?.Invoke(_currentGame);
                 }
+
+                // Periodic Mid-Game Checkpoint for active Steam game
+                if (_currentGame != null)
+                {
+                    CheckMidGameCheckpoint(_currentGame);
+                }
                 return;
             }
 
@@ -239,13 +250,6 @@ public static class ActiveGameTrackerService
                         return;
                     }
                 }
-            }
-
-            // Periodic Mid-Game Checkpoint for active Steam game
-            if (_currentGame != null)
-            {
-                CheckMidGameCheckpoint(_currentGame);
-                return;
             }
 
             // 3. If a game was active and now stopped:

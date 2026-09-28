@@ -3,8 +3,10 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         Title="CloudRedirect — Mobile Streaming &amp; Moonlight Guide"
-        Width="880" Height="700"
-        MinWidth="820" MinHeight="620"
+        Width="880" Height="680"
+        MinWidth="640" MinHeight="480"
+        MaxWidth="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Width}"
+        MaxHeight="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Height}"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource SteamWindowBackgroundGradient}"
         ExtendsContentIntoTitleBar="True">
@@ -66,9 +68,18 @@
                                 <Border Background="#0E1620" BorderBrush="#1C2E3F" BorderThickness="1" CornerRadius="6" Padding="10,5" Margin="0,0,10,6">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                         <ui:SymbolIcon Symbol="Wifi124" FontSize="14" Foreground="#00D2FF" Margin="0,0,6,0" />
-                                        <TextBlock Text="LAN IP: " Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12" />
+                                        <TextBlock Text="Home LAN IP: " Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12" />
                                         <TextBlock x:Name="LanIpText" Text="192.168.1.100" FontWeight="Bold" Foreground="#00D2FF" FontSize="12" Margin="0,0,8,0" />
-                                        <ui:Button x:Name="CopyIpBtn" Content="Copy IP" Appearance="Transparent" Padding="6,2" FontSize="11" Click="CopyIp_Click" Cursor="Hand" />
+                                        <ui:Button x:Name="CopyIpBtn" Content="Copy" Appearance="Transparent" Padding="6,2" FontSize="11" Click="CopyIp_Click" Cursor="Hand" />
+                                    </StackPanel>
+                                </Border>
+
+                                <Border x:Name="TailscaleIpBorder" Background="#0E1620" BorderBrush="#254359" BorderThickness="1" CornerRadius="6" Padding="10,5" Margin="0,0,10,6">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <ui:SymbolIcon Symbol="Globe24" FontSize="14" Foreground="#66D18F" Margin="0,0,6,0" />
+                                        <TextBlock Text="Work / 5G IP: " Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12" />
+                                        <TextBlock x:Name="TailscaleIpText" Text="100.120.175.117" FontWeight="Bold" Foreground="#66D18F" FontSize="12" Margin="0,0,8,0" />
+                                        <ui:Button x:Name="CopyTailscaleIpBtn" Content="Copy" Appearance="Transparent" Padding="6,2" FontSize="11" Click="CopyTailscaleIp_Click" Cursor="Hand" />
                                     </StackPanel>
                                 </Border>
 
@@ -76,7 +87,7 @@
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                         <ui:SymbolIcon Symbol="LockClosed20" FontSize="13" Foreground="#66D18F" Margin="0,0,6,0" />
                                         <TextBlock Text="Port: " Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12" />
-                                        <TextBlock Text="47990 (SSL Encrypted)" FontWeight="SemiBold" Foreground="#66D18F" FontSize="12" />
+                                        <TextBlock Text="47990 (SSL)" FontWeight="SemiBold" Foreground="#66D18F" FontSize="12" />
                                     </StackPanel>
                                 </Border>
                             </WrapPanel>
@@ -384,23 +395,82 @@
                     </TabItem>
 
                     <!-- TAB 3: 5G & REMOTE NETWORKS -->
-                    <TabItem Header="5G &amp; Outside Wi-Fi (WAN)">
+                    <TabItem Header="Workplace, 5G &amp; Outside Wi-Fi">
                         <StackPanel Margin="0,10,0,0">
+                            <!-- Hero Remote Status Card -->
+                            <Border Background="#111D2A" BorderBrush="#254359" BorderThickness="1.5" CornerRadius="8" Padding="16,14" Margin="0,0,0,12">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Border Width="28" Height="28" Background="#1B3347" CornerRadius="14" Margin="0,0,10,0">
+                                                <ui:SymbolIcon Symbol="Globe24" FontSize="16" Foreground="#66D18F" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+                                            <TextBlock Text="Remote Streaming IP (Tailscale Mesh VPN)" FontWeight="Bold" FontSize="14" Foreground="#66D18F" />
+                                            <Border Background="#163823" BorderBrush="#287340" BorderThickness="1" CornerRadius="12" Padding="8,2" Margin="10,0,0,0">
+                                                <TextBlock x:Name="TailscaleStatusBadge" Text="Active &amp; Ready" FontSize="11" FontWeight="SemiBold" Foreground="#66D18F" />
+                                            </Border>
+                                        </StackPanel>
+                                        <TextBlock Text="Bypasses home router firewalls, workplace network blocks, and CGNAT automatically with WireGuard encryption."
+                                                   FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,4,0,10" />
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Border Background="#091017" BorderBrush="#1C2F40" BorderThickness="1" CornerRadius="6" Padding="10,6">
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="PC Remote IP: " Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12.5" />
+                                                    <TextBlock x:Name="TabTailscaleIpText" Text="100.120.175.117" FontWeight="Bold" Foreground="#66D18F" FontSize="13" Margin="0,0,10,0" />
+                                                    <ui:Button x:Name="TabCopyTailscaleBtn" Content="Copy IP" Appearance="Primary" Padding="8,3" FontSize="11.5" Click="CopyTailscaleIp_Click" Cursor="Hand" />
+                                                </StackPanel>
+                                            </Border>
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="14,0,0,0">
+                                        <ui:Button Appearance="Secondary"
+                                                   Content="Start / Reconnect"
+                                                   Icon="{ui:SymbolIcon Play24}"
+                                                   Click="StartTailscale_Click"
+                                                   Width="140"
+                                                   Cursor="Hand" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <!-- Why LAN IP Fails Note -->
+                            <Border Background="#1E1911" BorderBrush="#4A3B18" BorderThickness="1" CornerRadius="6" Padding="12,10" Margin="0,0,0,12">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:SymbolIcon Symbol="Warning24" FontSize="16" Foreground="#E5A823" Margin="0,2,10,0" VerticalAlignment="Top" />
+                                    <TextBlock Text="Why LAN IP (192.168.x.x) doesn't work from work: Local IPs only exist inside your home router's Wi-Fi. Outside your house, your phone cannot reach 192.168.x.x without Tailscale or port forwarding."
+                                               FontSize="11.5" Foreground="#E5C170" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 3 Step Remote Play Guide -->
                             <Border Background="#14202D" BorderBrush="#253D52" BorderThickness="1" CornerRadius="8" Padding="16,14">
                                 <StackPanel>
-                                    <TextBlock Text="Playing Across Different Networks &amp; Cellular Data:" FontWeight="Bold" FontSize="14" Foreground="#E5A823" Margin="0,0,0,12" />
+                                    <TextBlock Text="3 Steps to Play from Workplace or 4G/5G Cellular:" FontWeight="Bold" FontSize="13.5" Foreground="#66C0F4" Margin="0,0,0,10" />
 
-                                    <TextBlock Text="• UPnP Automatic Port Forwarding:" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                    <TextBlock Text="Sunshine has UPnP enabled by default. If your home router supports UPnP, ports are forwarded automatically so you can connect directly over 4G/5G."
-                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Margin="12,2,0,10" />
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                        <Border Width="22" Height="22" Background="#1A2D3E" CornerRadius="11" Margin="0,0,10,0">
+                                            <TextBlock Text="1" FontWeight="Bold" Foreground="#66C0F4" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <TextBlock Text="Open Tailscale on your Android phone and toggle it to Connected (same account as your PC)." VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" FontSize="12" />
+                                    </StackPanel>
 
-                                    <TextBlock Text="• Connecting over 5G:" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                    <TextBlock Text="Once paired while at home, your phone remembers the PC. When outside, simply open GameHub or Moonlight and tap your PC to connect."
-                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Margin="12,2,0,10" />
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                        <Border Width="22" Height="22" Background="#1A2D3E" CornerRadius="11" Margin="0,0,10,0">
+                                            <TextBlock Text="2" FontWeight="Bold" Foreground="#66C0F4" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <TextBlock Text="Open Moonlight (CloudRedirect Stream) on your phone and tap '+' (Add Computer Manually) in the top-right." VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" FontSize="12" />
+                                    </StackPanel>
 
-                                    <TextBlock Text="• CGNAT / Strict Networks (Tailscale):" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                    <TextBlock Text="If your cellular provider blocks direct connections, install Tailscale on PC and phone. Enter your 100.x.y.z Tailscale IP into Moonlight to bypass all firewalls."
-                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Margin="12,2,0,4" />
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Width="22" Height="22" Background="#1A2D3E" CornerRadius="11" Margin="0,0,10,0">
+                                            <TextBlock Text="3" FontWeight="Bold" Foreground="#66C0F4" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <TextBlock Text="Type your PC's Remote IP (shown above). Your PC will show online and ready to stream with low latency!" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" FontSize="12" />
+                                    </StackPanel>
                                 </StackPanel>
                             </Border>
                         </StackPanel>

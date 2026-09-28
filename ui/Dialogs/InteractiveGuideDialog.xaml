@@ -5,7 +5,9 @@
         xmlns:res="clr-namespace:CloudRedirect.Resources"
         Title="CloudRedirect — Interactive Feature Guide"
         Width="910" Height="620"
-        MinWidth="840" MinHeight="540"
+        MinWidth="640" MinHeight="460"
+        MaxWidth="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Width}"
+        MaxHeight="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Height}"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource SteamWindowBackgroundGradient}"
         ExtendsContentIntoTitleBar="True">

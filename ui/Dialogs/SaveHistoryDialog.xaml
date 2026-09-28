@@ -5,7 +5,9 @@
         xmlns:res="clr-namespace:CloudRedirect.Resources"
         Title="Save Version History &amp; Rollback"
         Width="720" Height="500"
-        MinWidth="680" MinHeight="440"
+        MinWidth="580" MinHeight="380"
+        MaxWidth="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Width}"
+        MaxHeight="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Height}"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource SteamWindowBackgroundGradient}"
         ExtendsContentIntoTitleBar="True">

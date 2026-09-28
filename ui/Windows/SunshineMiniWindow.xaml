@@ -4,10 +4,12 @@
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         Title="Sunshine Streaming Manager"
-        Width="1050"
-        Height="720"
-        MinWidth="820"
-        MinHeight="540"
+        Width="980"
+        Height="660"
+        MinWidth="760"
+        MinHeight="480"
+        MaxWidth="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Width}"
+        MaxHeight="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Height}"
         WindowStartupLocation="CenterScreen"
         WindowBackdropType="None"
         Background="{DynamicResource SteamWindowBackgroundGradient}"
@@ -69,8 +71,24 @@
                     </Grid>
                 </Border>
 
-                <!-- Right Actions: Credentials & External Browser -->
+                <!-- Right Actions: Auto-Fit Zoom, Credentials & External Browser -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- Auto-Fit Zoom Pill -->
+                    <Border Background="#0E161F" BorderBrush="#1F3243" BorderThickness="1" CornerRadius="13" Padding="4,2" Margin="0,0,8,0" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <ui:Button x:Name="ZoomOutBtn" ToolTip="Zoom Out" Width="22" Height="22" Padding="0" Margin="0" Appearance="Transparent" Click="ZoomOutBtn_Click">
+                                <ui:SymbolIcon Symbol="SubtractCircle20" FontSize="13" Foreground="#8F98A0" />
+                            </ui:Button>
+                            <TextBlock x:Name="ZoomPercentText" Text="Auto Fit" FontSize="11" FontWeight="SemiBold" Foreground="#66C0F4" VerticalAlignment="Center" Margin="5,0" ToolTip="Click to Reset or Toggle Auto-Fit" Cursor="Hand" MouseDown="ZoomPercent_MouseDown" />
+                            <ui:Button x:Name="ZoomInBtn" ToolTip="Zoom In" Width="22" Height="22" Padding="0" Margin="0" Appearance="Transparent" Click="ZoomInBtn_Click">
+                                <ui:SymbolIcon Symbol="AddCircle20" FontSize="13" Foreground="#8F98A0" />
+                            </ui:Button>
+                            <ui:Button x:Name="AutoFitBtn" ToolTip="Auto-Fit Dashboard to Window" Width="22" Height="22" Padding="0" Margin="2,0,0,0" Appearance="Transparent" Click="AutoFitBtn_Click">
+                                <ui:SymbolIcon Symbol="FullScreenMaximize24" FontSize="13" Foreground="#66D18F" />
+                            </ui:Button>
+                        </StackPanel>
+                    </Border>
+
                     <ui:Button x:Name="CopyCredsBtn" Icon="{ui:SymbolIcon Copy24}" Content="Copy Password"
                                Appearance="Secondary" Padding="10,6" Margin="0,0,6,0" ToolTip="Copy Sunshine Admin Password" Click="CopyCredsBtn_Click" />
                     <ui:Button x:Name="OpenExternalBtn" Icon="{ui:SymbolIcon Open24}" ToolTip="Open in External Default Browser"
