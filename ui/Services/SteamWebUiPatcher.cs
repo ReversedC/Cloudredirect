@@ -44,7 +44,7 @@ public static class SteamWebUiPatcher
     }
 
     /// <summary>
-    /// Checks if the CSS patch is currently injected into Steam's library.css.
+    /// Checks if the CSS patch is currently injected into Steam's library.css or Millennium's quick.css.
     /// </summary>
     public static bool IsPatchApplied(string? steamPath = null)
     {
@@ -53,6 +53,14 @@ public static class SteamWebUiPatcher
             steamPath ??= SteamDetector.FindSteamPath();
             if (string.IsNullOrEmpty(steamPath) || !Directory.Exists(steamPath))
                 return false;
+
+            var quickCss = GetMillenniumQuickCssPath(steamPath);
+            if (quickCss != null && File.Exists(quickCss))
+            {
+                var qContent = File.ReadAllText(quickCss);
+                if (qContent.Contains(MarkerStart, StringComparison.Ordinal))
+                    return true;
+            }
 
             var cssPath = Path.Combine(steamPath, "steamui", "css", "library.css");
             if (!File.Exists(cssPath)) return false;
@@ -64,6 +72,24 @@ public static class SteamWebUiPatcher
         {
             return false;
         }
+    }
+
+    /// <summary>
+    /// Returns the path to Millennium's quick.css if Millennium is present.
+    /// </summary>
+    public static string? GetMillenniumQuickCssPath(string steamPath)
+    {
+        var millDir = Path.Combine(steamPath, "millennium");
+        return Directory.Exists(millDir) ? Path.Combine(millDir, "config", "quick.css") : null;
+    }
+
+    /// <summary>
+    /// Returns true if the Millennium modding framework is installed in the Steam folder.
+    /// </summary>
+    public static bool IsMillenniumActive(string steamPath)
+    {
+        var millDir = Path.Combine(steamPath, "millennium");
+        return Directory.Exists(millDir);
     }
 
     /// <summary>
@@ -243,6 +269,7 @@ public static class SteamWebUiPatcher
         var targetStr = string.Join(", ", targets);
 
         return $@"{MarkerStart}
+/* 1. PlayBar & Dialogs: Custom Cloud Status Icon */
 :is({containerStr}):has(
     :is(
         {hasClause}
@@ -258,6 +285,7 @@ public static class SteamWebUiPatcher
     min-height: 16px !important;
     max-width: 32px !important;
     max-height: 32px !important;
+    filter: drop-shadow(0 0 4px rgba(0, 210, 255, 0.45)) !important;
 }}
 
 :is({containerStr}):has(
@@ -267,12 +295,54 @@ public static class SteamWebUiPatcher
 ) :is({targetStr}) > * {{
     display: none !important;
 }}
+
+/* 2. Steam Library Grid: Visual Glow & Cloud Badge for Redirected/SUO Games */
+:is(div[class*=""CapsuleContainer""], div[class*=""Capsule""], div[class*=""GridItem""]):has(
+    :is(
+        {hasClause}
+    )
+) {{
+    position: relative !important;
+}}
+
+:is(div[class*=""CapsuleContainer""], div[class*=""Capsule""], div[class*=""GridItem""]):has(
+    :is(
+        {hasClause}
+    )
+):hover {{
+    box-shadow: 0 0 14px rgba(0, 210, 255, 0.45) !important;
+    transition: box-shadow 0.2s ease-in-out !important;
+}}
+
+:is(div[class*=""CapsuleContainer""], div[class*=""Capsule""], div[class*=""GridItem""]):has(
+    :is(
+        {hasClause}
+    )
+)::after {{
+    content: ""CLOUD"" !important;
+    position: absolute !important;
+    top: 6px !important;
+    right: 6px !important;
+    background: rgba(16, 26, 38, 0.88) !important;
+    color: #00d2ff !important;
+    font-size: 9px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.5px !important;
+    padding: 2px 6px !important;
+    border-radius: 3px !important;
+    border: 1px solid rgba(0, 210, 255, 0.45) !important;
+    pointer-events: none !important;
+    backdrop-filter: blur(4px) !important;
+    z-index: 10 !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6) !important;
+    text-shadow: 0 0 4px rgba(0, 210, 255, 0.6) !important;
+}}
 {MarkerEnd}
 ";
     }
 
     /// <summary>
-    /// Injects the custom icon stylesheet rules into Steam's library.css scoped to Lua games.
+    /// Injects the custom icon and capsule rules into Steam's library.css and Millennium's quick.css.
     /// Also saves custom_cloud_icon: true in config.json.
     /// </summary>
     public static (bool Success, string Message) ApplyPatch(string? steamPath = null)
@@ -303,9 +373,8 @@ public static class SteamWebUiPatcher
             var customIcon = Path.Combine(steamPath, "cloud_redirect", "cloud_icon.png");
             var patchCss = GenerateCss(luaAppIds, dynamicClasses, File.Exists(customIcon) ? customIcon : null);
 
+            // 1. Native Steam library.css
             var existingContent = File.ReadAllText(cssPath);
-
-            // Strip any existing patch section (both legacy and new format)
             const string legacyMarkerStart = "/* === BEGIN CLOUDREDIRECT STEAM CLOUD ICON === */";
             const string legacyMarkerEnd = "/* === END CLOUDREDIRECT STEAM CLOUD ICON === */";
             existingContent = StripMarkerSection(existingContent, legacyMarkerStart, legacyMarkerEnd);
@@ -317,6 +386,33 @@ public static class SteamWebUiPatcher
 
             FileUtils.AtomicWriteAllText(cssPath, newContent);
 
+            // 2. Millennium quick.css (live hot-reload)
+            var quickCss = GetMillenniumQuickCssPath(steamPath);
+            bool millenniumSynced = false;
+            if (quickCss != null)
+            {
+                try
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(quickCss)!);
+                    var existingQuick = File.Exists(quickCss) ? File.ReadAllText(quickCss) : "";
+                    existingQuick = StripMarkerSection(existingQuick, legacyMarkerStart, legacyMarkerEnd);
+                    existingQuick = StripMarkerSection(existingQuick, MarkerStart, MarkerEnd);
+
+                    var newQuick = string.IsNullOrEmpty(patchCss)
+                        ? existingQuick.TrimEnd() + "\n"
+                        : (string.IsNullOrWhiteSpace(existingQuick)
+                            ? "/* Quick CSS file managed by Millennium & CloudRedirect */\n\n"
+                            : existingQuick.TrimEnd() + "\n\n") + patchCss;
+
+                    FileUtils.AtomicWriteAllText(quickCss, newQuick);
+                    millenniumSynced = true;
+                }
+                catch (Exception mex)
+                {
+                    Debug.WriteLine($"[SteamWebUiPatcher] Millennium quick.css write warning: {mex.Message}");
+                }
+            }
+
             // Persist setting in config.json
             var configPath = SteamDetector.GetConfigFilePath();
             ConfigHelper.SaveConfig(configPath, new[] { "custom_cloud_icon" }, writer =>
@@ -324,7 +420,8 @@ public static class SteamWebUiPatcher
                 writer.WriteBoolean("custom_cloud_icon", true);
             });
 
-            return (true, $"Successfully applied custom Steam Cloud icon for {luaAppIds.Count} Lua games. Original games retain stock icon.");
+            var millMsg = millenniumSynced ? " (Millennium live hot-reload synced)" : "";
+            return (true, $"Successfully applied Steam GUI patch for {luaAppIds.Count} games{millMsg}.");
         }
         catch (Exception ex)
         {
@@ -348,7 +445,7 @@ public static class SteamWebUiPatcher
     }
 
     /// <summary>
-    /// Removes the custom icon stylesheet rules from Steam's library.css.
+    /// Removes the custom icon stylesheet rules from Steam's library.css and Millennium's quick.css.
     /// Also saves custom_cloud_icon: false in config.json.
     /// </summary>
     public static (bool Success, string Message) RemovePatch(string? steamPath = null)
@@ -359,6 +456,7 @@ public static class SteamWebUiPatcher
             if (string.IsNullOrEmpty(steamPath) || !Directory.Exists(steamPath))
                 return (false, "Steam installation path could not be located.");
 
+            // 1. Remove from library.css
             var cssPath = Path.Combine(steamPath, "steamui", "css", "library.css");
             if (File.Exists(cssPath))
             {
@@ -370,6 +468,22 @@ public static class SteamWebUiPatcher
                 FileUtils.AtomicWriteAllText(cssPath, existingContent);
             }
 
+            // 2. Remove from Millennium quick.css if present
+            var quickCss = GetMillenniumQuickCssPath(steamPath);
+            if (quickCss != null && File.Exists(quickCss))
+            {
+                try
+                {
+                    var existingQuick = File.ReadAllText(quickCss);
+                    const string legacyMarkerStart = "/* === BEGIN CLOUDREDIRECT STEAM CLOUD ICON === */";
+                    const string legacyMarkerEnd = "/* === END CLOUDREDIRECT STEAM CLOUD ICON === */";
+                    existingQuick = StripMarkerSection(existingQuick, legacyMarkerStart, legacyMarkerEnd);
+                    existingQuick = StripMarkerSection(existingQuick, MarkerStart, MarkerEnd);
+                    FileUtils.AtomicWriteAllText(quickCss, existingQuick);
+                }
+                catch { }
+            }
+
             // Persist setting in config.json
             var configPath = SteamDetector.GetConfigFilePath();
             ConfigHelper.SaveConfig(configPath, new[] { "custom_cloud_icon" }, writer =>
@@ -377,7 +491,7 @@ public static class SteamWebUiPatcher
                 writer.WriteBoolean("custom_cloud_icon", false);
             });
 
-            return (true, "Successfully restored default Steam Cloud icon.");
+            return (true, "Successfully restored default Steam GUI styles.");
         }
         catch (Exception ex)
         {
@@ -404,12 +518,13 @@ public static class SteamWebUiPatcher
 
     private static FileSystemWatcher? _cssWatcher;
     private static FileSystemWatcher? _luaWatcher;
+    private static FileSystemWatcher? _quickCssWatcher;
     private static DateTime _lastWatcherTrigger = DateTime.MinValue;
 
     /// <summary>
-    /// Starts real-time file watchers on Steam's library.css and stplug-in directory.
-    /// If Steam updates or new Lua games are added/removed, the patcher
-    /// immediately detects it and updates the scoped icon rules.
+    /// Starts real-time file watchers on Steam's library.css, Millennium's quick.css, and stplug-in directory.
+    /// If Steam updates, Millennium resets, or new Lua games are added/removed, the patcher
+    /// immediately detects it and updates the scoped icon and badge rules.
     /// </summary>
     public static void StartWatcher(string? steamPath = null)
     {
@@ -447,6 +562,20 @@ public static class SteamWebUiPatcher
                 _luaWatcher.Created += OnFileChanged;
                 _luaWatcher.Deleted += OnFileChanged;
                 _luaWatcher.Renamed += OnFileChanged;
+            }
+
+            // 3. Watch Millennium quick.css if Millennium is present
+            var millConfigDir = Path.Combine(steamPath, "millennium", "config");
+            if (Directory.Exists(millConfigDir) && _quickCssWatcher == null)
+            {
+                _quickCssWatcher = new FileSystemWatcher(millConfigDir, "quick.css")
+                {
+                    NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size,
+                    EnableRaisingEvents = true
+                };
+
+                _quickCssWatcher.Changed += OnFileChanged;
+                _quickCssWatcher.Created += OnFileChanged;
             }
         }
         catch { }

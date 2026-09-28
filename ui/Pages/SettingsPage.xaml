@@ -49,14 +49,37 @@
                             <!-- Custom Steam Cloud status icon -->
                             <ui:CardControl x:Name="SteamCloudIconCard" Margin="0,0,0,8">
                                 <ui:CardControl.Header>
-                                    <StackPanel>
-                                        <TextBlock Text="{res:Loc Settings_CustomCloudIcon}"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                        <TextBlock Text="{res:Loc Settings_CustomCloudIconHint}"
-                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                   TextWrapping="Wrap" />
-                                    </StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <TextBlock Text="{res:Loc Settings_CustomCloudIcon}"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                <Border x:Name="MillenniumBadge"
+                                                        Background="#162B3D" BorderBrush="#00D2FF" BorderThickness="1"
+                                                        CornerRadius="4" Padding="6,1" Margin="8,0,0,0" VerticalAlignment="Center"
+                                                        Visibility="Collapsed">
+                                                    <TextBlock Text="Millennium Live Sync" FontSize="11" FontWeight="SemiBold" Foreground="#00D2FF" />
+                                                </Border>
+                                            </StackPanel>
+                                            <TextBlock Text="{res:Loc Settings_CustomCloudIconHint}"
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                       TextWrapping="Wrap" Margin="0,2,0,0" />
+                                        </StackPanel>
+                                        <ui:Button Grid.Column="1"
+                                                   x:Name="RefreshSteamGuiBtn"
+                                                   Appearance="Secondary"
+                                                   Content="Refresh Steam GUI"
+                                                   Icon="{ui:SymbolIcon ArrowSync24}"
+                                                   Click="RefreshSteamGui_Click"
+                                                   Margin="8,0,0,0"
+                                                   VerticalAlignment="Center"
+                                                   Cursor="Hand" />
+                                    </Grid>
                                 </ui:CardControl.Header>
                                 <ui:ToggleSwitch x:Name="SteamCloudIconToggle"
                                                  Checked="SteamCloudIconToggle_Changed"

@@ -57,6 +57,16 @@ public partial class SettingsPage : Page
 
         ApplySyncToggles(snap.SyncAchievements, snap.SyncPlaytime, snap.SyncLuas, snap.AutoUpdateDll,
                          snap.ShowNonSteamGame, snap.CustomCloudIcon);
+
+        var steamPath = Services.SteamDetector.FindSteamPath();
+        if (!string.IsNullOrEmpty(steamPath) && Services.SteamWebUiPatcher.IsMillenniumActive(steamPath))
+        {
+            MillenniumBadge.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            MillenniumBadge.Visibility = Visibility.Collapsed;
+        }
     }
 
     private void ApplySyncToggles(bool? achievements, bool? playtime, bool? luas, bool? autoUpdateDll,
@@ -375,6 +385,27 @@ public partial class SettingsPage : Page
         catch (Exception ex)
         {
             await Services.Dialog.ShowErrorAsync(S.Get("Common_Error"), S.Format("Settings_FailedReset", ex.Message));
+        }
+    }
+
+    private async void RefreshSteamGui_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var steamPath = Services.SteamDetector.FindSteamPath();
+            var (success, msg) = Services.SteamWebUiPatcher.ApplyPatch(steamPath);
+            if (success)
+            {
+                await Services.Dialog.ShowInfoAsync(S.Get("Settings_Done"), msg);
+            }
+            else
+            {
+                await Services.Dialog.ShowErrorAsync(S.Get("Common_Error"), msg);
+            }
+        }
+        catch (Exception ex)
+        {
+            await Services.Dialog.ShowErrorAsync(S.Get("Common_Error"), ex.Message);
         }
     }
 }
