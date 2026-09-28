@@ -239,13 +239,10 @@ public static class SteamWebUiPatcher
         var appSelectors = new List<string>();
         foreach (var appId in luaAppIds.OrderBy(id => id))
         {
-            appSelectors.Add($"[src*=\"/{appId}/\"]");
-            appSelectors.Add($"[src*=\"apps/{appId}\"]");
-            appSelectors.Add($"[href*=\"/{appId}\"]");
             appSelectors.Add($"[data-appid=\"{appId}\"]");
         }
 
-        var hasClause = string.Join(",\n        ", appSelectors);
+        var hasClause = string.Join(", ", appSelectors);
 
         // Containers: PlayBar, Game Details Container, or App Properties Dialog
         var containers = new List<string> { "div[class*=\"PlayBar\"]", "div[class*=\"Container\"]", "dialog" };
@@ -289,9 +286,7 @@ public static class SteamWebUiPatcher
         return $@"{MarkerStart}
 /* 1. PlayBar & Dialogs: Custom Cloud Status Icon */
 :is({containerStr}):has(
-    :is(
-        {hasClause}
-    )
+    :is({hasClause})
 ) :is({targetStr}) {{
     background-image: url(""data:image/png;base64,{iconB64}"") !important;
     background-repeat: no-repeat !important;
@@ -307,35 +302,27 @@ public static class SteamWebUiPatcher
 }}
 
 :is({containerStr}):has(
-    :is(
-        {hasClause}
-    )
+    :is({hasClause})
 ) :is({targetStr}) > * {{
     display: none !important;
 }}
 
 /* 2. Steam Library Grid: Visual Glow & Cloud Badge for Redirected/SUO Games */
 :is({capsuleStr}):has(
-    :is(
-        {hasClause}
-    )
+    :is({hasClause})
 ) {{
     position: relative !important;
 }}
 
 :is({capsuleStr}):has(
-    :is(
-        {hasClause}
-    )
+    :is({hasClause})
 ):hover {{
     box-shadow: 0 0 16px rgba(0, 210, 255, 0.45) !important;
     transition: box-shadow 0.2s ease-in-out !important;
 }}
 
 :is({capsuleStr}):has(
-    :is(
-        {hasClause}
-    )
+    :is({hasClause})
 )::after {{
     content: ""CLOUD"" !important;
     position: absolute !important;
@@ -358,17 +345,13 @@ public static class SteamWebUiPatcher
 
 /* 3. Steam Library Sidebar: Subtle Highlight & Left Accent for Redirected/SUO Games */
 :is({sidebarStr}):has(
-    :is(
-        {hasClause}
-    )
+    :is({hasClause})
 ) {{
     border-left: 2px solid #00d2ff !important;
 }}
 
 :is({sidebarStr}):has(
-    :is(
-        {hasClause}
-    )
+    :is({hasClause})
 ):hover {{
     background: rgba(0, 210, 255, 0.08) !important;
 }}
@@ -380,7 +363,8 @@ public static class SteamWebUiPatcher
     private static volatile bool _isWriting = false;
 
     /// <summary>
-    /// Injects the custom icon, capsule badges, and sidebar rules into Steam's library.css and Millennium's quick.css.
+    /// Injects the custom icon, capsule badges, and sidebar rules into Millennium's quick.css.
+    /// Safely leaves Steam's native library.css untouched (or cleans it) so Steam's manifest file checks never fail.
     /// Also saves custom_cloud_icon: true in config.json. Thread-safe and loop-prevented.
     /// </summary>
     public static (bool Success, string Message) ApplyPatch(string? steamPath = null)
@@ -396,14 +380,22 @@ public static class SteamWebUiPatcher
 
                 var cssDir = Path.Combine(steamPath, "steamui", "css");
                 var cssPath = Path.Combine(cssDir, "library.css");
-                if (!File.Exists(cssPath))
-                    return (false, $"Steam library stylesheet not found at: {cssPath}");
 
-                // Create backup if not already present
-                var bakPath = cssPath + ".bak";
-                if (!File.Exists(bakPath))
+                // Clean native library.css if present to preserve exact stock checksum/size (75426 bytes)
+                const string legacyMarkerStart = "/* === BEGIN CLOUDREDIRECT STEAM CLOUD ICON === */";
+                const string legacyMarkerEnd = "/* === END CLOUDREDIRECT STEAM CLOUD ICON === */";
+                if (File.Exists(cssPath))
                 {
-                    try { File.Copy(cssPath, bakPath, false); }
+                    try
+                    {
+                        var existingContent = File.ReadAllText(cssPath);
+                        var cleaned = StripMarkerSection(existingContent, legacyMarkerStart, legacyMarkerEnd);
+                        cleaned = StripMarkerSection(cleaned, MarkerStart, MarkerEnd);
+                        if (existingContent != cleaned)
+                        {
+                            FileUtils.AtomicWriteAllText(cssPath, cleaned);
+                        }
+                    }
                     catch { }
                 }
 
@@ -414,23 +406,7 @@ public static class SteamWebUiPatcher
                 var customIcon = Path.Combine(steamPath, "cloud_redirect", "cloud_icon.png");
                 var patchCss = GenerateCss(luaAppIds, dynamicClasses, File.Exists(customIcon) ? customIcon : null);
 
-                // 1. Native Steam library.css
-                var existingContent = File.ReadAllText(cssPath);
-                const string legacyMarkerStart = "/* === BEGIN CLOUDREDIRECT STEAM CLOUD ICON === */";
-                const string legacyMarkerEnd = "/* === END CLOUDREDIRECT STEAM CLOUD ICON === */";
-                existingContent = StripMarkerSection(existingContent, legacyMarkerStart, legacyMarkerEnd);
-                existingContent = StripMarkerSection(existingContent, MarkerStart, MarkerEnd);
-
-                var newContent = string.IsNullOrEmpty(patchCss)
-                    ? existingContent.TrimEnd() + "\n"
-                    : existingContent.TrimEnd() + "\n\n" + patchCss;
-
-                if (File.ReadAllText(cssPath) != newContent)
-                {
-                    FileUtils.AtomicWriteAllText(cssPath, newContent);
-                }
-
-                // 2. Millennium quick.css (live hot-reload)
+                // Millennium quick.css (live hot-reload without modifying Steam core files)
                 var quickCss = GetMillenniumQuickCssPath(steamPath);
                 bool millenniumSynced = false;
                 if (quickCss != null)
@@ -582,7 +558,6 @@ public static class SteamWebUiPatcher
         catch { }
     }
 
-    private static FileSystemWatcher? _cssWatcher;
     private static FileSystemWatcher? _luaWatcher;
     private static FileSystemWatcher? _quickCssWatcher;
     private static DateTime _lastWatcherTrigger = DateTime.MinValue;
@@ -600,21 +575,7 @@ public static class SteamWebUiPatcher
             steamPath ??= SteamDetector.FindSteamPath();
             if (string.IsNullOrEmpty(steamPath) || !Directory.Exists(steamPath)) return;
 
-            // 1. Watch library.css for Steam updates
-            var cssDir = Path.Combine(steamPath, "steamui", "css");
-            if (Directory.Exists(cssDir) && _cssWatcher == null)
-            {
-                _cssWatcher = new FileSystemWatcher(cssDir, "library.css")
-                {
-                    NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size,
-                    EnableRaisingEvents = true
-                };
-
-                _cssWatcher.Changed += OnFileChanged;
-                _cssWatcher.Created += OnFileChanged;
-            }
-
-            // 2. Watch stplug-in for newly added/removed Lua scripts
+            // 1. Watch stplug-in for newly added/removed Lua scripts
             var pluginDir = Path.Combine(steamPath, "config", "stplug-in");
             if (Directory.Exists(pluginDir) && _luaWatcher == null)
             {

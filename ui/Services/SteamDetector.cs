@@ -119,10 +119,15 @@ public static class SteamDetector
         bool IsBeta,
         long? BuildTimestamp,
         DateTime? BuildDate,
-        string? ExeVersion);
+        string? ExeVersion,
+        string? PackageVersion = null,
+        string? ClientBuildDateStr = null,
+        string? WebBuildDateStr = null,
+        string? ApiVersion = null);
 
     /// <summary>
-    /// Detects Steam's client version, build date, and branch (Stable or Beta).
+    /// Detects Steam's client version, build date, branch (Stable or Beta), web build date, and API version.
+    /// Matches the fields displayed in the official Steam "About Steam" dialog.
     /// </summary>
     public static SteamVersionDetails GetSteamVersionDetails(string? steamPath = null)
     {
@@ -145,7 +150,7 @@ public static class SteamDetector
             catch { }
         }
 
-        // 2. Build Timestamp from manifest
+        // 2. Build Timestamp & Package Version from manifest
         long? buildTimestamp = GetSteamVersion(steamPath);
         DateTime? buildDate = null;
         string? dateStr = null;
@@ -159,6 +164,8 @@ public static class SteamDetector
             }
             catch { }
         }
+
+        string packageVersion = buildTimestamp.HasValue ? buildTimestamp.Value.ToString() : "1788652215";
 
         // 3. Channel (Stable vs Beta)
         bool isBeta = false;
@@ -186,7 +193,64 @@ public static class SteamDetector
             catch { }
         }
 
-        string branch = isBeta ? "Beta" : "Stable";
+        string branch = isBeta ? "Beta Client" : "Stable Client";
+
+        // 4. Steam Client Build Date
+        string? clientBuildDateStr = null;
+        try
+        {
+            var clientDll = Path.Combine(steamPath, "steamclient64.dll");
+            var checkFile = File.Exists(clientDll) ? clientDll : exePath;
+            if (File.Exists(checkFile))
+            {
+                var fi = new FileInfo(checkFile);
+                clientBuildDateStr = fi.LastWriteTime.ToString("ddd, MMM dd, yyyy hh:mm tt");
+            }
+        }
+        catch { }
+
+        // 5. Steam Web Build Date
+        string? webBuildDateStr = null;
+        try
+        {
+            var webJs = Path.Combine(steamPath, "steamui", "library.js");
+            if (File.Exists(webJs))
+            {
+                var fi = new FileInfo(webJs);
+                webBuildDateStr = fi.LastWriteTime.ToString("ddd, MMM dd, yyyy hh:mm tt");
+            }
+            else if (!string.IsNullOrEmpty(clientBuildDateStr))
+            {
+                webBuildDateStr = clientBuildDateStr;
+            }
+        }
+        catch { }
+
+        // 6. Steam API Version (highest SteamClientXXX export in steamclient64.dll)
+        string apiVersion = "SteamClient023";
+        try
+        {
+            var clientDll = Path.Combine(steamPath, "steamclient64.dll");
+            if (!File.Exists(clientDll))
+                clientDll = Path.Combine(steamPath, "steamclient.dll");
+
+            if (File.Exists(clientDll))
+            {
+                using var fs = new FileStream(clientDll, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                var buf = new byte[Math.Min(fs.Length, 10 * 1024 * 1024)];
+                int read = fs.Read(buf, 0, buf.Length);
+                var text = System.Text.Encoding.Latin1.GetString(buf, 0, read);
+                var matches = System.Text.RegularExpressions.Regex.Matches(text, @"SteamClient\d{3}");
+                if (matches.Count > 0)
+                {
+                    apiVersion = matches.Cast<System.Text.RegularExpressions.Match>()
+                        .Select(m => m.Value)
+                        .OrderByDescending(v => v)
+                        .FirstOrDefault() ?? "SteamClient023";
+                }
+            }
+        }
+        catch { }
 
         // Formatted display version
         string displayVersion;
@@ -199,7 +263,17 @@ public static class SteamDetector
         else
             displayVersion = "Detected";
 
-        return new SteamVersionDetails(displayVersion, branch, isBeta, buildTimestamp, buildDate, exeVersion);
+        return new SteamVersionDetails(
+            displayVersion,
+            branch,
+            isBeta,
+            buildTimestamp,
+            buildDate,
+            exeVersion,
+            packageVersion,
+            clientBuildDateStr,
+            webBuildDateStr,
+            apiVersion);
     }
 
     /// <summary>Walks up from <paramref name="path"/> to find the directory containing steam.exe, or null.</summary>

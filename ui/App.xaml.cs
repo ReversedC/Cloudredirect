@@ -94,7 +94,7 @@ public partial class App : System.Windows.Application
             var steamPath = Services.SteamDetector.FindSteamPath();
             var steamDetails = Services.SteamDetector.GetSteamVersionDetails(steamPath);
             var suoInfo = Services.SuoDetector.Detect();
-            var statusStr = $"Steam: {steamDetails.DisplayVersion} [{steamDetails.Branch}] | SUO: {suoInfo.Version} [{(suoInfo.IsOnline ? "Online" : "Offline")}]";
+            var statusStr = $"Steam: {steamDetails.DisplayVersion} [{steamDetails.Branch}] (Pkg: {steamDetails.PackageVersion}, ClientDate: {steamDetails.ClientBuildDateStr}, WebDate: {steamDetails.WebBuildDateStr}, API: {steamDetails.ApiVersion}) | SUO: {suoInfo.Version} [{(suoInfo.IsOnline ? "Online" : "Offline")}]";
             LogStartup("CLI Test Status: " + statusStr);
             Console.WriteLine(statusStr);
             Environment.Exit(0);

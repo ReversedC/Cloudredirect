@@ -42,25 +42,59 @@
 
                                         <!-- Steam Client Status -->
                                         <Grid Grid.Row="0" Margin="0,2,0,10">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <ui:SymbolIcon Grid.Column="0" Symbol="Games24" FontSize="20"
+                                            <ui:SymbolIcon Grid.Row="0" Grid.Column="0" Symbol="Games24" FontSize="20"
                                                            Foreground="{StaticResource SteamAccentCyanBrush}"
-                                                           Margin="0,0,12,0" VerticalAlignment="Center" />
-                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                           Margin="0,0,12,0" VerticalAlignment="Top" />
+                                            <StackPanel Grid.Row="0" Grid.Column="1" VerticalAlignment="Center">
                                                 <TextBlock Text="Steam Client" FontWeight="SemiBold"
                                                            Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                                                 <TextBlock x:Name="SteamVersionText" Text="Detecting Steam..."
                                                            FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                             </StackPanel>
-                                            <Border Grid.Column="2" x:Name="SteamBranchBadge"
+                                            <Border Grid.Row="0" Grid.Column="2" x:Name="SteamBranchBadge"
                                                     Background="#162B3D" BorderBrush="#00D2FF" BorderThickness="1"
-                                                    CornerRadius="4" Padding="8,2" VerticalAlignment="Center">
-                                                <TextBlock x:Name="SteamBranchText" Text="Stable"
+                                                    CornerRadius="4" Padding="8,2" VerticalAlignment="Top">
+                                                <TextBlock x:Name="SteamBranchText" Text="Stable Client"
                                                            FontSize="11" FontWeight="Bold" Foreground="#00D2FF" />
+                                            </Border>
+
+                                            <!-- Detailed About Steam Metadata -->
+                                            <Border Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
+                                                    Background="#0D1622" BorderBrush="#1B2838" BorderThickness="1"
+                                                    CornerRadius="4" Padding="10,6" Margin="0,8,0,0">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                    </Grid.RowDefinitions>
+
+                                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Steam Version:" FontSize="11" Foreground="#8F98A0" Margin="0,1,12,1" />
+                                                    <TextBlock Grid.Row="0" Grid.Column="1" x:Name="SteamManifestVersionText" Text="--" FontSize="11" Foreground="#C7D5E0" FontWeight="SemiBold" />
+
+                                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Client Build Date:" FontSize="11" Foreground="#8F98A0" Margin="0,1,12,1" />
+                                                    <TextBlock Grid.Row="1" Grid.Column="1" x:Name="SteamClientBuildDateText" Text="--" FontSize="11" Foreground="#C7D5E0" />
+
+                                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Web Build Date:" FontSize="11" Foreground="#8F98A0" Margin="0,1,12,1" />
+                                                    <TextBlock Grid.Row="2" Grid.Column="1" x:Name="SteamWebBuildDateText" Text="--" FontSize="11" Foreground="#C7D5E0" />
+
+                                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Steam API Version:" FontSize="11" Foreground="#8F98A0" Margin="0,1,12,1" />
+                                                    <TextBlock Grid.Row="3" Grid.Column="1" x:Name="SteamApiVersionText" Text="--" FontSize="11" Foreground="#00D2FF" FontWeight="SemiBold" />
+                                                </Grid>
                                             </Border>
                                         </Grid>
 

@@ -422,6 +422,10 @@ public partial class SettingsPage : Page
 
             SteamVersionText.Text = steamDetails.DisplayVersion;
             SteamBranchText.Text = steamDetails.Branch;
+            SteamManifestVersionText.Text = steamDetails.PackageVersion ?? "--";
+            SteamClientBuildDateText.Text = steamDetails.ClientBuildDateStr ?? "--";
+            SteamWebBuildDateText.Text = steamDetails.WebBuildDateStr ?? "--";
+            SteamApiVersionText.Text = steamDetails.ApiVersion ?? "--";
 
             if (steamDetails.IsBeta)
             {
