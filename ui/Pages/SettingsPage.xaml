@@ -80,56 +80,6 @@
                                                  Unchecked="SyncToggle_Changed" />
                             </ui:CardControl>
 
-
-                            <!-- Mobile Streaming (Sunshine / GameHub / Moonlight) -->
-                            <ui:CardControl Margin="0,8,0,0">
-                                <ui:CardControl.Header>
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel Grid.Column="0">
-                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <TextBlock Text="Mobile GameStream (Sunshine / GameHub / Moonlight)"
-                                                           FontWeight="SemiBold"
-                                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                                <Border x:Name="SunshineStatusBorder"
-                                                        Background="#1A3E26" BorderBrush="#2E7D48" BorderThickness="1"
-                                                        CornerRadius="4" Padding="6,1" Margin="8,0,0,0" VerticalAlignment="Center">
-                                                    <TextBlock x:Name="SunshineStatusText" Text="Active" FontSize="11" FontWeight="SemiBold" Foreground="#66D18F" />
-                                                </Border>
-                                            </StackPanel>
-                                            <TextBlock Text="Stream your .lua and Steam games to mobile with full GameHub custom touch buttons (E, F, 1-9) and hardware GPU encoding."
-                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                       TextWrapping="Wrap" Margin="0,2,0,0" />
-                                        </StackPanel>
-                                        <WrapPanel Grid.Column="1" VerticalAlignment="Center">
-                                            <ui:Button x:Name="SyncSunshineBtn"
-                                                       Appearance="Secondary"
-                                                       Content="Sync Games"
-                                                       Icon="{ui:SymbolIcon ArrowSync24}"
-                                                       Click="SyncSunshine_Click"
-                                                       Margin="0,0,8,0"
-                                                       Cursor="Hand" />
-                                            <ui:Button x:Name="SunshineCredsBtn"
-                                                       Appearance="Secondary"
-                                                       Content="Web Credentials"
-                                                       Icon="{ui:SymbolIcon ShieldKeyhole24}"
-                                                       Click="OpenSunshineGuide_Click"
-                                                       Margin="0,0,8,0"
-                                                       Cursor="Hand" />
-                                            <ui:Button x:Name="OpenSunshineGuideBtn"
-                                                       Appearance="Primary"
-                                                       Content="Mobile Setup Guide"
-                                                       Icon="{ui:SymbolIcon PhoneLaptop24}"
-                                                       Click="OpenSunshineGuide_Click"
-                                                       Cursor="Hand" />
-                                        </WrapPanel>
-                                    </Grid>
-                                </ui:CardControl.Header>
-                            </ui:CardControl>
-
                             <!-- Start with Windows -->
                             <ui:CardControl Margin="0,8,0,0">
                                 <ui:CardControl.Header>

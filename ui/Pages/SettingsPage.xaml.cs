@@ -57,7 +57,6 @@ public partial class SettingsPage : Page
 
         ApplySyncToggles(snap.SyncAchievements, snap.SyncPlaytime, snap.SyncLuas, snap.AutoUpdateDll,
                          snap.ShowNonSteamGame, snap.CustomCloudIcon);
-        UpdateSunshineStatus();
     }
 
     private void ApplySyncToggles(bool? achievements, bool? playtime, bool? luas, bool? autoUpdateDll,
@@ -377,57 +376,5 @@ public partial class SettingsPage : Page
         {
             await Services.Dialog.ShowErrorAsync(S.Get("Common_Error"), S.Format("Settings_FailedReset", ex.Message));
         }
-    }
-
-    private void UpdateSunshineStatus()
-    {
-        if (Services.SunshineSyncService.IsSunshineRunning)
-        {
-            SunshineStatusText.Text = "Active & Running";
-            SunshineStatusBorder.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x1A, 0x3E, 0x26));
-            SunshineStatusBorder.BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x2E, 0x7D, 0x48));
-            SunshineStatusText.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x66, 0xD1, 0x8F));
-        }
-        else if (Services.SunshineSyncService.IsSunshineInstalled)
-        {
-            SunshineStatusText.Text = "Installed (Stopped)";
-            SunshineStatusBorder.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x3E, 0x2E, 0x1A));
-            SunshineStatusBorder.BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x7D, 0x5D, 0x2E));
-            SunshineStatusText.Foreground = System.Windows.Media.Brushes.Orange;
-        }
-        else
-        {
-            SunshineStatusText.Text = "Not Installed";
-            SunshineStatusBorder.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x3E, 0x1A, 0x1A));
-            SunshineStatusBorder.BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x7D, 0x2E, 0x2E));
-            SunshineStatusText.Foreground = System.Windows.Media.Brushes.IndianRed;
-        }
-    }
-
-    private async void SyncSunshine_Click(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            var res = await Services.SunshineSyncService.SyncGamesToSunshineAsync();
-            if (res.Success)
-            {
-                await Services.Dialog.ShowInfoAsync("Sunshine Synced", res.Message);
-            }
-            else
-            {
-                await Services.Dialog.ShowWarningAsync("Sync Warning", res.Message);
-            }
-        }
-        catch (Exception ex)
-        {
-            await Services.Dialog.ShowErrorAsync("Sync Error", ex.Message);
-        }
-    }
-
-    private void OpenSunshineGuide_Click(object sender, RoutedEventArgs e)
-    {
-        var guide = new Dialogs.MobileStreamingGuideDialog();
-        guide.Owner = Application.Current.MainWindow;
-        guide.ShowDialog();
     }
 }

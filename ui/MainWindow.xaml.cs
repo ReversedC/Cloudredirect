@@ -25,7 +25,6 @@ public partial class MainWindow : FluentWindow
         Closed += (_, _) =>
         {
             App.LogStartup("MainWindow Closed event fired.");
-            Services.MobileInputReceiverService.Instance.Stop();
         };
 
         InitializeComponent();
@@ -85,8 +84,6 @@ public partial class MainWindow : FluentWindow
 
                 App.LogStartup("Loaded: ActiveGameTrackerService.Start");
                 Services.ActiveGameTrackerService.Start();
-                App.LogStartup("Loaded: MobileInputReceiverService.Start");
-                Services.MobileInputReceiverService.Instance.Start();
                 _ = Task.Run(async () =>
                 {
                     try
