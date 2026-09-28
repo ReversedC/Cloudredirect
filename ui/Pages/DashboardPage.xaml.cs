@@ -475,50 +475,7 @@ public partial class DashboardPage : Page
 
     private async Task RestartSteamClientAsync()
     {
-        var steamPath = Services.SteamDetector.FindSteamPath();
-        if (steamPath == null) return;
-        var steamExe = Path.Combine(steamPath, "steam.exe");
-        if (!File.Exists(steamExe)) return;
-
-        if (Services.SteamDetector.IsSteamRunning())
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = steamExe,
-                Arguments = "-shutdown",
-                UseShellExecute = true
-            })?.Dispose();
-
-            bool exited = await Task.Run(async () =>
-            {
-                for (int i = 0; i < 30; i++)
-                {
-                    await Task.Delay(500);
-                    var procs = Process.GetProcessesByName("steam");
-                    bool any = procs.Length > 0;
-                    foreach (var p in procs) p.Dispose();
-                    if (!any) return true;
-                }
-                return false;
-            });
-
-            if (!exited)
-            {
-                foreach (var proc in Process.GetProcessesByName("steam"))
-                {
-                    try { proc.Kill(); }
-                    catch { }
-                    finally { proc.Dispose(); }
-                }
-            }
-        }
-
-        await Task.Delay(800);
-        Process.Start(new ProcessStartInfo
-        {
-            FileName = steamExe,
-            UseShellExecute = true
-        })?.Dispose();
+        await Services.SteamDetector.RestartSteamAsync();
     }
 
     private void OpenGuide_Click(object sender, RoutedEventArgs e)

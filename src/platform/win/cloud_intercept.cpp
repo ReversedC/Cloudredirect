@@ -518,10 +518,87 @@ static std::unordered_set<uint32_t> g_namespaceApps;
 static std::unordered_set<uint32_t> g_checkedNegativeApps;
 static std::mutex g_namespaceAppsMutex;
 
-void AddNamespaceApp(uint32_t appId);
+static FILETIME g_lastConfigJsonTime = {};
+static FILETIME g_lastInterceptTxtTime = {};
+
+#ifdef _WIN32
+static FILETIME GetFileWriteTime(const std::wstring& path) {
+    WIN32_FILE_ATTRIBUTE_DATA data;
+    if (GetFileAttributesExW(path.c_str(), GetFileExInfoStandard, &data)) {
+        return data.ftLastWriteTime;
+    }
+    return {};
+}
+
+static bool FileTimeDifferent(const FILETIME& a, const FILETIME& b) {
+    return a.dwLowDateTime != b.dwLowDateTime || a.dwHighDateTime != b.dwHighDateTime;
+}
+#endif
 
 bool IsNamespaceApp(uint32_t appId) {
     if (appId == 0) return false;
+
+#ifdef _WIN32
+    if (!g_steamPath.empty()) {
+        std::wstring configPathW = FileUtil::Utf8ToPath(g_steamPath + "cloud_redirect\\config.json").wstring();
+        std::wstring textListPathW = FileUtil::Utf8ToPath(g_steamPath + "cloud_redirect\\intercept_apps.txt").wstring();
+        FILETIME curCfgTime = GetFileWriteTime(configPathW);
+        FILETIME curTxtTime = GetFileWriteTime(textListPathW);
+
+        bool filesChanged = false;
+        {
+            std::lock_guard<std::mutex> lock(g_namespaceAppsMutex);
+            if (FileTimeDifferent(curCfgTime, g_lastConfigJsonTime) ||
+                FileTimeDifferent(curTxtTime, g_lastInterceptTxtTime)) {
+                filesChanged = true;
+                g_lastConfigJsonTime = curCfgTime;
+                g_lastInterceptTxtTime = curTxtTime;
+                g_checkedNegativeApps.clear(); // invalidate negative cache on file modification!
+            }
+        }
+
+        if (filesChanged) {
+            // Reload config.json
+            std::ifstream pinFile(configPathW);
+            if (pinFile) {
+                std::string pinStr((std::istreambuf_iterator<char>(pinFile)), {});
+                pinFile.close();
+                auto pinCfg = Json::Parse(pinStr);
+                auto& interceptArr = pinCfg["intercept_apps"];
+                if (interceptArr.type == Json::Type::Array) {
+                    for (auto& val : interceptArr.arrVal) {
+                        uint32_t id = 0;
+                        if (val.type == Json::Type::Number)
+                            id = (uint32_t)val.integer();
+                        else if (val.type == Json::Type::String)
+                            id = (uint32_t)strtoul(val.str().c_str(), nullptr, 10);
+                        if (id != 0) {
+                            AddNamespaceApp(id);
+                        }
+                    }
+                }
+            }
+
+            // Reload intercept_apps.txt
+            std::ifstream txtFile(textListPathW);
+            if (txtFile) {
+                std::string tline;
+                while (std::getline(txtFile, tline)) {
+                    while (!tline.empty() && (tline.back() == '\r' || tline.back() == '\n' || tline.back() == ' ' || tline.back() == '\t'))
+                        tline.pop_back();
+                    size_t s = 0;
+                    while (s < tline.size() && (tline[s] == ' ' || tline[s] == '\t')) s++;
+                    if (s >= tline.size() || tline[s] == '#') continue;
+                    uint32_t txtAppId = (uint32_t)strtoul(tline.c_str() + s, nullptr, 10);
+                    if (txtAppId != 0) {
+                        AddNamespaceApp(txtAppId);
+                    }
+                }
+            }
+        }
+    }
+#endif
+
     {
         std::lock_guard<std::mutex> lock(g_namespaceAppsMutex);
         if (g_namespaceApps.count(appId) > 0)
@@ -530,58 +607,8 @@ bool IsNamespaceApp(uint32_t appId) {
             return false;
     }
 
+    // Check if game has steam_appid.txt across all Steam libraries
     if (!g_steamPath.empty()) {
-        // 1. Check cloud_redirect\config.json for "intercept_apps" (hot-reload from CloudRedirect UI)
-        std::string configPath = g_steamPath + "cloud_redirect\\config.json";
-        std::ifstream pinFile(FileUtil::Utf8ToPath(configPath));
-        if (pinFile) {
-            std::string pinStr((std::istreambuf_iterator<char>(pinFile)), {});
-            pinFile.close();
-            auto pinCfg = Json::Parse(pinStr);
-            auto& interceptArr = pinCfg["intercept_apps"];
-            if (interceptArr.type == Json::Type::Array) {
-                for (auto& val : interceptArr.arrVal) {
-                    uint32_t id = 0;
-                    if (val.type == Json::Type::Number)
-                        id = (uint32_t)val.integer();
-                    else if (val.type == Json::Type::String)
-                        id = (uint32_t)strtoul(val.str().c_str(), nullptr, 10);
-                    if (id != 0) {
-                        AddNamespaceApp(id);
-                    }
-                }
-            }
-            std::lock_guard<std::mutex> lock(g_namespaceAppsMutex);
-            if (g_namespaceApps.count(appId) > 0) {
-                LOG("[ZeroLua] Found appId %u in config.json intercept_apps", appId);
-                return true;
-            }
-        }
-
-        // 2. Check cloud_redirect\intercept_apps.txt (hot-reload without restart)
-        std::string textListPath = g_steamPath + "cloud_redirect\\intercept_apps.txt";
-        std::ifstream txtFile(FileUtil::Utf8ToPath(textListPath));
-        if (txtFile) {
-            std::string tline;
-            while (std::getline(txtFile, tline)) {
-                while (!tline.empty() && (tline.back() == '\r' || tline.back() == '\n' || tline.back() == ' ' || tline.back() == '\t'))
-                    tline.pop_back();
-                size_t s = 0;
-                while (s < tline.size() && (tline[s] == ' ' || tline[s] == '\t')) s++;
-                if (s >= tline.size() || tline[s] == '#') continue;
-                uint32_t txtAppId = (uint32_t)strtoul(tline.c_str() + s, nullptr, 10);
-                if (txtAppId != 0) {
-                    AddNamespaceApp(txtAppId);
-                }
-            }
-            std::lock_guard<std::mutex> lock(g_namespaceAppsMutex);
-            if (g_namespaceApps.count(appId) > 0) {
-                LOG("[ZeroLua] Found appId %u in intercept_apps.txt", appId);
-                return true;
-            }
-        }
-
-        // 3. Check if game has steam_appid.txt across all Steam libraries
         std::string installDir = AutoCloudScan::FindGameInstallPath(g_steamPath, appId);
         if (!installDir.empty()) {
             std::string appidTxt = installDir + "\\steam_appid.txt";
@@ -4423,25 +4450,6 @@ void Init(const std::string& steamPath, bool cloudSaveOnly, CR_NotifyFn notifyCa
                 }
             }
 
-            // Load intercept_apps.txt (Zero-Lua text list fallback)
-            std::string txtPath = cloudRoot + "intercept_apps.txt";
-            std::ifstream txtFile(FileUtil::Utf8ToPath(txtPath));
-            if (txtFile) {
-                std::string tline;
-                while (std::getline(txtFile, tline)) {
-                    while (!tline.empty() && (tline.back() == '\r' || tline.back() == '\n' || tline.back() == ' ' || tline.back() == '\t'))
-                        tline.pop_back();
-                    size_t s = 0;
-                    while (s < tline.size() && (tline[s] == ' ' || tline[s] == '\t')) s++;
-                    if (s >= tline.size() || tline[s] == '#') continue;
-                    uint32_t appId = (uint32_t)strtoul(tline.c_str() + s, nullptr, 10);
-                    if (appId != 0) {
-                        AddNamespaceApp(appId);
-                        LOG("[Config] Added Zero-Lua intercept_app from txt: %u", appId);
-                    }
-                }
-            }
-
             if (!cloudSaveOnly) {
 
             if (pinCfg["manifest_pinning"].type == Json::Type::Bool)
@@ -4535,6 +4543,27 @@ void Init(const std::string& steamPath, bool cloudSaveOnly, CR_NotifyFn notifyCa
         } else {
             if (!cloudSaveOnly)
                 LOG("[ManifestPin] No pin config at %s", pinConfigPath.c_str());
+        }
+    }
+
+    // Load intercept_apps.txt (Zero-Lua text list fallback, loaded independently of config.json)
+    {
+        std::string txtPath = cloudRoot + "intercept_apps.txt";
+        std::ifstream txtFile(FileUtil::Utf8ToPath(txtPath));
+        if (txtFile) {
+            std::string tline;
+            while (std::getline(txtFile, tline)) {
+                while (!tline.empty() && (tline.back() == '\r' || tline.back() == '\n' || tline.back() == ' ' || tline.back() == '\t'))
+                    tline.pop_back();
+                size_t s = 0;
+                while (s < tline.size() && (tline[s] == ' ' || tline[s] == '\t')) s++;
+                if (s >= tline.size() || tline[s] == '#') continue;
+                uint32_t appId = (uint32_t)strtoul(tline.c_str() + s, nullptr, 10);
+                if (appId != 0) {
+                    AddNamespaceApp(appId);
+                    LOG("[Config] Added Zero-Lua intercept_app from txt: %u", appId);
+                }
+            }
         }
     }
 

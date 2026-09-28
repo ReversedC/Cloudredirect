@@ -165,9 +165,13 @@ public static class ActiveGameTrackerService
                             }
                         }
                     }
-                    // 2. Unlocked game without interception (Cloud Denied or Depot game) -> auto-protect immediately via Universal Saves!
+                    // 2. Unlocked game without interception (Cloud Denied or Depot game) -> auto-protect immediately via Universal Saves & Zero-Lua!
                     else if (isUnlockedNoLua)
                     {
+                        // Proactively register into Zero-Lua interception and fix corrupted syncstate
+                        SteamDetector.AddInterceptApp(runningAppId);
+                        SteamDetector.FixRemoteCacheSyncState(runningAppId);
+
                         universalProfile = UniversalSaveWatcherService.FindProfile(runningAppId, procName, name);
                         if (universalProfile == null)
                         {
@@ -309,6 +313,12 @@ public static class ActiveGameTrackerService
                         if (exitedGame.IsGenuineOwned && exitedGame.HasSteamCloud)
                         {
                             return;
+                        }
+
+                        // Ensure remotecache.vdf is repaired if Steam flagged syncstate 3
+                        if (appId > 0)
+                        {
+                            SteamDetector.FixRemoteCacheSyncState(appId);
                         }
 
                         if (!AppSettings.AutoSyncOnGameExit)

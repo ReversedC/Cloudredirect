@@ -99,6 +99,16 @@ public static class SteamGameScannerService
                         bool isGenuineWithCloud = !isIntercepted && !isUnlockedNoLua && hasCloud;
                         bool isGenuineNoCloud = !isIntercepted && !isUnlockedNoLua && !hasCloud;
 
+                        // Auto-enroll non-genuine games into Zero-Lua interception and fix syncstate
+                        if (isUnlockedNoLua)
+                        {
+                            SteamDetector.AddInterceptApp(appId, steamPath);
+                            if (hasCloudDenied)
+                            {
+                                SteamDetector.FixRemoteCacheSyncState(appId, steamPath);
+                            }
+                        }
+
                         if (isIntercepted) luaCount++;
                         else if (isGenuineWithCloud) genuineCloudCount++;
                         else nonCloudCount++;
