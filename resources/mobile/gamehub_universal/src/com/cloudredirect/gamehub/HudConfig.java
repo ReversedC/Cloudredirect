@@ -16,6 +16,11 @@ public class HudConfig {
     public static final String KEY_PILL_X = "pill_x";
     public static final String KEY_PILL_Y = "pill_y";
     public static final String KEY_CUSTOM_ITEMS = "custom_items_json_v2";
+    public static final String KEY_ORIENTATION = "hud_orientation";
+
+    public static final String ORIENTATION_AUTO = "Auto (Sensor)";
+    public static final String ORIENTATION_HORIZONTAL = "Horizontal (Landscape)";
+    public static final String ORIENTATION_VERTICAL = "Vertical (Portrait)";
 
     public static final String PRESET_STEAM_LINK = "Steam Link Universal";
     public static final String PRESET_ACTION_RPG = "Action RPG";
@@ -193,6 +198,28 @@ public class HudConfig {
 
     public static boolean isHapticsEnabled(Context context) {
         return getPrefs(context).getBoolean(KEY_HAPTICS, true);
+    }
+
+    public static String getOrientationMode(Context context) {
+        return getPrefs(context).getString(KEY_ORIENTATION, ORIENTATION_AUTO);
+    }
+
+    public static void setOrientationMode(Context context, String mode) {
+        getPrefs(context).edit().putString(KEY_ORIENTATION, mode).apply();
+    }
+
+    public static String cycleOrientationMode(Context context) {
+        String cur = getOrientationMode(context);
+        String next;
+        if (ORIENTATION_AUTO.equals(cur)) {
+            next = ORIENTATION_HORIZONTAL;
+        } else if (ORIENTATION_HORIZONTAL.equals(cur)) {
+            next = ORIENTATION_VERTICAL;
+        } else {
+            next = ORIENTATION_AUTO;
+        }
+        setOrientationMode(context, next);
+        return next;
     }
 
     public static List<ControlDef> getControls(Context context) {

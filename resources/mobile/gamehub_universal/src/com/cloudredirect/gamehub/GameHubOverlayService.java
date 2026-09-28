@@ -7,6 +7,8 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.graphics.Typeface;
@@ -61,6 +63,7 @@ public class GameHubOverlayService extends Service {
     private Button btnDockAdd;
     private Button btnDockRemove;
     private Button btnDockMove;
+    private Button btnDockOrientation;
     private Button btnDockOpacity;
     private Button btnDockPreset;
     private Button btnDockHideAll;
@@ -72,6 +75,10 @@ public class GameHubOverlayService extends Service {
 
     public static boolean isRunning() {
         return instance != null;
+    }
+
+    public static GameHubOverlayService getInstance() {
+        return instance;
     }
 
     public static void stopService(Context context) {
@@ -95,6 +102,7 @@ public class GameHubOverlayService extends Service {
 
         startForeground(NOTIF_ID, createNotification());
         createFloatingPill();
+        applyOrientationMode();
     }
 
     private Notification createNotification() {
@@ -140,6 +148,7 @@ public class GameHubOverlayService extends Service {
         floatingPill.setBackgroundResource(R.drawable.steam_pill_bg);
         floatingPill.setPadding(dpToPx(14), dpToPx(8), dpToPx(14), dpToPx(8));
         floatingPill.setGravity(Gravity.CENTER);
+        floatingPill.setAlpha(HudConfig.getOpacity(this));
 
         int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
             ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
@@ -283,9 +292,10 @@ public class GameHubOverlayService extends Service {
             addControlOverlay.setVisibility(View.GONE);
         }
 
-        // 3. Show small discreet [⚙ EDIT HUD] button at top
+        // 3. Show small discreet [⚙ EDIT HUD] button at top matching button transparency!
         if (btnOpenEdit != null) {
             btnOpenEdit.setVisibility(View.VISIBLE);
+            btnOpenEdit.setAlpha(HudConfig.getOpacity(this));
         }
     }
 
@@ -320,7 +330,7 @@ public class GameHubOverlayService extends Service {
         );
         hudRootLayout.addView(touchHudView, touchLp);
 
-        // 2. Small discreet [⚙ EDIT HUD] pill button (Visible in Play Mode)
+        // 2. Small discreet [⚙ EDIT HUD] pill button (Visible in Play Mode, follows button opacity)
         btnOpenEdit = new TextView(this);
         btnOpenEdit.setText("⚙ EDIT HUD");
         btnOpenEdit.setTextSize(11f);
@@ -328,7 +338,8 @@ public class GameHubOverlayService extends Service {
         btnOpenEdit.setTypeface(null, Typeface.BOLD);
         btnOpenEdit.setPadding(dpToPx(12), dpToPx(5), dpToPx(12), dpToPx(5));
         btnOpenEdit.setGravity(Gravity.CENTER);
-        applyRoundedCardBg(btnOpenEdit, 0x880B121B, 0xAA00D2FF, dpToPx(14));
+        applyRoundedCardBg(btnOpenEdit, 0x440B121B, 0x6600D2FF, dpToPx(14));
+        btnOpenEdit.setAlpha(HudConfig.getOpacity(this));
 
         FrameLayout.LayoutParams openEditLp = new FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.WRAP_CONTENT,
@@ -341,6 +352,17 @@ public class GameHubOverlayService extends Service {
             @Override
             public void onClick(View v) {
                 enterEditMode();
+            }
+        });
+        btnOpenEdit.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                    btnOpenEdit.setAlpha(1.0f);
+                } else if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL) {
+                    btnOpenEdit.setAlpha(HudConfig.getOpacity(GameHubOverlayService.this));
+                }
+                return false;
             }
         });
         hudRootLayout.addView(btnOpenEdit);
@@ -363,6 +385,7 @@ public class GameHubOverlayService extends Service {
         btnDockAdd = createDockButton("➕ ADD", 0xFF00D2FF, 0xDD121F2D, 0xFF00D2FF);
         btnDockRemove = createDockButton("🗑 REMOVE", 0xFFFF6B6B, 0xDD281418, 0xFFD83B3B);
         btnDockMove = createDockButton("📐 MOVE", 0xFF66C0F4, 0xDD121F2D, 0xFF284868);
+        btnDockOrientation = createDockButton("🔄 AUTO", 0xFF66C0F4, 0xDD121F2D, 0xFF284868);
         btnDockOpacity = createDockButton("👁 75%", 0xFF66C0F4, 0xDD121F2D, 0xFF284868);
         btnDockPreset = createDockButton("🎮 PRESET", 0xFF66C0F4, 0xDD121F2D, 0xFF284868);
         btnDockHideAll = createDockButton("🚫 HIDE ALL", 0xFF9EABB8, 0xDD18202A, 0xFF3A4B5E);
@@ -372,6 +395,7 @@ public class GameHubOverlayService extends Service {
         dockBar.addView(btnDockAdd);
         dockBar.addView(btnDockRemove);
         dockBar.addView(btnDockMove);
+        dockBar.addView(btnDockOrientation);
         dockBar.addView(btnDockOpacity);
         dockBar.addView(btnDockPreset);
         dockBar.addView(btnDockHideAll);
@@ -444,6 +468,15 @@ public class GameHubOverlayService extends Service {
             }
         });
 
+        btnDockOrientation.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String next = HudConfig.cycleOrientationMode(GameHubOverlayService.this);
+                applyOrientationMode();
+                Toast.makeText(GameHubOverlayService.this, "Orientation: " + next, Toast.LENGTH_SHORT).show();
+            }
+        });
+
         btnDockOpacity.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -452,6 +485,12 @@ public class GameHubOverlayService extends Service {
                 HudConfig.getPrefs(GameHubOverlayService.this).edit().putInt(HudConfig.KEY_OPACITY, cur).apply();
                 float newAlpha = HudConfig.getOpacity(GameHubOverlayService.this);
                 touchHudView.setHudAlpha(newAlpha);
+                if (btnOpenEdit != null) {
+                    btnOpenEdit.setAlpha(newAlpha);
+                }
+                if (floatingPill != null) {
+                    floatingPill.setAlpha(newAlpha);
+                }
                 updateDockButtonStates();
             }
         });
@@ -577,6 +616,7 @@ public class GameHubOverlayService extends Service {
             int pct = (int)(touchHudView.getHudAlpha() * 100);
             btnDockOpacity.setText("👁 " + pct + "%");
         }
+        updateDockOrientationButton();
     }
 
     private void buildAddControlOverlay() {
@@ -849,6 +889,65 @@ public class GameHubOverlayService extends Service {
     private int dpToPx(float dp) {
         DisplayMetrics metrics = getResources().getDisplayMetrics();
         return (int) (dp * metrics.density + 0.5f);
+    }
+
+    public void applyOrientationMode() {
+        String mode = HudConfig.getOrientationMode(this);
+        int requested = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED;
+        if (HudConfig.ORIENTATION_HORIZONTAL.equals(mode)) {
+            requested = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE;
+        } else if (HudConfig.ORIENTATION_VERTICAL.equals(mode)) {
+            requested = ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT;
+        }
+
+        if (hudParams != null) {
+            hudParams.screenOrientation = requested;
+            if (hudRootLayout != null && isHudExpanded) {
+                try {
+                    windowManager.updateViewLayout(hudRootLayout, hudParams);
+                } catch (Throwable ignored) {}
+            }
+        }
+        if (pillParams != null) {
+            pillParams.screenOrientation = requested;
+            if (floatingPill != null && !isHudExpanded) {
+                try {
+                    windowManager.updateViewLayout(floatingPill, pillParams);
+                } catch (Throwable ignored) {}
+            }
+        }
+        updateDockOrientationButton();
+    }
+
+    private void updateDockOrientationButton() {
+        if (btnDockOrientation == null) return;
+        String mode = HudConfig.getOrientationMode(this);
+        if (HudConfig.ORIENTATION_HORIZONTAL.equals(mode)) {
+            btnDockOrientation.setText("🔄 HORIZ");
+        } else if (HudConfig.ORIENTATION_VERTICAL.equals(mode)) {
+            btnDockOrientation.setText("🔄 VERT");
+        } else {
+            btnDockOrientation.setText("🔄 AUTO");
+        }
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        if (hudRootLayout != null && hudParams != null && isHudExpanded) {
+            try {
+                windowManager.updateViewLayout(hudRootLayout, hudParams);
+            } catch (Throwable ignored) {}
+        }
+        if (touchHudView != null) {
+            touchHudView.post(new Runnable() {
+                @Override
+                public void run() {
+                    touchHudView.requestLayout();
+                    touchHudView.invalidate();
+                }
+            });
+        }
     }
 
     @Override

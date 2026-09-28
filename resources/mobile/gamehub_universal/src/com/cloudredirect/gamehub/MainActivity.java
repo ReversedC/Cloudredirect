@@ -2,6 +2,7 @@ package com.cloudredirect.gamehub;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
@@ -21,6 +22,7 @@ public class MainActivity extends Activity {
     private Button btnGrantOverlay;
     private Button btnCyclePreset;
     private Button btnCycleOpacity;
+    private Button btnCycleOrientation;
     private Button btnResetLayout;
     private CheckBox cbHaptics;
     private TextView statusPill;
@@ -38,6 +40,7 @@ public class MainActivity extends Activity {
         btnGrantOverlay = (Button) findViewById(R.id.btnGrantOverlay);
         btnCyclePreset = (Button) findViewById(R.id.btnCyclePreset);
         btnCycleOpacity = (Button) findViewById(R.id.btnCycleOpacity);
+        btnCycleOrientation = (Button) findViewById(R.id.btnCycleOrientation);
         btnResetLayout = (Button) findViewById(R.id.btnResetLayout);
         cbHaptics = (CheckBox) findViewById(R.id.cbHaptics);
         statusPill = (TextView) findViewById(R.id.statusPill);
@@ -83,6 +86,21 @@ public class MainActivity extends Activity {
             }
         });
 
+        btnCycleOrientation.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String next = HudConfig.cycleOrientationMode(MainActivity.this);
+                applyOrientation();
+                updateUI();
+                Toast.makeText(MainActivity.this, "Orientation: " + next, Toast.LENGTH_SHORT).show();
+                if (GameHubOverlayService.isRunning() && GameHubOverlayService.getInstance() != null) {
+                    GameHubOverlayService.getInstance().applyOrientationMode();
+                }
+            }
+        });
+
+        applyOrientation();
+
         btnResetLayout.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -116,8 +134,20 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        applyOrientation();
         updateUI();
         AutoUpdateService.checkPendingInstallOnResume(this);
+    }
+
+    private void applyOrientation() {
+        String mode = HudConfig.getOrientationMode(this);
+        if (HudConfig.ORIENTATION_HORIZONTAL.equals(mode)) {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+        } else if (HudConfig.ORIENTATION_VERTICAL.equals(mode)) {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT);
+        } else {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+        }
     }
 
     private void updateUI() {
@@ -150,6 +180,10 @@ public class MainActivity extends Activity {
 
         int opacityPct = (int)(HudConfig.getOpacity(this) * 100);
         btnCycleOpacity.setText("Opacity: " + opacityPct + "%");
+
+        if (btnCycleOrientation != null) {
+            btnCycleOrientation.setText("Orientation: " + HudConfig.getOrientationMode(this));
+        }
     }
 
     private boolean hasOverlayPermission() {

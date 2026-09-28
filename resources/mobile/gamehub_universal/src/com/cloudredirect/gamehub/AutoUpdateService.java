@@ -27,7 +27,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 public class AutoUpdateService {
-    public static final String APP_VERSION = "2.9.50";
+    public static final String APP_VERSION = "2.9.51";
     private static final String PREFS_NAME = "GameHubUpdatePrefs";
     private static final String KEY_LAST_CHECK = "last_check_timestamp";
     private static final String GITHUB_LATEST_RELEASE = 

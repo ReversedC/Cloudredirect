@@ -174,6 +174,25 @@
                 android:background="@drawable/steam_btn_secondary"
                 android:layout_marginBottom="12dp" />
 
+            <!-- Screen Orientation Selector -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Screen Orientation Mode"
+                android:textSize="13sp"
+                android:textColor="@color/text_white"
+                android:layout_marginBottom="4dp" />
+
+            <Button
+                android:id="@+id/btnCycleOrientation"
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:text="Orientation: Auto (Sensor)"
+                android:textSize="13sp"
+                android:textColor="@color/steam_blue_text"
+                android:background="@drawable/steam_btn_secondary"
+                android:layout_marginBottom="12dp" />
+
             <!-- Vibration / Haptics Toggle -->
             <CheckBox
                 android:id="@+id/cbHaptics"
@@ -242,7 +261,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="GAMEHUB CORE v2.9.50"
+                    android:text="GAMEHUB CORE v2.9.51"
                     android:textSize="12sp"
                     android:textStyle="bold"
                     android:textColor="@color/steam_cyan" />
