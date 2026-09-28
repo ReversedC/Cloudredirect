@@ -19,6 +19,8 @@ public record ActiveGameInfo(
     bool HasSteamCloud = true,
     bool IsGenuineOwned = false,
     bool HasAntiCheat = false,
+    bool IsCloudDenied = false,
+    bool IsZeroLuaIntercepted = false,
     UniversalGameProfile? UniversalProfile = null
 );
 
@@ -99,8 +101,17 @@ public static class ActiveGameTrackerService
 
                     // Classify the game:
                     bool isLuaGame = SteamDetector.IsLuaGame(runningAppId);
+                    bool isZeroLua = SteamDetector.IsInterceptApp(runningAppId);
+                    bool isIntercepted = isLuaGame || isZeroLua;
                     bool hasCloud = AppInfoParser.HasCloudSave(runningAppId);
-                    bool isGenuine = !isLuaGame;
+
+                    bool hasCloudDenied = SteamDetector.HasCloudAccessDenied(runningAppId);
+                    bool isSuoGame = SuoDetector.IsAppInCatalog(runningAppId);
+                    bool hasAppIdTxt = SteamDetector.HasAppIdTxt(runningAppId);
+
+                    // Unlocked/Non-genuine without interception if cloud upload was rejected by Valve, or in SUO catalog, or has steam_appid.txt
+                    bool isUnlockedNoLua = !isIntercepted && (hasCloudDenied || isSuoGame || hasAppIdTxt);
+                    bool isGenuine = !isIntercepted && !isUnlockedNoLua;
 
                     string? procName = null;
                     string? installDir = null;
@@ -133,7 +144,7 @@ public static class ActiveGameTrackerService
                     UniversalGameProfile? universalProfile = null;
 
                     // Evaluate:
-                    // Genuine game without cloud saves -> auto-protect via Universal Cloud Saves
+                    // 1. Genuine game without cloud saves -> auto-protect via Universal Cloud Saves
                     if (isGenuine && !hasCloud && AppSettings.AutoProtectNonCloudGames)
                     {
                         universalProfile = UniversalSaveWatcherService.FindProfile(runningAppId, procName, name);
@@ -154,8 +165,29 @@ public static class ActiveGameTrackerService
                             }
                         }
                     }
-                    // Lua game without cloud saves or with anti-cheat -> also link to Universal profile if available
-                    else if (isLuaGame && (!hasCloud || hasAntiCheat) && AppSettings.AutoProtectNonCloudGames)
+                    // 2. Unlocked game without interception (Cloud Denied or Depot game) -> auto-protect immediately via Universal Saves!
+                    else if (isUnlockedNoLua)
+                    {
+                        universalProfile = UniversalSaveWatcherService.FindProfile(runningAppId, procName, name);
+                        if (universalProfile == null)
+                        {
+                            var saveFolder = GameSaveAutoDetector.DetectSaveFolder(name, procName, runningAppId);
+                            if (saveFolder != null)
+                            {
+                                universalProfile = UniversalSaveWatcherService.AutoEnrollIfNeeded(
+                                    name, procName, runningAppId, saveFolder, hasAntiCheat, isGenuine: false);
+
+                                if (universalProfile != null && AppSettings.ShowSyncNotifications)
+                                {
+                                    TrayIconService.Instance.ShowNotification(
+                                        "CloudRedirect Protection",
+                                        $"{name} Steam Cloud upload was rejected by Valve. Save folder is now safeguarded by CloudRedirect!");
+                                }
+                            }
+                        }
+                    }
+                    // 3. Intercepted game (Lua or Zero-Lua) without cloud saves or with anti-cheat
+                    else if (isIntercepted && (!hasCloud || hasAntiCheat) && AppSettings.AutoProtectNonCloudGames)
                     {
                         universalProfile = UniversalSaveWatcherService.FindProfile(runningAppId, procName, name);
                         if (universalProfile == null)
@@ -187,6 +219,8 @@ public static class ActiveGameTrackerService
                         HasSteamCloud: hasCloud,
                         IsGenuineOwned: isGenuine,
                         HasAntiCheat: hasAntiCheat,
+                        IsCloudDenied: hasCloudDenied || isUnlockedNoLua,
+                        IsZeroLuaIntercepted: isZeroLua,
                         UniversalProfile: universalProfile
                     );
 

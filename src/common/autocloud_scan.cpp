@@ -99,27 +99,6 @@ static std::vector<std::filesystem::path> GetSteamLibraryPaths(const std::string
     return paths;
 }
 
-static std::string FindGameInstallPath(const std::string& steamPath, uint32_t appId) {
-    for (const auto& libPath : GetSteamLibraryPaths(steamPath)) {
-        auto manifestPath = libPath / "steamapps" / ("appmanifest_" + std::to_string(appId) + ".acf");
-        std::ifstream mf(manifestPath);
-        if (!mf) continue;
-
-        std::string line;
-        while (std::getline(mf, line)) {
-            auto pos = line.find("\"installdir\"");
-            if (pos == std::string::npos) continue;
-            auto q1 = line.rfind('"');
-            auto q2 = q1 == std::string::npos ? std::string::npos : line.rfind('"', q1 - 1);
-            if (q1 != std::string::npos && q2 != std::string::npos && q1 > q2) {
-                auto installDir = line.substr(q2 + 1, q1 - q2 - 1);
-                return FileUtil::PathToUtf8(libPath / "steamapps" / "common" / FileUtil::Utf8ToPath(installDir));
-            }
-        }
-    }
-    return {};
-}
-
 static std::string GetAccountNameFromLoginUsers(const std::string& steamPath, uint32_t accountId) {
     auto vdfPath = FileUtil::Utf8ToPath(steamPath) / "config" / "loginusers.vdf";
     std::ifstream f(vdfPath);
@@ -615,6 +594,27 @@ bool IsAppInstalled(const std::string& steamPath, uint32_t appId) {
         if (std::filesystem::exists(manifestPath, ec) && !ec) return true;
     }
     return false;
+}
+
+std::string FindGameInstallPath(const std::string& steamPath, uint32_t appId) {
+    for (const auto& libPath : GetSteamLibraryPaths(steamPath)) {
+        auto manifestPath = libPath / "steamapps" / ("appmanifest_" + std::to_string(appId) + ".acf");
+        std::ifstream mf(manifestPath);
+        if (!mf) continue;
+
+        std::string line;
+        while (std::getline(mf, line)) {
+            auto pos = line.find("\"installdir\"");
+            if (pos == std::string::npos) continue;
+            auto q1 = line.rfind('"');
+            auto q2 = q1 == std::string::npos ? std::string::npos : line.rfind('"', q1 - 1);
+            if (q1 != std::string::npos && q2 != std::string::npos && q1 > q2) {
+                auto installDir = line.substr(q2 + 1, q1 - q2 - 1);
+                return FileUtil::PathToUtf8(libPath / "steamapps" / "common" / FileUtil::Utf8ToPath(installDir));
+            }
+        }
+    }
+    return {};
 }
 
 ScanResult GetFileList(const std::string& steamPath,

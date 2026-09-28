@@ -260,4 +260,76 @@ public static class SuoDetector
         catch { }
         return null;
     }
+
+    private static readonly object _catalogLock = new();
+    private static System.Collections.Generic.HashSet<uint>? _cachedCatalogAppIds;
+    private static DateTime _lastCatalogCheck = DateTime.MinValue;
+
+    /// <summary>
+    /// Checks whether an AppID exists in Steam Unlock ONENNABE's local branches_cache.json database.
+    /// </summary>
+    public static bool IsAppInCatalog(uint appId)
+    {
+        if (appId == 0) return false;
+        var catalog = GetCatalogAppIds();
+        return catalog.Contains(appId);
+    }
+
+    /// <summary>
+    /// Gets all AppIDs registered in SUO's branches_cache.json.
+    /// </summary>
+    public static System.Collections.Generic.HashSet<uint> GetCatalogAppIds()
+    {
+        lock (_catalogLock)
+        {
+            if (_cachedCatalogAppIds != null && (DateTime.UtcNow - _lastCatalogCheck).TotalMinutes < 5)
+            {
+                return _cachedCatalogAppIds;
+            }
+        }
+
+        var set = new System.Collections.Generic.HashSet<uint>();
+        try
+        {
+            string[] possiblePaths =
+            {
+                @"C:\Program Files\Steam Unlock ONENNABE\branches_cache.json",
+                @"C:\Program Files (x86)\Steam Unlock ONENNABE\branches_cache.json"
+            };
+
+            string? targetPath = null;
+            foreach (var p in possiblePaths)
+            {
+                if (File.Exists(p)) { targetPath = p; break; }
+            }
+
+            if (targetPath != null)
+            {
+                using var fs = new FileStream(targetPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                using var sr = new StreamReader(fs, Encoding.UTF8);
+                string? line;
+                var appidRegex = new Regex(@"""appid""\s*:\s*""?(\d+)""?", RegexOptions.Compiled);
+                while ((line = sr.ReadLine()) != null)
+                {
+                    if (line.Contains("\"appid\""))
+                    {
+                        var m = appidRegex.Match(line);
+                        if (m.Success && uint.TryParse(m.Groups[1].Value, out var id) && id > 0)
+                        {
+                            set.Add(id);
+                        }
+                    }
+                }
+            }
+        }
+        catch { }
+
+        lock (_catalogLock)
+        {
+            _cachedCatalogAppIds = set;
+            _lastCatalogCheck = DateTime.UtcNow;
+        }
+
+        return set;
+    }
 }

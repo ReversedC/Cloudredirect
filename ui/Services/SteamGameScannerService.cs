@@ -88,18 +88,26 @@ public static class SteamGameScannerService
                         var fullInstallDir = Path.Combine(steamAppsDir, "common", installDirName);
 
                         bool isLua = SteamDetector.IsLuaGame(appId, steamPath);
+                        bool isZeroLua = SteamDetector.IsInterceptApp(appId, steamPath);
+                        bool isIntercepted = isLua || isZeroLua;
                         bool hasCloud = AppInfoParser.HasCloudSave(appId, steamPath);
-                        bool isGenuineNoCloud = !isLua && !hasCloud;
+                        bool hasCloudDenied = SteamDetector.HasCloudAccessDenied(appId, steamPath);
+                        bool isSuoGame = SuoDetector.IsAppInCatalog(appId);
+                        bool hasAppIdTxt = File.Exists(Path.Combine(fullInstallDir, "steam_appid.txt"));
 
-                        if (isLua) luaCount++;
-                        else if (hasCloud) genuineCloudCount++;
-                        else if (isGenuineNoCloud) nonCloudCount++;
+                        bool isUnlockedNoLua = !isIntercepted && (hasCloudDenied || isSuoGame || hasAppIdTxt);
+                        bool isGenuineWithCloud = !isIntercepted && !isUnlockedNoLua && hasCloud;
+                        bool isGenuineNoCloud = !isIntercepted && !isUnlockedNoLua && !hasCloud;
+
+                        if (isIntercepted) luaCount++;
+                        else if (isGenuineWithCloud) genuineCloudCount++;
+                        else nonCloudCount++;
 
                         string? detectedSave = null;
                         bool enrolled = false;
 
-                        // If genuine without cloud, or Lua game without cloud: auto-detect and protect
-                        if (isGenuineNoCloud || (isLua && !hasCloud))
+                        // If genuine without cloud, or unlocked without Lua, or intercepted without cloud: auto-detect and protect
+                        if (isGenuineNoCloud || isUnlockedNoLua || (isIntercepted && !hasCloud))
                         {
                             detectedSave = GameSaveAutoDetector.DetectSaveFolder(name, null, appId);
                             if (!string.IsNullOrEmpty(detectedSave) && Directory.Exists(detectedSave))

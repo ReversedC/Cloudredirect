@@ -2318,6 +2318,32 @@
   <data name="Dashboard_ActiveGame_SubLua" xml:space="preserve">
     <value>Steam AppID: {0} • CloudRedirect 已激活 (Lua 已解锁)</value>
   </data>
+  <data name="Dashboard_ActiveGame_BadgeZeroLua" xml:space="preserve">
+    <value>ZERO-LUA 重定向激活</value>
+  </data>
+  <data name="Dashboard_ActiveGame_SubZeroLua" xml:space="preserve">
+    <value>Steam AppID: {0} • CloudRedirect 原生拦截已激活 (无需 .lua 脚本)</value>
+  </data>
+  <data name="Dashboard_ActiveGame_BadgeCloudDenied" xml:space="preserve">
+    <value>STEAM 云同步被拒 • 解锁版游戏</value>
+  </data>
+  <data name="Dashboard_ActiveGame_SubCloudDenied" xml:space="preserve">
+    <value>Steam AppID: {0} • Valve 拒绝云存档上传 (账户未持有凭证)。存档存在丢失风险！</value>
+  </data>
+  <data name="Dashboard_ActiveGame_PillCloudDenied" xml:space="preserve">
+    <value>云同步受阻</value>
+  </data>
+  <data name="Dashboard_ActiveGame_FixSync" xml:space="preserve">
+    <value>一键修复云同步</value>
+  </data>
+  <data name="Dashboard_ActiveGame_FixSuccessTitle" xml:space="preserve">
+    <value>云同步修复已激活</value>
+  </data>
+  <data name="Dashboard_ActiveGame_FixSuccessPrompt" xml:space="preserve">
+    <value>已为 {0} 激活 CloudRedirect Zero-Lua 深度拦截并已自动保护存档！
+
+是否立即重启 Steam 以清除 Steam 客户端界面的“无法同步”错误？</value>
+  </data>
   <data name="Dashboard_ActiveGame_PillHooked" xml:space="preserve">
     <value>CloudRedirect 已注入</value>
   </data>

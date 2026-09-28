@@ -547,6 +547,276 @@ public static class SteamDetector
     /// Checks whether an AppID belongs to a Lua-unlocked game in config/stplug-in.
     /// Only Lua games have their cloud saves intercepted and redirected by CloudRedirect.
     /// </summary>
+    private static readonly object _interceptCacheLock = new();
+    private static System.Collections.Generic.HashSet<uint>? _cachedInterceptAppIds;
+    private static DateTime _lastInterceptAppIdsCheck = DateTime.MinValue;
+
+    /// <summary>
+    /// Checks whether an AppID is configured for Zero-Lua interception (via cloud_redirect/config.json or intercept_apps.txt).
+    /// </summary>
+    public static bool IsInterceptApp(uint appId, string? steamPath = null)
+    {
+        if (appId == 0) return false;
+        var apps = GetInterceptAppIds(steamPath);
+        return apps.Contains(appId);
+    }
+
+    /// <summary>
+    /// Gets all AppIDs explicitly configured for Zero-Lua interception.
+    /// </summary>
+    public static System.Collections.Generic.HashSet<uint> GetInterceptAppIds(string? steamPath = null)
+    {
+        lock (_interceptCacheLock)
+        {
+            if (_cachedInterceptAppIds != null && (DateTime.UtcNow - _lastInterceptAppIdsCheck).TotalSeconds < 3)
+                return _cachedInterceptAppIds;
+        }
+
+        steamPath ??= FindSteamPath();
+        var set = new System.Collections.Generic.HashSet<uint>();
+        if (string.IsNullOrEmpty(steamPath) || !Directory.Exists(steamPath))
+            return set;
+
+        var cloudDir = Path.Combine(steamPath, "cloud_redirect");
+
+        // 1. Read cloud_redirect/config.json
+        try
+        {
+            var cfgPath = Path.Combine(cloudDir, "config.json");
+            if (File.Exists(cfgPath))
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(cfgPath));
+                if (doc.RootElement.TryGetProperty("intercept_apps", out var arr) && arr.ValueKind == System.Text.Json.JsonValueKind.Array)
+                {
+                    foreach (var elem in arr.EnumerateArray())
+                    {
+                        if (elem.TryGetUInt32(out var id) && id > 0)
+                            set.Add(id);
+                        else if (elem.ValueKind == System.Text.Json.JsonValueKind.String && uint.TryParse(elem.GetString(), out var strId) && strId > 0)
+                            set.Add(strId);
+                    }
+                }
+            }
+        }
+        catch { }
+
+        // 2. Read cloud_redirect/intercept_apps.txt
+        try
+        {
+            var txtPath = Path.Combine(cloudDir, "intercept_apps.txt");
+            if (File.Exists(txtPath))
+            {
+                foreach (var line in File.ReadLines(txtPath))
+                {
+                    var trimmed = line.Trim();
+                    if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith("#")) continue;
+                    if (uint.TryParse(trimmed, out var txtId) && txtId > 0)
+                        set.Add(txtId);
+                }
+            }
+        }
+        catch { }
+
+        lock (_interceptCacheLock)
+        {
+            _cachedInterceptAppIds = set;
+            _lastInterceptAppIdsCheck = DateTime.UtcNow;
+        }
+
+        return set;
+    }
+
+    /// <summary>
+    /// Adds an AppID to Zero-Lua interception (cloud_redirect/intercept_apps.txt and config.json)
+    /// without creating any .lua files in config/stplug-in/.
+    /// </summary>
+    public static void AddInterceptApp(uint appId, string? steamPath = null)
+    {
+        if (appId == 0) return;
+        steamPath ??= FindSteamPath();
+        if (string.IsNullOrEmpty(steamPath)) return;
+
+        var cloudDir = Path.Combine(steamPath, "cloud_redirect");
+        Directory.CreateDirectory(cloudDir);
+
+        // Append to intercept_apps.txt
+        try
+        {
+            var txtPath = Path.Combine(cloudDir, "intercept_apps.txt");
+            var existing = File.Exists(txtPath) ? File.ReadAllLines(txtPath).Select(l => l.Trim()).ToHashSet() : new System.Collections.Generic.HashSet<string>();
+            if (!existing.Contains(appId.ToString()))
+            {
+                File.AppendAllText(txtPath, appId.ToString() + Environment.NewLine);
+            }
+        }
+        catch { }
+
+        // Update config.json
+        try
+        {
+            var cfgPath = Path.Combine(cloudDir, "config.json");
+            System.Text.Json.Nodes.JsonObject rootObj;
+            if (File.Exists(cfgPath))
+            {
+                var text = File.ReadAllText(cfgPath);
+                rootObj = System.Text.Json.Nodes.JsonNode.Parse(text) as System.Text.Json.Nodes.JsonObject ?? new System.Text.Json.Nodes.JsonObject();
+            }
+            else
+            {
+                rootObj = new System.Text.Json.Nodes.JsonObject();
+            }
+
+            if (!rootObj.ContainsKey("cloud_redirect")) rootObj["cloud_redirect"] = true;
+
+            System.Text.Json.Nodes.JsonArray arr;
+            if (rootObj.TryGetPropertyValue("intercept_apps", out var existingArrNode) && existingArrNode is System.Text.Json.Nodes.JsonArray existingArr)
+            {
+                arr = existingArr;
+            }
+            else
+            {
+                arr = new System.Text.Json.Nodes.JsonArray();
+                rootObj["intercept_apps"] = arr;
+            }
+
+            bool alreadyIn = false;
+            foreach (var item in arr)
+            {
+                if (item != null && uint.TryParse(item.ToString(), out var val) && val == appId)
+                {
+                    alreadyIn = true;
+                    break;
+                }
+            }
+
+            if (!alreadyIn)
+            {
+                arr.Add(appId);
+                var options = new System.Text.Json.JsonSerializerOptions { WriteIndented = true };
+                File.WriteAllText(cfgPath, rootObj.ToJsonString(options));
+            }
+        }
+        catch { }
+
+        lock (_interceptCacheLock)
+        {
+            _cachedInterceptAppIds?.Add(appId);
+        }
+    }
+
+    /// <summary>
+    /// Checks whether Steam Cloud rejected upload for this AppID (returns true if Upload Access Denied or syncstate 3).
+    /// </summary>
+    public static bool HasCloudAccessDenied(uint appId, string? steamPath = null)
+    {
+        if (appId == 0) return false;
+        steamPath ??= FindSteamPath();
+        if (string.IsNullOrEmpty(steamPath) || !Directory.Exists(steamPath)) return false;
+
+        // 1. Check cloud_log.txt tail
+        try
+        {
+            var logPath = Path.Combine(steamPath, "logs", "cloud_log.txt");
+            if (File.Exists(logPath))
+            {
+                using var fs = new FileStream(logPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                long len = fs.Length;
+                long offset = Math.Max(0, len - 128 * 1024);
+                fs.Seek(offset, SeekOrigin.Begin);
+                using var reader = new StreamReader(fs, System.Text.Encoding.Latin1);
+                var tail = reader.ReadToEnd();
+                if (tail.Contains($"[AppID {appId}] Upload Access Denied") ||
+                    (tail.Contains($"[AppID {appId}]") && tail.Contains("result Access Denied")))
+                {
+                    return true;
+                }
+            }
+        }
+        catch { }
+
+        // 2. Check userdata/*/{appId}/remotecache.vdf for syncstate 3
+        try
+        {
+            var userDir = Path.Combine(steamPath, "userdata");
+            if (Directory.Exists(userDir))
+            {
+                foreach (var accountDir in Directory.EnumerateDirectories(userDir))
+                {
+                    var vdf = Path.Combine(accountDir, appId.ToString(), "remotecache.vdf");
+                    if (File.Exists(vdf))
+                    {
+                        var text = File.ReadAllText(vdf);
+                        if (text.Contains("\"syncstate\"") && System.Text.RegularExpressions.Regex.IsMatch(text, @"""syncstate""\s+""3"""))
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        catch { }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Checks whether steam_appid.txt exists in the game installation directory (typical marker for depot-unlocked games).
+    /// </summary>
+    public static bool HasAppIdTxt(uint appId, string? steamPath = null)
+    {
+        if (appId == 0) return false;
+        steamPath ??= FindSteamPath();
+        if (string.IsNullOrEmpty(steamPath) || !Directory.Exists(steamPath)) return false;
+
+        try
+        {
+            var installDir = AppCloudConfig.FindGameInstallDir(steamPath, appId);
+            if (!string.IsNullOrEmpty(installDir) && File.Exists(Path.Combine(installDir, "steam_appid.txt")))
+            {
+                return true;
+            }
+        }
+        catch { }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Safely updates remotecache.vdf for an AppID, clearing the yellow "Unable to sync" state (syncstate 3 -> 1).
+    /// </summary>
+    public static bool FixRemoteCacheSyncState(uint appId, string? steamPath = null)
+    {
+        if (appId == 0) return false;
+        steamPath ??= FindSteamPath();
+        if (string.IsNullOrEmpty(steamPath) || !Directory.Exists(steamPath)) return false;
+
+        bool updated = false;
+        try
+        {
+            var userDir = Path.Combine(steamPath, "userdata");
+            if (Directory.Exists(userDir))
+            {
+                foreach (var accountDir in Directory.EnumerateDirectories(userDir))
+                {
+                    var vdf = Path.Combine(accountDir, appId.ToString(), "remotecache.vdf");
+                    if (File.Exists(vdf))
+                    {
+                        var text = File.ReadAllText(vdf);
+                        if (System.Text.RegularExpressions.Regex.IsMatch(text, @"""syncstate""\s+""3"""))
+                        {
+                            var fixedText = System.Text.RegularExpressions.Regex.Replace(text, @"""syncstate""\s+""3""", "\"syncstate\"\t\t\"1\"");
+                            File.WriteAllText(vdf, fixedText, System.Text.Encoding.UTF8);
+                            updated = true;
+                        }
+                    }
+                }
+            }
+        }
+        catch { }
+
+        return updated;
+    }
+
     public static bool IsLuaGame(uint appId, string? steamPath = null)
     {
         if (appId == 0) return false;

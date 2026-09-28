@@ -2345,6 +2345,32 @@ Are you sure?</value>
   <data name="Dashboard_ActiveGame_SubLua" xml:space="preserve">
     <value>Steam AppID: {0} • CloudRedirect Active (Lua Unlocked)</value>
   </data>
+  <data name="Dashboard_ActiveGame_BadgeZeroLua" xml:space="preserve">
+    <value>ZERO-LUA REDIRECT ACTIVE</value>
+  </data>
+  <data name="Dashboard_ActiveGame_SubZeroLua" xml:space="preserve">
+    <value>Steam AppID: {0} • CloudRedirect Active (Direct DLL Interception • No .lua needed)</value>
+  </data>
+  <data name="Dashboard_ActiveGame_BadgeCloudDenied" xml:space="preserve">
+    <value>STEAM CLOUD BLOCKED • UNLOCKED GAME</value>
+  </data>
+  <data name="Dashboard_ActiveGame_SubCloudDenied" xml:space="preserve">
+    <value>Steam AppID: {0} • Valve rejected cloud upload (License not owned). Saves at risk!</value>
+  </data>
+  <data name="Dashboard_ActiveGame_PillCloudDenied" xml:space="preserve">
+    <value>Cloud Blocked</value>
+  </data>
+  <data name="Dashboard_ActiveGame_FixSync" xml:space="preserve">
+    <value>Fix Cloud Sync</value>
+  </data>
+  <data name="Dashboard_ActiveGame_FixSuccessTitle" xml:space="preserve">
+    <value>Cloud Sync Fix Activated</value>
+  </data>
+  <data name="Dashboard_ActiveGame_FixSuccessPrompt" xml:space="preserve">
+    <value>CloudRedirect Zero-Lua interception has been activated for {0} and save files are protected!
+
+Would you like to restart Steam now to clear the Steam UI 'Unable to sync' error?</value>
+  </data>
   <data name="Dashboard_ActiveGame_PillHooked" xml:space="preserve">
     <value>CloudRedirect Hooked</value>
   </data>

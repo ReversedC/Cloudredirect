@@ -57,6 +57,9 @@ std::unordered_map<std::string, std::string> GetRootTokenDirectories(
 // Returns empty string if not found.
 std::string GetAppName(const std::string& steamPath, uint32_t appId);
 
+// Returns the game installation folder path on disk (e.g., "C:\Steam\steamapps\common\Super Hexagon"), or empty string if not found.
+std::string FindGameInstallPath(const std::string& steamPath, uint32_t appId);
+
 #ifdef CLOUDREDIRECT_TESTING
 // Test seam: read a file once, returning its SHA1 and (in outBytes) the exact
 // bytes read. Underpins the scan->commit race fix (bytes are captured during

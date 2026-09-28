@@ -2297,6 +2297,32 @@ Tem certeza?</value>
   <data name="Dashboard_ActiveGame_SubLua" xml:space="preserve">
     <value>Steam AppID: {0} • CloudRedirect Ativo (Lua Desbloqueado)</value>
   </data>
+  <data name="Dashboard_ActiveGame_BadgeZeroLua" xml:space="preserve">
+    <value>REDIRECIONAMENTO ZERO-LUA ATIVO</value>
+  </data>
+  <data name="Dashboard_ActiveGame_SubZeroLua" xml:space="preserve">
+    <value>Steam AppID: {0} • CloudRedirect Ativo (Interceptação Direta via DLL • Sem .lua)</value>
+  </data>
+  <data name="Dashboard_ActiveGame_BadgeCloudDenied" xml:space="preserve">
+    <value>STEAM CLOUD BLOQUEADO • JOGO DESBLOQUEADO</value>
+  </data>
+  <data name="Dashboard_ActiveGame_SubCloudDenied" xml:space="preserve">
+    <value>Steam AppID: {0} • A Valve rejeitou o upload para a nuvem (Sem licença). Saves em risco!</value>
+  </data>
+  <data name="Dashboard_ActiveGame_PillCloudDenied" xml:space="preserve">
+    <value>Nuvem Bloqueada</value>
+  </data>
+  <data name="Dashboard_ActiveGame_FixSync" xml:space="preserve">
+    <value>Corrigir Sincronização</value>
+  </data>
+  <data name="Dashboard_ActiveGame_FixSuccessTitle" xml:space="preserve">
+    <value>Correção Ativada</value>
+  </data>
+  <data name="Dashboard_ActiveGame_FixSuccessPrompt" xml:space="preserve">
+    <value>A interceptação Zero-Lua do CloudRedirect foi ativada para {0} e os arquivos de save estão protegidos!
+
+Deseja reiniciar a Steam agora para limpar o erro "Não foi possível sincronizar"?</value>
+  </data>
   <data name="Dashboard_ActiveGame_PillHooked" xml:space="preserve">
     <value>CloudRedirect Conectado</value>
   </data>

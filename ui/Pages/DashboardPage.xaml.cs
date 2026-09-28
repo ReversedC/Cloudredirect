@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using CloudRedirect.Resources;
 
 namespace CloudRedirect.Pages;
@@ -263,8 +264,78 @@ public partial class DashboardPage : Page
                     });
                 }
 
-                if (game.IsUniversal)
+                // Styling brushes
+                var greenBrush = new SolidColorBrush(Color.FromRgb(0xA4, 0xD0, 0x07));
+                var greenBg = new SolidColorBrush(Color.FromRgb(0x19, 0x2A, 0x1A));
+                var greenBorder = new SolidColorBrush(Color.FromRgb(0x4C, 0x78, 0x15));
+                var greenPillBg = new SolidColorBrush(Color.FromRgb(0x14, 0x2B, 0x1A));
+                var greenPillBorder = new SolidColorBrush(Color.FromRgb(0x3D, 0x68, 0x1C));
+
+                var cyanBrush = new SolidColorBrush(Color.FromRgb(0x66, 0xC0, 0xF4));
+                var cyanBg = new SolidColorBrush(Color.FromRgb(0x13, 0x24, 0x33));
+                var cyanBorder = new SolidColorBrush(Color.FromRgb(0x1A, 0x5C, 0x88));
+                var cyanPillBg = new SolidColorBrush(Color.FromRgb(0x11, 0x2B, 0x3D));
+                var cyanPillBorder = new SolidColorBrush(Color.FromRgb(0x1E, 0x6B, 0x9E));
+
+                var amberBrush = new SolidColorBrush(Color.FromRgb(0xFF, 0xAA, 0x00));
+                var amberBg = new SolidColorBrush(Color.FromRgb(0x2B, 0x20, 0x0F));
+                var amberBorder = new SolidColorBrush(Color.FromRgb(0x8A, 0x55, 0x12));
+                var amberPillBg = new SolidColorBrush(Color.FromRgb(0x38, 0x24, 0x0A));
+                var amberPillBorder = new SolidColorBrush(Color.FromRgb(0xA8, 0x6E, 0x18));
+
+                ActiveGameFixSyncButton.Visibility = Visibility.Collapsed;
+
+                if (game.IsCloudDenied || (!game.IsGenuineOwned && !game.IsLuaGame && !game.IsZeroLuaIntercepted))
                 {
+                    // Blocked / Unlocked game without interception!
+                    ActiveGameCard.Background = amberBg;
+                    ActiveGameCard.BorderBrush = amberBorder;
+                    ActiveGameArtworkBorder.Background = amberBg;
+                    ActiveGameArtworkBorder.BorderBrush = amberBorder;
+                    ActiveGameFallbackIcon.Foreground = amberBrush;
+                    ActiveGameBadgeDot.Fill = amberBrush;
+                    ActiveGameBadgeText.Foreground = amberBrush;
+                    ActiveGameStatusBorder.Background = amberPillBg;
+                    ActiveGameStatusBorder.BorderBrush = amberPillBorder;
+                    ActiveGameStatusPill.Foreground = amberBrush;
+
+                    ActiveGameBadgeText.Text = S.Get("Dashboard_ActiveGame_BadgeCloudDenied");
+                    ActiveGameSubtitle.Text = string.Format(S.Get("Dashboard_ActiveGame_SubCloudDenied"), game.AppId);
+                    ActiveGameStatusPill.Text = S.Get("Dashboard_ActiveGame_PillCloudDenied");
+
+                    ActiveGameFixSyncButton.Visibility = Visibility.Visible;
+                }
+                else if (game.IsZeroLuaIntercepted)
+                {
+                    // Zero-Lua Intercepted Game
+                    ActiveGameCard.Background = cyanBg;
+                    ActiveGameCard.BorderBrush = cyanBorder;
+                    ActiveGameArtworkBorder.Background = cyanBg;
+                    ActiveGameArtworkBorder.BorderBrush = cyanBorder;
+                    ActiveGameFallbackIcon.Foreground = cyanBrush;
+                    ActiveGameBadgeDot.Fill = cyanBrush;
+                    ActiveGameBadgeText.Foreground = cyanBrush;
+                    ActiveGameStatusBorder.Background = cyanPillBg;
+                    ActiveGameStatusBorder.BorderBrush = cyanPillBorder;
+                    ActiveGameStatusPill.Foreground = cyanBrush;
+
+                    ActiveGameBadgeText.Text = S.Get("Dashboard_ActiveGame_BadgeZeroLua");
+                    ActiveGameSubtitle.Text = string.Format(S.Get("Dashboard_ActiveGame_SubZeroLua"), game.AppId);
+                    ActiveGameStatusPill.Text = S.Get("Dashboard_ActiveGame_PillHooked");
+                }
+                else if (game.IsUniversal)
+                {
+                    ActiveGameCard.Background = greenBg;
+                    ActiveGameCard.BorderBrush = greenBorder;
+                    ActiveGameArtworkBorder.Background = greenBg;
+                    ActiveGameArtworkBorder.BorderBrush = greenBorder;
+                    ActiveGameFallbackIcon.Foreground = greenBrush;
+                    ActiveGameBadgeDot.Fill = greenBrush;
+                    ActiveGameBadgeText.Foreground = greenBrush;
+                    ActiveGameStatusBorder.Background = greenPillBg;
+                    ActiveGameStatusBorder.BorderBrush = greenPillBorder;
+                    ActiveGameStatusPill.Foreground = greenBrush;
+
                     if (game.IsGenuineOwned)
                     {
                         ActiveGameBadgeText.Text = S.Get("Dashboard_ActiveGame_BadgeGenuineNoCloud");
@@ -280,18 +351,51 @@ public partial class DashboardPage : Page
                 }
                 else if (game.IsLuaGame)
                 {
+                    ActiveGameCard.Background = greenBg;
+                    ActiveGameCard.BorderBrush = greenBorder;
+                    ActiveGameArtworkBorder.Background = greenBg;
+                    ActiveGameArtworkBorder.BorderBrush = greenBorder;
+                    ActiveGameFallbackIcon.Foreground = greenBrush;
+                    ActiveGameBadgeDot.Fill = greenBrush;
+                    ActiveGameBadgeText.Foreground = greenBrush;
+                    ActiveGameStatusBorder.Background = greenPillBg;
+                    ActiveGameStatusBorder.BorderBrush = greenPillBorder;
+                    ActiveGameStatusPill.Foreground = greenBrush;
+
                     ActiveGameBadgeText.Text = S.Get("Dashboard_ActiveGame_BadgeLua");
                     ActiveGameSubtitle.Text = string.Format(S.Get("Dashboard_ActiveGame_SubLua"), game.AppId);
                     ActiveGameStatusPill.Text = S.Get("Dashboard_ActiveGame_PillHooked");
                 }
                 else if (game.IsGenuineOwned && game.HasSteamCloud)
                 {
+                    ActiveGameCard.Background = greenBg;
+                    ActiveGameCard.BorderBrush = greenBorder;
+                    ActiveGameArtworkBorder.Background = greenBg;
+                    ActiveGameArtworkBorder.BorderBrush = greenBorder;
+                    ActiveGameFallbackIcon.Foreground = greenBrush;
+                    ActiveGameBadgeDot.Fill = greenBrush;
+                    ActiveGameBadgeText.Foreground = greenBrush;
+                    ActiveGameStatusBorder.Background = greenPillBg;
+                    ActiveGameStatusBorder.BorderBrush = greenPillBorder;
+                    ActiveGameStatusPill.Foreground = greenBrush;
+
                     ActiveGameBadgeText.Text = S.Get("Dashboard_ActiveGame_BadgeGenuine");
                     ActiveGameSubtitle.Text = string.Format(S.Get("Dashboard_ActiveGame_SubGenuineSteam"), game.AppId);
                     ActiveGameStatusPill.Text = S.Get("Dashboard_ActiveGame_PillOriginalCloud");
                 }
                 else
                 {
+                    ActiveGameCard.Background = greenBg;
+                    ActiveGameCard.BorderBrush = greenBorder;
+                    ActiveGameArtworkBorder.Background = greenBg;
+                    ActiveGameArtworkBorder.BorderBrush = greenBorder;
+                    ActiveGameFallbackIcon.Foreground = greenBrush;
+                    ActiveGameBadgeDot.Fill = greenBrush;
+                    ActiveGameBadgeText.Foreground = greenBrush;
+                    ActiveGameStatusBorder.Background = greenPillBg;
+                    ActiveGameStatusBorder.BorderBrush = greenPillBorder;
+                    ActiveGameStatusPill.Foreground = greenBrush;
+
                     ActiveGameBadgeText.Text = S.Get("Dashboard_ActiveGame_BadgeSteam");
                     ActiveGameSubtitle.Text = string.Format(S.Get("Dashboard_ActiveGame_SubSteam"), game.AppId);
                     ActiveGameStatusPill.Text = S.Get("Dashboard_ActiveGame_PillRunning");
@@ -307,6 +411,114 @@ public partial class DashboardPage : Page
             // Trigger zoom recalculation when banner appears/disappears
             Services.UiZoomManager.Instance.TriggerAutoFitRecalculation();
         });
+    }
+
+    private async void FixSync_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentActiveGame == null || _currentActiveGame.AppId == 0) return;
+        var appId = _currentActiveGame.AppId;
+        var gameName = _currentActiveGame.Name;
+
+        try
+        {
+            // 1. Add to Zero-Lua intercept list (cloud_redirect/intercept_apps.txt and config.json)
+            Services.SteamDetector.AddInterceptApp(appId);
+
+            // 2. Fix remotecache.vdf syncstate (3 -> 1) to clear error
+            Services.SteamDetector.FixRemoteCacheSyncState(appId);
+
+            // 3. Auto-enroll in Universal Save Watcher if not already enrolled
+            var steamPath = Services.SteamDetector.FindSteamPath();
+            var installDir = steamPath != null ? Services.AppCloudConfig.FindGameInstallDir(steamPath, appId) : null;
+            var saveFolder = Services.GameSaveAutoDetector.DetectSaveFolder(gameName, _currentActiveGame.ProcessName, appId);
+            if (saveFolder != null)
+            {
+                Services.UniversalSaveWatcherService.AutoEnrollIfNeeded(
+                    gameName, _currentActiveGame.ProcessName, appId, saveFolder, _currentActiveGame.HasAntiCheat, isGenuine: false);
+            }
+
+            // 4. Update UI immediately
+            ActiveGameFixSyncButton.Visibility = Visibility.Collapsed;
+            var cyanBrush = new SolidColorBrush(Color.FromRgb(0x66, 0xC0, 0xF4));
+            var cyanBg = new SolidColorBrush(Color.FromRgb(0x13, 0x24, 0x33));
+            var cyanBorder = new SolidColorBrush(Color.FromRgb(0x1A, 0x5C, 0x88));
+            var cyanPillBg = new SolidColorBrush(Color.FromRgb(0x11, 0x2B, 0x3D));
+            var cyanPillBorder = new SolidColorBrush(Color.FromRgb(0x1E, 0x6B, 0x9E));
+
+            ActiveGameCard.Background = cyanBg;
+            ActiveGameCard.BorderBrush = cyanBorder;
+            ActiveGameArtworkBorder.Background = cyanBg;
+            ActiveGameArtworkBorder.BorderBrush = cyanBorder;
+            ActiveGameFallbackIcon.Foreground = cyanBrush;
+            ActiveGameBadgeDot.Fill = cyanBrush;
+            ActiveGameBadgeText.Foreground = cyanBrush;
+            ActiveGameStatusBorder.Background = cyanPillBg;
+            ActiveGameStatusBorder.BorderBrush = cyanPillBorder;
+            ActiveGameStatusPill.Foreground = cyanBrush;
+
+            ActiveGameBadgeText.Text = S.Get("Dashboard_ActiveGame_BadgeZeroLua");
+            ActiveGameSubtitle.Text = string.Format(S.Get("Dashboard_ActiveGame_SubZeroLua"), appId);
+            ActiveGameStatusPill.Text = S.Get("Dashboard_ActiveGame_PillHooked");
+
+            var restartPrompt = S.Format("Dashboard_ActiveGame_FixSuccessPrompt", gameName);
+            var confirmRestart = await Services.Dialog.ConfirmAsync(S.Get("Dashboard_ActiveGame_FixSuccessTitle"), restartPrompt);
+            if (confirmRestart)
+            {
+                await RestartSteamClientAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            await Services.Dialog.ShowErrorAsync(S.Get("Common_Error"), ex.Message);
+        }
+    }
+
+    private async Task RestartSteamClientAsync()
+    {
+        var steamPath = Services.SteamDetector.FindSteamPath();
+        if (steamPath == null) return;
+        var steamExe = Path.Combine(steamPath, "steam.exe");
+        if (!File.Exists(steamExe)) return;
+
+        if (Services.SteamDetector.IsSteamRunning())
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = steamExe,
+                Arguments = "-shutdown",
+                UseShellExecute = true
+            })?.Dispose();
+
+            bool exited = await Task.Run(async () =>
+            {
+                for (int i = 0; i < 30; i++)
+                {
+                    await Task.Delay(500);
+                    var procs = Process.GetProcessesByName("steam");
+                    bool any = procs.Length > 0;
+                    foreach (var p in procs) p.Dispose();
+                    if (!any) return true;
+                }
+                return false;
+            });
+
+            if (!exited)
+            {
+                foreach (var proc in Process.GetProcessesByName("steam"))
+                {
+                    try { proc.Kill(); }
+                    catch { }
+                    finally { proc.Dispose(); }
+                }
+            }
+        }
+
+        await Task.Delay(800);
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = steamExe,
+            UseShellExecute = true
+        })?.Dispose();
     }
 
     private void OpenGuide_Click(object sender, RoutedEventArgs e)

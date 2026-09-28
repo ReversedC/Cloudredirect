@@ -141,7 +141,7 @@
                     <!-- Active Game Details -->
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Ellipse Width="8" Height="8" Fill="#A4D007" Margin="0,0,6,0">
+                            <Ellipse x:Name="ActiveGameBadgeDot" Width="8" Height="8" Fill="#A4D007" Margin="0,0,6,0">
                                 <Ellipse.Triggers>
                                     <EventTrigger RoutedEvent="Loaded">
                                         <BeginStoryboard>
@@ -169,14 +169,29 @@
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                     </StackPanel>
 
-                    <!-- Status Pill -->
-                    <Border Grid.Column="2"
-                            Background="#142B1A" BorderBrush="#3D681C" BorderThickness="1"
-                            CornerRadius="12" Padding="12,5" VerticalAlignment="Center" Margin="12,0,0,0">
-                        <TextBlock x:Name="ActiveGameStatusPill"
-                                   Text="Sync Active" FontSize="11" FontWeight="SemiBold"
-                                   Foreground="#A4D007" />
-                    </Border>
+                    <!-- Action Button & Status Pill -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
+                        <ui:Button x:Name="ActiveGameFixSyncButton"
+                                   Visibility="Collapsed"
+                                   Content="{res:Loc Dashboard_ActiveGame_FixSync}"
+                                   Icon="{ui:SymbolIcon Flash24}"
+                                   Appearance="Caution"
+                                   Background="#D37B00"
+                                   Foreground="#FFFFFF"
+                                   FontWeight="SemiBold"
+                                   FontSize="11"
+                                   Padding="10,4"
+                                   Margin="0,0,8,0"
+                                   Click="FixSync_Click"
+                                   Cursor="Hand" />
+                        <Border x:Name="ActiveGameStatusBorder"
+                                Background="#142B1A" BorderBrush="#3D681C" BorderThickness="1"
+                                CornerRadius="12" Padding="12,5" VerticalAlignment="Center">
+                            <TextBlock x:Name="ActiveGameStatusPill"
+                                       Text="Sync Active" FontSize="11" FontWeight="SemiBold"
+                                       Foreground="#A4D007" />
+                        </Border>
+                    </StackPanel>
                 </Grid>
             </Border>
 

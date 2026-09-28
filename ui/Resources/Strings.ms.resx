@@ -2213,6 +2213,32 @@ Fail can be restored from the Pulihkan tab. Continue?</value>
   <data name="Dashboard_ActiveGame_SubLua" xml:space="preserve">
     <value>Steam AppID: {0} • CloudRedirect Aktif (Lua Dinyahkunci)</value>
   </data>
+  <data name="Dashboard_ActiveGame_BadgeZeroLua" xml:space="preserve">
+    <value>REDIRECT ZERO-LUA AKTIF</value>
+  </data>
+  <data name="Dashboard_ActiveGame_SubZeroLua" xml:space="preserve">
+    <value>Steam AppID: {0} • CloudRedirect Aktif (Pintasan DLL Terus • Tiada .lua Diperlukan)</value>
+  </data>
+  <data name="Dashboard_ActiveGame_BadgeCloudDenied" xml:space="preserve">
+    <value>STEAM CLOUD DISEKAT • GAME UNLOCKED</value>
+  </data>
+  <data name="Dashboard_ActiveGame_SubCloudDenied" xml:space="preserve">
+    <value>Steam AppID: {0} • Valve menolak muat naik cloud (Lesen tidak dimiliki). Save berisiko hilang!</value>
+  </data>
+  <data name="Dashboard_ActiveGame_PillCloudDenied" xml:space="preserve">
+    <value>Cloud Disekat</value>
+  </data>
+  <data name="Dashboard_ActiveGame_FixSync" xml:space="preserve">
+    <value>Baiki Cloud Sync</value>
+  </data>
+  <data name="Dashboard_ActiveGame_FixSuccessTitle" xml:space="preserve">
+    <value>Pembaikan Cloud Sync Diaktifkan</value>
+  </data>
+  <data name="Dashboard_ActiveGame_FixSuccessPrompt" xml:space="preserve">
+    <value>Pintasan Zero-Lua CloudRedirect telah diaktifkan untuk {0} dan fail simpanan kini dilindungi!
+
+Adakah anda mahu memulakan semula (restart) Steam sekarang untuk membersihkan ralat 'Unable to sync'?</value>
+  </data>
   <data name="Dashboard_ActiveGame_PillHooked" xml:space="preserve">
     <value>CloudRedirect Disambung</value>
   </data>
