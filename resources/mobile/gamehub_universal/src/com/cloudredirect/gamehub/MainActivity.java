@@ -54,6 +54,19 @@ public class MainActivity extends Activity {
         cbHaptics = (CheckBox) findViewById(R.id.cbHaptics);
         statusPill = (TextView) findViewById(R.id.statusPill);
 
+        Button btnCheckUpdates = (Button) findViewById(R.id.btnCheckUpdates);
+        if (btnCheckUpdates != null) {
+            btnCheckUpdates.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    AutoUpdateService.checkManual(MainActivity.this);
+                }
+            });
+        }
+
+        // Automatic background update check on app launch
+        AutoUpdateService.checkOnLaunch(this);
+
         editHostIp = (EditText) findViewById(R.id.editHostIp);
         btnScanPc = (Button) findViewById(R.id.btnScanPc);
         btnTestPing = (Button) findViewById(R.id.btnTestPing);

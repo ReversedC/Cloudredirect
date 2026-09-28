@@ -67,17 +67,16 @@ subprocess.check_call(cmd)
 
 # 4. Dex with d8
 print("4. Dexing classes with d8...")
-class_files = []
-for root, dirs, files in os.walk(CLASSES_DIR):
-    for f in files:
-        if f.endswith(".class"):
-            class_files.append(os.path.join(root, f))
+classes_jar = os.path.join(OUTPUT_DIR, "classes.jar")
+with zipfile.ZipFile(classes_jar, 'w') as jf:
+    for root, dirs, files in os.walk(CLASSES_DIR):
+        for f in files:
+            if f.endswith(".class"):
+                abs_f = os.path.join(root, f)
+                rel_f = os.path.relpath(abs_f, CLASSES_DIR)
+                jf.write(abs_f, rel_f)
 
-cmd = [
-    D8,
-    "--lib", PLATFORM_JAR,
-    "--output", DEX_DIR
-] + class_files
+cmd = f'"{D8}" --lib "{PLATFORM_JAR}" --output "{DEX_DIR}" "{classes_jar}"'
 subprocess.check_call(cmd, shell=True)
 
 # 5. Add classes.dex into unaligned.apk

@@ -3,8 +3,12 @@ package com.cloudredirect.gamehub;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.DashPathEffect;
 import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.RadialGradient;
 import android.graphics.RectF;
+import android.graphics.Shader;
 import android.graphics.Typeface;
 import android.os.Build;
 import android.os.VibrationEffect;
@@ -23,26 +27,21 @@ public class GameHubTouchView extends View {
     private final Vibrator vibrator;
     private final List<HudConfig.ControlDef> controls = new ArrayList<HudConfig.ControlDef>();
     private boolean isEditMode = false;
-    private float hudAlpha = 0.70f;
+    private boolean isRemoveMode = false;
+    private float hudAlpha = 0.75f;
     private final GameHubInputSender inputSender;
 
     // Paints
     private final Paint basePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint glowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint knobPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint toolbarPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint editPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint badgePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint tickPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
-    // Multi-touch tracking: pointerId -> control
+    // Multi-touch tracking: pointerId -> ActiveTouch
     private final Map<Integer, ActiveTouch> activeTouches = new HashMap<Integer, ActiveTouch>();
-
-    public interface OnToolbarActionListener {
-        void onCollapse();
-        void onOpacityCycle();
-        void onPresetCycle();
-        void onSaveLayout();
-    }
-    private OnToolbarActionListener toolbarListener;
 
     public static class ActiveTouch {
         public HudConfig.ControlDef control;
@@ -65,24 +64,47 @@ public class GameHubTouchView extends View {
         inputSender = GameHubInputSender.getInstance(context);
         hudAlpha = HudConfig.getOpacity(context);
 
-        // Load controls from config
+        // Load configured controls
         controls.addAll(HudConfig.getControls(context));
 
         textPaint.setTextAlign(Paint.Align.CENTER);
-        textPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+        textPaint.setTypeface(Typeface.create("sans-serif-condensed", Typeface.BOLD));
 
         editPaint.setStyle(Paint.Style.STROKE);
         editPaint.setStrokeWidth(3f);
         editPaint.setColor(0xFF00D2FF);
+
+        glowPaint.setStyle(Paint.Style.STROKE);
+
+        badgePaint.setStyle(Paint.Style.FILL);
+
+        tickPaint.setColor(0x8800D2FF);
+        tickPaint.setStrokeWidth(2f);
+        tickPaint.setStyle(Paint.Style.STROKE);
     }
 
-    public void setOnToolbarActionListener(OnToolbarActionListener listener) {
-        this.toolbarListener = listener;
+    public List<HudConfig.ControlDef> getControls() {
+        return controls;
+    }
+
+    public void addControl(HudConfig.ControlDef def) {
+        controls.add(def);
+        invalidate();
+    }
+
+    public boolean removeControl(HudConfig.ControlDef def) {
+        boolean removed = controls.remove(def);
+        if (removed) invalidate();
+        return removed;
     }
 
     public void setHudAlpha(float alpha) {
         this.hudAlpha = alpha;
         invalidate();
+    }
+
+    public float getHudAlpha() {
+        return hudAlpha;
     }
 
     public void reloadControls() {
@@ -91,23 +113,37 @@ public class GameHubTouchView extends View {
         invalidate();
     }
 
-    public boolean toggleEditMode() {
-        isEditMode = !isEditMode;
+    public void saveControls() {
+        HudConfig.saveControls(getContext(), controls);
+    }
+
+    public void setEditMode(boolean edit) {
+        this.isEditMode = edit;
+        if (edit) this.isRemoveMode = false;
         invalidate();
-        return isEditMode;
     }
 
     public boolean isEditMode() {
         return isEditMode;
     }
 
+    public void setRemoveMode(boolean remove) {
+        this.isRemoveMode = remove;
+        if (remove) this.isEditMode = false;
+        invalidate();
+    }
+
+    public boolean isRemoveMode() {
+        return isRemoveMode;
+    }
+
     private void triggerHaptic() {
         if (!HudConfig.isHapticsEnabled(getContext()) || vibrator == null) return;
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                vibrator.vibrate(VibrationEffect.createOneShot(18, VibrationEffect.DEFAULT_AMPLITUDE));
+                vibrator.vibrate(VibrationEffect.createOneShot(20, VibrationEffect.DEFAULT_AMPLITUDE));
             } else {
-                vibrator.vibrate(18);
+                vibrator.vibrate(20);
             }
         } catch (Exception ignored) {}
     }
@@ -119,154 +155,282 @@ public class GameHubTouchView extends View {
         int h = getHeight();
         if (w <= 0 || h <= 0) return;
 
-        // 1. Draw Toolbar at top
-        drawTopToolbar(canvas, w, h);
-
-        // 2. Draw each control
+        // Render each controller component
         for (HudConfig.ControlDef def : controls) {
             float cx = def.xRatio * w;
             float cy = def.yRatio * h;
             float sizePx = dpToPx(def.sizeDp);
-
             boolean isPressed = isControlPressed(def);
 
-            if ("stick".equals(def.type)) {
+            if ("stick".equals(def.type) || "stick_right".equals(def.type)) {
                 drawJoystick(canvas, def, cx, cy, sizePx);
-            } else if ("dpad".equals(def.type)) {
+            } else if ("dpad".equals(def.type) || "dpad_arrow".equals(def.type)) {
                 drawDpad(canvas, def, cx, cy, sizePx);
             } else {
                 drawButton(canvas, def, cx, cy, sizePx, isPressed);
             }
 
-            // In Edit Mode, draw cyan bounding box
+            // Draw Edit / Move handles
             if (isEditMode) {
-                canvas.drawRoundRect(cx - sizePx / 2 - 4, cy - sizePx / 2 - 4,
-                        cx + sizePx / 2 + 4, cy + sizePx / 2 + 4, 12, 12, editPaint);
+                drawEditFrame(canvas, def, cx, cy, sizePx);
+            }
+
+            // Draw Remove Badges
+            if (isRemoveMode) {
+                drawRemoveBadge(canvas, def, cx, cy, sizePx);
             }
         }
     }
 
-    private void drawTopToolbar(Canvas canvas, int w, int h) {
-        toolbarPaint.setStyle(Paint.Style.FILL);
-        toolbarPaint.setColor(0xCC0E151E);
-        canvas.drawRoundRect(w * 0.20f, 10, w * 0.80f, 65, 24, 24, toolbarPaint);
+    private void drawButton(Canvas canvas, HudConfig.ControlDef def, float cx, float cy, float sizePx, boolean isPressed) {
+        int alpha = (int)(hudAlpha * 255);
+        String label = def.label;
+        boolean isAbxy = "A".equals(label) || "B".equals(label) || "X".equals(label) || "Y".equals(label);
+        boolean isPill = "SPACE".equals(label) || "SHIFT".equals(label) || "LB".equals(label) || 
+                         "RB".equals(label) || "LT".equals(label) || "RT".equals(label) || 
+                         "CROUCH".equals(label) || "SPRINT".equals(label);
 
-        toolbarPaint.setStyle(Paint.Style.STROKE);
-        toolbarPaint.setStrokeWidth(2f);
-        toolbarPaint.setColor(0xFF283A4E);
-        canvas.drawRoundRect(w * 0.20f, 10, w * 0.80f, 65, 24, 24, toolbarPaint);
+        float r = sizePx / 2f;
+        if (isPressed) {
+            r *= 0.94f; // Tactile physical depression simulation
+        }
 
-        // Buttons inside toolbar
-        textPaint.setTextSize(spToPx(12));
-        textPaint.setColor(isEditMode ? 0xFFA4D007 : 0xFF00D2FF);
-        canvas.drawText(isEditMode ? "✎ EDIT (ON)" : "✎ EDIT", w * 0.28f, 44, textPaint);
+        // Determine button theme colors
+        int neonColor = def.color;
+        if (isAbxy) {
+            if ("A".equals(label)) neonColor = 0xFF00E676; // Xbox/Steam Green
+            else if ("B".equals(label)) neonColor = 0xFFFF1744; // Vivid Red
+            else if ("X".equals(label)) neonColor = 0xFF00D2FF; // Cyber Cyan/Blue
+            else if ("Y".equals(label)) neonColor = 0xFFFFD600; // Solar Yellow
+        }
 
-        textPaint.setColor(0xFF66C0F4);
-        int pct = (int)(hudAlpha * 100);
-        canvas.drawText("👁 " + pct + "%", w * 0.41f, 44, textPaint);
+        int red = Color.red(neonColor);
+        int green = Color.green(neonColor);
+        int blue = Color.blue(neonColor);
 
-        textPaint.setColor(0xFF66C0F4);
-        canvas.drawText("⚙ PRESET", w * 0.54f, 44, textPaint);
+        if (isPill) {
+            // Pill geometry for wide buttons (Space, Shift, Bumpers)
+            float pw = sizePx * 1.35f;
+            float ph = sizePx * 0.72f;
+            if (isPressed) { pw *= 0.95f; ph *= 0.95f; }
+            RectF pillRect = new RectF(cx - pw / 2f, cy - ph / 2f, cx + pw / 2f, cy + ph / 2f);
 
-        textPaint.setColor(0xFFE5A823);
-        canvas.drawText("💾 SAVE", w * 0.66f, 44, textPaint);
+            // Dark backfill
+            basePaint.setStyle(Paint.Style.FILL);
+            basePaint.setColor(isPressed ? Color.argb((int)(alpha * 0.85f), red, green, blue)
+                                        : Color.argb((int)(alpha * 0.60f), 15, 23, 33));
+            canvas.drawRoundRect(pillRect, 18, 18, basePaint);
 
-        textPaint.setColor(0xFFD83B3B);
-        canvas.drawText("✖ CLOSE", w * 0.75f, 44, textPaint);
+            // Neon glowing border
+            glowPaint.setStrokeWidth(isPressed ? 3.5f : 2.2f);
+            glowPaint.setColor(Color.argb(alpha, red, green, blue));
+            canvas.drawRoundRect(pillRect, 18, 18, glowPaint);
+
+            // Text
+            textPaint.setTextSize(spToPx(label.length() > 4 ? 11 : 13));
+            textPaint.setColor(isPressed ? 0xFFFFFFFF : Color.argb(alpha, 240, 245, 250));
+            canvas.drawText(label, cx, cy + spToPx(4), textPaint);
+        } else {
+            // Circular 3D button
+            // 1. Drop shadow / outer bevel ring
+            basePaint.setStyle(Paint.Style.FILL);
+            basePaint.setColor(Color.argb((int)(alpha * 0.40f), 0, 0, 0));
+            canvas.drawCircle(cx, cy + 2.5f, r + 2f, basePaint);
+
+            // 2. Button Body (Dark carbon/slate)
+            basePaint.setColor(isPressed ? Color.argb((int)(alpha * 0.88f), red, green, blue)
+                                        : Color.argb((int)(alpha * 0.65f), 18, 27, 38));
+            canvas.drawCircle(cx, cy, r, basePaint);
+
+            // 3. Glowing Outer Rim
+            glowPaint.setStrokeWidth(isPressed ? 3.8f : 2.5f);
+            glowPaint.setColor(Color.argb(alpha, red, green, blue));
+            canvas.drawCircle(cx, cy, r, glowPaint);
+
+            // 4. Subtle inner concentric bevel
+            glowPaint.setStrokeWidth(1.2f);
+            glowPaint.setColor(Color.argb((int)(alpha * 0.35f), 255, 255, 255));
+            canvas.drawCircle(cx, cy, r * 0.82f, glowPaint);
+
+            // 5. Lettering
+            float textSize = isAbxy ? spToPx(20) : spToPx(label.length() > 3 ? 10 : (label.length() > 1 ? 12 : 16));
+            textPaint.setTextSize(textSize);
+            textPaint.setColor(isPressed ? 0xFFFFFFFF : (isAbxy ? neonColor : Color.argb(alpha, 245, 245, 245)));
+            canvas.drawText(label, cx, cy + spToPx(isAbxy ? 6.5f : 4.5f), textPaint);
+        }
+    }
+
+    private void drawDpad(Canvas canvas, HudConfig.ControlDef def, float cx, float cy, float sizePx) {
+        float r = sizePx / 2f;
+        int alpha = (int)(hudAlpha * 255);
+        boolean isWasd = !"dpad_arrow".equals(def.type);
+
+        ActiveTouch touch = getTouchForControl(def);
+        String activeDir = (touch != null) ? touch.lastDpadDirection : null;
+
+        float armW = sizePx * 0.36f;
+        float armL = r;
+
+        // 1. Dark Cross Body
+        basePaint.setStyle(Paint.Style.FILL);
+        basePaint.setColor(Color.argb((int)(alpha * 0.55f), 14, 21, 30));
+        canvas.drawRoundRect(cx - armW / 2, cy - armL, cx + armW / 2, cy + armL, 12, 12, basePaint);
+        canvas.drawRoundRect(cx - armL, cy - armW / 2, cx + armL, cy + armW / 2, 12, 12, basePaint);
+
+        // 2. Outline
+        glowPaint.setStrokeWidth(2.2f);
+        glowPaint.setColor(Color.argb((int)(alpha * 0.70f), 0, 210, 255));
+        canvas.drawRoundRect(cx - armW / 2, cy - armL, cx + armW / 2, cy + armL, 12, 12, glowPaint);
+        canvas.drawRoundRect(cx - armL, cy - armW / 2, cx + armL, cy + armW / 2, 12, 12, glowPaint);
+
+        // 3. Highlight active directional wing if pressed
+        if (activeDir != null) {
+            basePaint.setColor(Color.argb((int)(alpha * 0.85f), 0, 210, 255));
+            if ("UP".equals(activeDir) || "ARROW_UP".equals(activeDir)) {
+                canvas.drawRoundRect(cx - armW / 2, cy - armL, cx + armW / 2, cy, 10, 10, basePaint);
+            } else if ("DOWN".equals(activeDir) || "ARROW_DOWN".equals(activeDir)) {
+                canvas.drawRoundRect(cx - armW / 2, cy, cx + armW / 2, cy + armL, 10, 10, basePaint);
+            } else if ("LEFT".equals(activeDir) || "ARROW_LEFT".equals(activeDir)) {
+                canvas.drawRoundRect(cx - armL, cy - armW / 2, cx, cy + armW / 2, 10, 10, basePaint);
+            } else if ("RIGHT".equals(activeDir) || "ARROW_RIGHT".equals(activeDir)) {
+                canvas.drawRoundRect(cx, cy - armW / 2, cx + armL, cy + armW / 2, 10, 10, basePaint);
+            }
+        }
+
+        // 4. Center Thumb Rest Dish
+        basePaint.setColor(Color.argb((int)(alpha * 0.80f), 10, 15, 22));
+        canvas.drawCircle(cx, cy, armW * 0.58f, basePaint);
+        glowPaint.setStrokeWidth(1.5f);
+        glowPaint.setColor(Color.argb((int)(alpha * 0.40f), 0, 210, 255));
+        canvas.drawCircle(cx, cy, armW * 0.58f, glowPaint);
+
+        // 5. Engraved Wing Labels (WASD or Arrows)
+        textPaint.setTextSize(spToPx(14));
+        // UP
+        boolean upAct = "UP".equals(activeDir) || "ARROW_UP".equals(activeDir);
+        textPaint.setColor(upAct ? 0xFFFFFFFF : Color.argb(alpha, 140, 190, 230));
+        canvas.drawText(isWasd ? "W" : "▲", cx, cy - armL * 0.52f, textPaint);
+
+        // DOWN
+        boolean downAct = "DOWN".equals(activeDir) || "ARROW_DOWN".equals(activeDir);
+        textPaint.setColor(downAct ? 0xFFFFFFFF : Color.argb(alpha, 140, 190, 230));
+        canvas.drawText(isWasd ? "S" : "▼", cx, cy + armL * 0.76f, textPaint);
+
+        // LEFT
+        boolean leftAct = "LEFT".equals(activeDir) || "ARROW_LEFT".equals(activeDir);
+        textPaint.setColor(leftAct ? 0xFFFFFFFF : Color.argb(alpha, 140, 190, 230));
+        canvas.drawText(isWasd ? "A" : "◀", cx - armL * 0.62f, cy + spToPx(5), textPaint);
+
+        // RIGHT
+        boolean rightAct = "RIGHT".equals(activeDir) || "ARROW_RIGHT".equals(activeDir);
+        textPaint.setColor(rightAct ? 0xFFFFFFFF : Color.argb(alpha, 140, 190, 230));
+        canvas.drawText(isWasd ? "D" : "▶", cx + armL * 0.62f, cy + spToPx(5), textPaint);
     }
 
     private void drawJoystick(Canvas canvas, HudConfig.ControlDef def, float cx, float cy, float sizePx) {
         float r = sizePx / 2f;
         int alpha = (int)(hudAlpha * 255);
 
-        // Base Ring
+        // 1. Outer Base Ring & Radial Graduation Ticks (45 degree intervals)
         basePaint.setStyle(Paint.Style.FILL);
-        basePaint.setColor(Color.argb((int)(alpha * 0.35f), 16, 23, 34));
+        basePaint.setColor(Color.argb((int)(alpha * 0.35f), 12, 18, 26));
         canvas.drawCircle(cx, cy, r, basePaint);
 
-        basePaint.setStyle(Paint.Style.STROKE);
-        basePaint.setStrokeWidth(3f);
-        basePaint.setColor(Color.argb((int)(alpha * 0.75f), 0, 210, 255));
-        canvas.drawCircle(cx, cy, r, basePaint);
+        glowPaint.setStrokeWidth(2.6f);
+        glowPaint.setColor(Color.argb((int)(alpha * 0.75f), 0, 210, 255));
+        canvas.drawCircle(cx, cy, r, glowPaint);
 
-        // Label
-        textPaint.setColor(Color.argb(alpha, 140, 160, 180));
-        textPaint.setTextSize(spToPx(11));
-        canvas.drawText(def.label, cx, cy - r * 0.35f, textPaint);
+        // Concentric inner deadzone ring
+        glowPaint.setStrokeWidth(1.2f);
+        glowPaint.setColor(Color.argb((int)(alpha * 0.30f), 0, 210, 255));
+        canvas.drawCircle(cx, cy, r * 0.50f, glowPaint);
 
-        // Dynamic Knob
+        // 8 Radial Ticks
+        for (int deg = 0; deg < 360; deg += 45) {
+            double rad = Math.toRadians(deg);
+            float x1 = cx + (float) Math.cos(rad) * (r - dpToPx(3));
+            float y1 = cy + (float) Math.sin(rad) * (r - dpToPx(3));
+            float x2 = cx + (float) Math.cos(rad) * (r + dpToPx(5));
+            float y2 = cy + (float) Math.sin(rad) * (r + dpToPx(5));
+            canvas.drawLine(x1, y1, x2, y2, tickPaint);
+        }
+
+        // Top Header Tag
+        textPaint.setColor(Color.argb(alpha, 120, 160, 200));
+        textPaint.setTextSize(spToPx(10.5f));
+        canvas.drawText(def.label, cx, cy - r * 0.40f, textPaint);
+
+        // 2. Active Touch Knob Position
         float knobX = cx;
         float knobY = cy;
         ActiveTouch touch = getTouchForControl(def);
         if (touch != null) {
             knobX = cx + touch.stickDeltaX;
             knobY = cy + touch.stickDeltaY;
+
+            // Draw glowing cyan beam connecting base center to knob
+            glowPaint.setStrokeWidth(3f);
+            glowPaint.setColor(Color.argb((int)(alpha * 0.65f), 0, 210, 255));
+            canvas.drawLine(cx, cy, knobX, knobY, glowPaint);
         }
 
-        float knobR = r * 0.42f;
+        // 3. Thumbstick Knob (Rubberized concave cap)
+        float knobR = r * 0.38f;
         knobPaint.setStyle(Paint.Style.FILL);
-        knobPaint.setColor(Color.argb(alpha, 25, 42, 60));
+        knobPaint.setColor(Color.argb(alpha, 25, 38, 52));
         canvas.drawCircle(knobX, knobY, knobR, knobPaint);
 
+        // Outer knob rim
         knobPaint.setStyle(Paint.Style.STROKE);
         knobPaint.setStrokeWidth(2.5f);
         knobPaint.setColor(Color.argb(alpha, 0, 210, 255));
         canvas.drawCircle(knobX, knobY, knobR, knobPaint);
+
+        // Inner concave thumb dish with textured grip
+        knobPaint.setStyle(Paint.Style.FILL);
+        knobPaint.setColor(Color.argb((int)(alpha * 0.90f), 15, 23, 32));
+        canvas.drawCircle(knobX, knobY, knobR * 0.62f, knobPaint);
+
+        // Center micro-crosshair (+)
+        glowPaint.setStrokeWidth(1.8f);
+        glowPaint.setColor(Color.argb(alpha, 0, 210, 255));
+        canvas.drawLine(knobX - dpToPx(4), knobY, knobX + dpToPx(4), knobY, glowPaint);
+        canvas.drawLine(knobX, knobY - dpToPx(4), knobX, knobY + dpToPx(4), glowPaint);
     }
 
-    private void drawDpad(Canvas canvas, HudConfig.ControlDef def, float cx, float cy, float sizePx) {
-        float r = sizePx / 2f;
-        int alpha = (int)(hudAlpha * 255);
+    private void drawEditFrame(Canvas canvas, HudConfig.ControlDef def, float cx, float cy, float sizePx) {
+        float half = sizePx / 2f + dpToPx(6);
+        RectF bounds = new RectF(cx - half, cy - half, cx + half, cy + half);
 
-        basePaint.setStyle(Paint.Style.FILL);
-        basePaint.setColor(Color.argb((int)(alpha * 0.40f), 16, 23, 34));
+        // Cyan frame with corner handles
+        editPaint.setColor(0xFF00D2FF);
+        editPaint.setStrokeWidth(2.5f);
+        canvas.drawRoundRect(bounds, 12, 12, editPaint);
 
-        // Cross shape
-        float crossW = sizePx * 0.36f;
-        canvas.drawRoundRect(cx - crossW / 2, cy - r, cx + crossW / 2, cy + r, 8, 8, basePaint);
-        canvas.drawRoundRect(cx - r, cy - crossW / 2, cx + r, cy + crossW / 2, 8, 8, basePaint);
+        // Drag handle hint
+        textPaint.setTextSize(spToPx(9.5f));
+        textPaint.setColor(0xFF00D2FF);
+        canvas.drawText("DRAG", cx, cy + half + dpToPx(13), textPaint);
+    }
 
-        basePaint.setStyle(Paint.Style.STROKE);
-        basePaint.setStrokeWidth(2f);
-        basePaint.setColor(Color.argb((int)(alpha * 0.65f), 102, 192, 244));
-        canvas.drawRoundRect(cx - crossW / 2, cy - r, cx + crossW / 2, cy + r, 8, 8, basePaint);
-        canvas.drawRoundRect(cx - r, cy - crossW / 2, cx + r, cy + crossW / 2, 8, 8, basePaint);
+    private void drawRemoveBadge(Canvas canvas, HudConfig.ControlDef def, float cx, float cy, float sizePx) {
+        float bx = cx + sizePx * 0.38f;
+        float by = cy - sizePx * 0.38f;
+        float badgeR = dpToPx(13);
 
-        // Arrows
+        // Red circular badge
+        badgePaint.setColor(0xFFE53935);
+        canvas.drawCircle(bx, by, badgeR, badgePaint);
+
+        // White border
+        glowPaint.setStrokeWidth(1.8f);
+        glowPaint.setColor(0xFFFFFFFF);
+        canvas.drawCircle(bx, by, badgeR, glowPaint);
+
+        // White 'X'
         textPaint.setTextSize(spToPx(13));
-        textPaint.setColor(Color.argb(alpha, 255, 255, 255));
-        canvas.drawText("▲", cx, cy - r * 0.50f, textPaint);
-        canvas.drawText("▼", cx, cy + r * 0.75f, textPaint);
-        canvas.drawText("◀", cx - r * 0.60f, cy + spToPx(4), textPaint);
-        canvas.drawText("▶", cx + r * 0.60f, cy + spToPx(4), textPaint);
-    }
-
-    private void drawButton(Canvas canvas, HudConfig.ControlDef def, float cx, float cy, float sizePx, boolean isPressed) {
-        float r = sizePx / 2f;
-        int alpha = (int)(hudAlpha * 255);
-
-        int btnColor = def.color;
-        int red = Color.red(btnColor);
-        int green = Color.green(btnColor);
-        int blue = Color.blue(btnColor);
-
-        basePaint.setStyle(Paint.Style.FILL);
-        if (isPressed) {
-            basePaint.setColor(Color.argb((int)(alpha * 0.90f), red, green, blue));
-        } else {
-            basePaint.setColor(Color.argb((int)(alpha * 0.45f), red / 2, green / 2, blue / 2));
-        }
-        canvas.drawCircle(cx, cy, r, basePaint);
-
-        basePaint.setStyle(Paint.Style.STROKE);
-        basePaint.setStrokeWidth(2.5f);
-        basePaint.setColor(Color.argb(alpha, red, green, blue));
-        canvas.drawCircle(cx, cy, r, basePaint);
-
-        // Label
-        textPaint.setTextSize(spToPx(def.label.length() > 3 ? 10 : (def.label.length() > 2 ? 12 : 16)));
-        textPaint.setColor(isPressed ? 0xFFFFFFFF : Color.argb(alpha, 245, 245, 245));
-        canvas.drawText(def.label, cx, cy + spToPx(def.label.length() > 2 ? 4 : 5), textPaint);
+        textPaint.setColor(0xFFFFFFFF);
+        canvas.drawText("✕", bx, by + spToPx(4.5f), textPaint);
     }
 
     @Override
@@ -282,29 +446,30 @@ public class GameHubTouchView extends View {
         switch (action) {
             case MotionEvent.ACTION_DOWN:
             case MotionEvent.ACTION_POINTER_DOWN:
-                // Check Toolbar clicks first
-                if (y >= 10 && y <= 65 && x >= w * 0.20f && x <= w * 0.80f) {
-                    handleToolbarClick(x, w);
-                    return true;
-                }
-
-                // Check controls
                 HudConfig.ControlDef hit = findHitControl(x, y, w, h);
                 if (hit != null) {
+                    if (isRemoveMode) {
+                        controls.remove(hit);
+                        triggerHaptic();
+                        Toast.makeText(getContext(), "Removed: " + hit.label, Toast.LENGTH_SHORT).show();
+                        invalidate();
+                        return true;
+                    }
+
                     ActiveTouch touch = new ActiveTouch(hit, x, y);
                     activeTouches.put(pointerId, touch);
                     triggerHaptic();
 
-                    if ("stick".equals(hit.type)) {
-                        updateStickDelta(touch, hit, x, y, w, h);
-                    } else if ("dpad".equals(hit.type)) {
-                        updateDpadDirection(touch, hit, x, y, w, h);
-                    } else {
-                        // Action button down: send to PC and local accessibility
-                        inputSender.sendButton(hit, true);
-                        GameHubAccessibilityService.dispatchTap(x, y);
+                    if (!isEditMode) {
+                        if ("stick".equals(hit.type) || "stick_right".equals(hit.type)) {
+                            updateStickDelta(touch, hit, x, y, w, h);
+                        } else if ("dpad".equals(hit.type) || "dpad_arrow".equals(hit.type)) {
+                            updateDpadDirection(touch, hit, x, y, w, h);
+                        } else {
+                            inputSender.sendButton(hit, true);
+                            GameHubAccessibilityService.dispatchTap(x, y);
+                        }
                     }
-
                     invalidate();
                     return true;
                 }
@@ -319,13 +484,13 @@ public class GameHubTouchView extends View {
                         float py = event.getY(i);
 
                         if (isEditMode) {
-                            // Drag position in edit mode
-                            t.control.xRatio = Math.max(0.05f, Math.min(0.95f, px / w));
-                            t.control.yRatio = Math.max(0.12f, Math.min(0.95f, py / h));
+                            // Free drag and reposition
+                            t.control.xRatio = Math.max(0.04f, Math.min(0.96f, px / w));
+                            t.control.yRatio = Math.max(0.08f, Math.min(0.96f, py / h));
                         } else {
-                            if ("stick".equals(t.control.type)) {
+                            if ("stick".equals(t.control.type) || "stick_right".equals(t.control.type)) {
                                 updateStickDelta(t, t.control, px, py, w, h);
-                            } else if ("dpad".equals(t.control.type)) {
+                            } else if ("dpad".equals(t.control.type) || "dpad_arrow".equals(t.control.type)) {
                                 updateDpadDirection(t, t.control, px, py, w, h);
                             }
                         }
@@ -338,10 +503,10 @@ public class GameHubTouchView extends View {
             case MotionEvent.ACTION_POINTER_UP:
             case MotionEvent.ACTION_CANCEL:
                 ActiveTouch releaseTouch = activeTouches.remove(pointerId);
-                if (releaseTouch != null) {
-                    if ("stick".equals(releaseTouch.control.type)) {
+                if (releaseTouch != null && !isEditMode && !isRemoveMode) {
+                    if ("stick".equals(releaseTouch.control.type) || "stick_right".equals(releaseTouch.control.type)) {
                         inputSender.sendJoystick(releaseTouch.control.id, 0f, 0f);
-                    } else if ("dpad".equals(releaseTouch.control.type)) {
+                    } else if ("dpad".equals(releaseTouch.control.type) || "dpad_arrow".equals(releaseTouch.control.type)) {
                         if (releaseTouch.lastDpadDirection != null) {
                             inputSender.sendDpadDirection(releaseTouch.lastDpadDirection, false);
                         }
@@ -354,48 +519,6 @@ public class GameHubTouchView extends View {
         }
 
         return super.onTouchEvent(event);
-    }
-
-    private void handleToolbarClick(float x, int w) {
-        triggerHaptic();
-        if (x < w * 0.35f) {
-            toggleEditMode();
-        } else if (x < w * 0.47f) {
-            cycleOpacityInternal();
-            if (toolbarListener != null) toolbarListener.onOpacityCycle();
-        } else if (x < w * 0.60f) {
-            cyclePresetInternal();
-            if (toolbarListener != null) toolbarListener.onPresetCycle();
-        } else if (x < w * 0.71f) {
-            HudConfig.saveControls(getContext(), controls);
-            Toast.makeText(getContext(), "Layout Saved!", Toast.LENGTH_SHORT).show();
-            if (toolbarListener != null) toolbarListener.onSaveLayout();
-        } else {
-            if (toolbarListener != null) toolbarListener.onCollapse();
-        }
-    }
-
-    private void cycleOpacityInternal() {
-        int level = HudConfig.getPrefs(getContext()).getInt(HudConfig.KEY_OPACITY, 1);
-        level = (level + 1) % 4;
-        HudConfig.getPrefs(getContext()).edit().putInt(HudConfig.KEY_OPACITY, level).apply();
-        setHudAlpha(HudConfig.getOpacity(getContext()));
-    }
-
-    private void cyclePresetInternal() {
-        String cur = HudConfig.getPrefs(getContext()).getString(HudConfig.KEY_PRESET, HudConfig.PRESET_STEAM_LINK);
-        String next;
-        if (HudConfig.PRESET_STEAM_LINK.equals(cur)) {
-            next = HudConfig.PRESET_ACTION_RPG;
-        } else if (HudConfig.PRESET_ACTION_RPG.equals(cur)) {
-            next = HudConfig.PRESET_FPS;
-        } else {
-            next = HudConfig.PRESET_STEAM_LINK;
-        }
-        HudConfig.getPrefs(getContext()).edit().putString(HudConfig.KEY_PRESET, next).apply();
-        HudConfig.resetControls(getContext());
-        reloadControls();
-        Toast.makeText(getContext(), "Preset: " + next, Toast.LENGTH_SHORT).show();
     }
 
     private void updateStickDelta(ActiveTouch touch, HudConfig.ControlDef def, float px, float py, int w, int h) {
@@ -422,12 +545,13 @@ public class GameHubTouchView extends View {
         float cy = def.yRatio * h;
         float dx = px - cx;
         float dy = py - cy;
+        boolean isArrow = "dpad_arrow".equals(def.type);
         String dir = null;
 
         if (Math.abs(dy) > Math.abs(dx)) {
-            dir = dy < 0 ? "UP" : "DOWN";
+            dir = dy < 0 ? (isArrow ? "ARROW_UP" : "UP") : (isArrow ? "ARROW_DOWN" : "DOWN");
         } else {
-            dir = dx < 0 ? "LEFT" : "RIGHT";
+            dir = dx < 0 ? (isArrow ? "ARROW_LEFT" : "LEFT") : (isArrow ? "ARROW_RIGHT" : "RIGHT");
         }
 
         if (dir != null && !dir.equals(touch.lastDpadDirection)) {
@@ -443,7 +567,7 @@ public class GameHubTouchView extends View {
         for (HudConfig.ControlDef def : controls) {
             float cx = def.xRatio * w;
             float cy = def.yRatio * h;
-            float r = dpToPx(def.sizeDp) / 2f + 16;
+            float r = dpToPx(def.sizeDp) / 2f + dpToPx(16);
             float dx = x - cx;
             float dy = y - cy;
             if (dx * dx + dy * dy <= r * r) {
@@ -472,7 +596,7 @@ public class GameHubTouchView extends View {
         return dp * metrics.density;
     }
 
-    private float spToPx(int sp) {
+    private float spToPx(float sp) {
         DisplayMetrics metrics = getResources().getDisplayMetrics();
         return sp * metrics.scaledDensity;
     }

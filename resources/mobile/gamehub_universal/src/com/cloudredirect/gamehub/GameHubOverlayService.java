@@ -7,15 +7,27 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Color;
 import android.graphics.PixelFormat;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.IBinder;
+import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.Button;
+import android.widget.FrameLayout;
+import android.widget.HorizontalScrollView;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import java.util.List;
+import java.util.Random;
 
 public class GameHubOverlayService extends Service {
     private static final String CHANNEL_ID = "gamehub_overlay_channel";
@@ -24,10 +36,24 @@ public class GameHubOverlayService extends Service {
 
     private WindowManager windowManager;
     private TextView floatingPill;
+    private FrameLayout hudRootLayout;
     private GameHubTouchView touchHudView;
+    private LinearLayout dockBar;
+    private FrameLayout addControlOverlay;
+    private LinearLayout addItemsContainer;
+
+    private Button btnDockAdd;
+    private Button btnDockRemove;
+    private Button btnDockMove;
+    private Button btnDockOpacity;
+    private Button btnDockPreset;
+    private Button btnDockSave;
+    private Button btnDockHide;
+
     private WindowManager.LayoutParams pillParams;
     private WindowManager.LayoutParams hudParams;
     private boolean isHudExpanded = false;
+    private final Random random = new Random();
 
     public static boolean isRunning() {
         return instance != null;
@@ -83,7 +109,7 @@ public class GameHubOverlayService extends Service {
 
         return builder
             .setContentTitle("GameHub Mobile HUD Active")
-            .setContentText("Tap to open GameHub settings or drag floating HUD over games")
+            .setContentText("Universal touch controller running. Tap to open dashboard.")
             .setSmallIcon(R.drawable.ic_launcher)
             .setContentIntent(pi)
             .setOngoing(true)
@@ -95,9 +121,9 @@ public class GameHubOverlayService extends Service {
         floatingPill.setText("🎮 HUD");
         floatingPill.setTextSize(13);
         floatingPill.setTextColor(0xFF00D2FF);
-        floatingPill.setTypeface(null, android.graphics.Typeface.BOLD);
+        floatingPill.setTypeface(null, Typeface.BOLD);
         floatingPill.setBackgroundResource(R.drawable.steam_pill_bg);
-        floatingPill.setPadding(28, 14, 28, 14);
+        floatingPill.setPadding(dpToPx(14), dpToPx(8), dpToPx(14), dpToPx(8));
         floatingPill.setGravity(Gravity.CENTER);
 
         int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
@@ -166,46 +192,8 @@ public class GameHubOverlayService extends Service {
             floatingPill.setVisibility(View.GONE);
         }
 
-        if (touchHudView == null) {
-            touchHudView = new GameHubTouchView(this);
-            touchHudView.setOnToolbarActionListener(new GameHubTouchView.OnToolbarActionListener() {
-                @Override
-                public void onCollapse() {
-                    collapseHud();
-                }
-
-                @Override
-                public void onOpacityCycle() {
-                    int cur = HudConfig.getPrefs(GameHubOverlayService.this).getInt(HudConfig.KEY_OPACITY, 1);
-                    cur = (cur + 1) % 4;
-                    HudConfig.getPrefs(GameHubOverlayService.this).edit().putInt(HudConfig.KEY_OPACITY, cur).apply();
-                    float newAlpha = HudConfig.getOpacity(GameHubOverlayService.this);
-                    touchHudView.setHudAlpha(newAlpha);
-                    Toast.makeText(GameHubOverlayService.this, "Opacity: " + (int)(newAlpha * 100) + "%", Toast.LENGTH_SHORT).show();
-                }
-
-                @Override
-                public void onPresetCycle() {
-                    String curPreset = HudConfig.getPrefs(GameHubOverlayService.this).getString(HudConfig.KEY_PRESET, HudConfig.PRESET_STEAM_LINK);
-                    String nextPreset;
-                    if (HudConfig.PRESET_STEAM_LINK.equals(curPreset)) {
-                        nextPreset = HudConfig.PRESET_ACTION_RPG;
-                    } else if (HudConfig.PRESET_ACTION_RPG.equals(curPreset)) {
-                        nextPreset = HudConfig.PRESET_FPS;
-                    } else {
-                        nextPreset = HudConfig.PRESET_STEAM_LINK;
-                    }
-                    HudConfig.getPrefs(GameHubOverlayService.this).edit().putString(HudConfig.KEY_PRESET, nextPreset).apply();
-                    HudConfig.resetControls(GameHubOverlayService.this);
-                    touchHudView.reloadControls();
-                    Toast.makeText(GameHubOverlayService.this, "Preset: " + nextPreset, Toast.LENGTH_SHORT).show();
-                }
-
-                @Override
-                public void onSaveLayout() {
-                    Toast.makeText(GameHubOverlayService.this, "HUD Layout Saved! 🎮", Toast.LENGTH_SHORT).show();
-                }
-            });
+        if (hudRootLayout == null) {
+            buildHudViewHierarchy();
 
             int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
                 ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
@@ -220,22 +208,450 @@ public class GameHubOverlayService extends Service {
             );
             hudParams.gravity = Gravity.TOP | Gravity.START;
 
-            windowManager.addView(touchHudView, hudParams);
+            windowManager.addView(hudRootLayout, hudParams);
         } else {
-            touchHudView.setVisibility(View.VISIBLE);
+            hudRootLayout.setVisibility(View.VISIBLE);
         }
+        updateDockButtonStates();
     }
 
     private void collapseHud() {
         if (!isHudExpanded) return;
         isHudExpanded = false;
 
-        if (touchHudView != null) {
-            touchHudView.setVisibility(View.GONE);
+        if (hudRootLayout != null) {
+            hudRootLayout.setVisibility(View.GONE);
         }
         if (floatingPill != null) {
             floatingPill.setVisibility(View.VISIBLE);
         }
+    }
+
+    private void buildHudViewHierarchy() {
+        hudRootLayout = new FrameLayout(this);
+
+        // 1. Fullscreen Touch HUD View
+        touchHudView = new GameHubTouchView(this);
+        FrameLayout.LayoutParams touchLp = new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT
+        );
+        hudRootLayout.addView(touchHudView, touchLp);
+
+        // 2. Responsive Top GameHub Controller Dock inside HorizontalScrollView
+        HorizontalScrollView dockScroll = new HorizontalScrollView(this);
+        dockScroll.setHorizontalScrollBarEnabled(false);
+        dockScroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
+
+        dockBar = new LinearLayout(this);
+        dockBar.setOrientation(LinearLayout.HORIZONTAL);
+        dockBar.setGravity(Gravity.CENTER_VERTICAL);
+        dockBar.setPadding(dpToPx(10), dpToPx(6), dpToPx(10), dpToPx(6));
+        applyRoundedCardBg(dockBar, 0xEE0B121B, 0xFF2A425A, dpToPx(24));
+
+        // Dock Buttons
+        btnDockAdd = createDockButton("➕ ADD", 0xFF00D2FF, 0xDD121F2D, 0xFF00D2FF);
+        btnDockRemove = createDockButton("🗑 REMOVE", 0xFFFF6B6B, 0xDD281418, 0xFFD83B3B);
+        btnDockMove = createDockButton("📐 MOVE", 0xFF66C0F4, 0xDD121F2D, 0xFF284868);
+        btnDockOpacity = createDockButton("👁 75%", 0xFF66C0F4, 0xDD121F2D, 0xFF284868);
+        btnDockPreset = createDockButton("🎮 PRESET", 0xFF66C0F4, 0xDD121F2D, 0xFF284868);
+        btnDockSave = createDockButton("💾 SAVE", 0xFFFFD600, 0xDD2B2212, 0xFFFFB300);
+        btnDockHide = createDockButton("➖ HIDE", 0xFF9EABB8, 0xDD18202A, 0xFF3A4B5E);
+
+        dockBar.addView(btnDockAdd);
+        dockBar.addView(btnDockRemove);
+        dockBar.addView(btnDockMove);
+        dockBar.addView(btnDockOpacity);
+        dockBar.addView(btnDockPreset);
+        dockBar.addView(btnDockSave);
+        dockBar.addView(btnDockHide);
+
+        dockScroll.addView(dockBar);
+
+        FrameLayout.LayoutParams dockLp = new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        );
+        dockLp.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+        dockLp.topMargin = dpToPx(12);
+        hudRootLayout.addView(dockScroll, dockLp);
+
+        // 3. Add Control Modal Overlay
+        buildAddControlOverlay();
+
+        // Setup Dock Click Listeners
+        btnDockAdd.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showAddControlDialog();
+            }
+        });
+
+        btnDockRemove.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                boolean nextRemove = !touchHudView.isRemoveMode();
+                touchHudView.setRemoveMode(nextRemove);
+                updateDockButtonStates();
+                if (nextRemove) {
+                    Toast.makeText(GameHubOverlayService.this, "Tap any button (or red ✕) to delete it!", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+        btnDockMove.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                boolean nextEdit = !touchHudView.isEditMode();
+                touchHudView.setEditMode(nextEdit);
+                updateDockButtonStates();
+                if (nextEdit) {
+                    Toast.makeText(GameHubOverlayService.this, "Drag any button to reposition. Tap Save when done!", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+        btnDockOpacity.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                int cur = HudConfig.getPrefs(GameHubOverlayService.this).getInt(HudConfig.KEY_OPACITY, 1);
+                cur = (cur + 1) % 4;
+                HudConfig.getPrefs(GameHubOverlayService.this).edit().putInt(HudConfig.KEY_OPACITY, cur).apply();
+                float newAlpha = HudConfig.getOpacity(GameHubOverlayService.this);
+                touchHudView.setHudAlpha(newAlpha);
+                updateDockButtonStates();
+            }
+        });
+
+        btnDockPreset.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String curPreset = HudConfig.getPrefs(GameHubOverlayService.this).getString(HudConfig.KEY_PRESET, HudConfig.PRESET_STEAM_LINK);
+                String nextPreset;
+                if (HudConfig.PRESET_STEAM_LINK.equals(curPreset)) {
+                    nextPreset = HudConfig.PRESET_ACTION_RPG;
+                } else if (HudConfig.PRESET_ACTION_RPG.equals(curPreset)) {
+                    nextPreset = HudConfig.PRESET_FPS;
+                } else {
+                    nextPreset = HudConfig.PRESET_STEAM_LINK;
+                }
+                HudConfig.getPrefs(GameHubOverlayService.this).edit().putString(HudConfig.KEY_PRESET, nextPreset).apply();
+                HudConfig.resetControls(GameHubOverlayService.this);
+                touchHudView.reloadControls();
+                Toast.makeText(GameHubOverlayService.this, "Loaded Preset: " + nextPreset, Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        btnDockSave.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                touchHudView.saveControls();
+                Toast.makeText(GameHubOverlayService.this, "Controller Layout Saved! 🎮", Toast.LENGTH_SHORT).show();
+                // Turn off edit and remove modes once saved
+                touchHudView.setEditMode(false);
+                touchHudView.setRemoveMode(false);
+                updateDockButtonStates();
+            }
+        });
+
+        btnDockHide.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                collapseHud();
+            }
+        });
+    }
+
+    private void updateDockButtonStates() {
+        if (btnDockRemove != null) {
+            boolean isRemove = touchHudView.isRemoveMode();
+            btnDockRemove.setText(isRemove ? "🗑 REMOVE (ON)" : "🗑 REMOVE");
+            applyRoundedCardBg(btnDockRemove, isRemove ? 0xFFE53935 : 0xDD281418, 
+                               isRemove ? 0xFFFFFFFF : 0xFFD83B3B, dpToPx(16));
+            btnDockRemove.setTextColor(isRemove ? 0xFFFFFFFF : 0xFFFF6B6B);
+        }
+
+        if (btnDockMove != null) {
+            boolean isEdit = touchHudView.isEditMode();
+            btnDockMove.setText(isEdit ? "📐 MOVE (ON)" : "📐 MOVE");
+            applyRoundedCardBg(btnDockMove, isEdit ? 0xFF2E7D32 : 0xDD121F2D, 
+                               isEdit ? 0xFF00E676 : 0xFF284868, dpToPx(16));
+            btnDockMove.setTextColor(isEdit ? 0xFFFFFFFF : 0xFF66C0F4);
+        }
+
+        if (btnDockOpacity != null) {
+            int pct = (int)(touchHudView.getHudAlpha() * 100);
+            btnDockOpacity.setText("👁 " + pct + "%");
+        }
+    }
+
+    private void buildAddControlOverlay() {
+        addControlOverlay = new FrameLayout(this);
+        addControlOverlay.setBackgroundColor(0x99000000); // Dark dimmed backdrop
+        addControlOverlay.setVisibility(View.GONE);
+
+        // Centered Card Container
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dpToPx(16), dpToPx(16), dpToPx(16), dpToPx(16));
+        applyRoundedCardBg(card, 0xF4101A26, 0xFF00D2FF, dpToPx(20));
+
+        // 1. Header (Title + Close Button)
+        LinearLayout header = new LinearLayout(this);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        header.setPadding(0, 0, 0, dpToPx(10));
+
+        TextView tvTitle = new TextView(this);
+        tvTitle.setText("🎮 ADD CONTROLLER BUTTON");
+        tvTitle.setTextColor(0xFF00D2FF);
+        tvTitle.setTextSize(15f);
+        tvTitle.setTypeface(null, Typeface.BOLD);
+        LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        header.addView(tvTitle, titleLp);
+
+        TextView btnClose = new TextView(this);
+        btnClose.setText("✕ CLOSE");
+        btnClose.setTextColor(0xFFFF5252);
+        btnClose.setTextSize(12.5f);
+        btnClose.setTypeface(null, Typeface.BOLD);
+        btnClose.setPadding(dpToPx(10), dpToPx(4), dpToPx(10), dpToPx(4));
+        applyRoundedCardBg(btnClose, 0x44FF5252, 0xFFFF5252, dpToPx(12));
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                addControlOverlay.setVisibility(View.GONE);
+            }
+        });
+        header.addView(btnClose);
+        card.addView(header);
+
+        // Subtitle
+        TextView tvSub = new TextView(this);
+        tvSub.setText("Tap any component to add on-screen (drag to position):");
+        tvSub.setTextColor(0xFF8FA5B8);
+        tvSub.setTextSize(12f);
+        tvSub.setPadding(0, 0, 0, dpToPx(10));
+        card.addView(tvSub);
+
+        // 2. Category Tab Filter
+        HorizontalScrollView catScroll = new HorizontalScrollView(this);
+        catScroll.setHorizontalScrollBarEnabled(false);
+        catScroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        catScroll.setPadding(0, 0, 0, dpToPx(10));
+
+        LinearLayout catBar = new LinearLayout(this);
+        catBar.setOrientation(LinearLayout.HORIZONTAL);
+
+        final Button btnCatGamepad = createCategoryChip("🎮 GAMEPAD", true);
+        final Button btnCatAction = createCategoryChip("🎯 ACTION / FPS", false);
+        final Button btnCatKeyboard = createCategoryChip("⌨ KEYBOARD A-Z", false);
+        final Button btnCatNumbers = createCategoryChip("🔢 NUMBERS 0-9", false);
+        final Button btnCatMouse = createCategoryChip("🖱 MOUSE", false);
+
+        catBar.addView(btnCatGamepad);
+        catBar.addView(btnCatAction);
+        catBar.addView(btnCatKeyboard);
+        catBar.addView(btnCatNumbers);
+        catBar.addView(btnCatMouse);
+        catScroll.addView(catBar);
+        card.addView(catScroll);
+
+        // 3. Scrollable List/Grid of Items
+        ScrollView itemScroll = new ScrollView(this);
+        itemScroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
+
+        addItemsContainer = new LinearLayout(this);
+        addItemsContainer.setOrientation(LinearLayout.VERTICAL);
+        itemScroll.addView(addItemsContainer);
+
+        LinearLayout.LayoutParams scrollLp = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            dpToPx(280)
+        );
+        card.addView(itemScroll, scrollLp);
+
+        // Category Switch Listeners
+        View.OnClickListener catClickListener = new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                highlightCategoryChip(btnCatGamepad, v == btnCatGamepad);
+                highlightCategoryChip(btnCatAction, v == btnCatAction);
+                highlightCategoryChip(btnCatKeyboard, v == btnCatKeyboard);
+                highlightCategoryChip(btnCatNumbers, v == btnCatNumbers);
+                highlightCategoryChip(btnCatMouse, v == btnCatMouse);
+
+                if (v == btnCatGamepad) populateCatalogItems(HudConfig.getGamepadCatalog());
+                else if (v == btnCatAction) populateCatalogItems(HudConfig.getActionCatalog());
+                else if (v == btnCatKeyboard) populateCatalogItems(HudConfig.getKeyboardAlphabetCatalog());
+                else if (v == btnCatNumbers) populateCatalogItems(HudConfig.getNumbersCatalog());
+                else if (v == btnCatMouse) populateCatalogItems(HudConfig.getMouseCatalog());
+            }
+        };
+
+        btnCatGamepad.setOnClickListener(catClickListener);
+        btnCatAction.setOnClickListener(catClickListener);
+        btnCatKeyboard.setOnClickListener(catClickListener);
+        btnCatNumbers.setOnClickListener(catClickListener);
+        btnCatMouse.setOnClickListener(catClickListener);
+
+        // Populate initial Gamepad catalog
+        populateCatalogItems(HudConfig.getGamepadCatalog());
+
+        // Center card inside overlay
+        FrameLayout.LayoutParams cardLp = new FrameLayout.LayoutParams(
+            dpToPx(380),
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        );
+        cardLp.gravity = Gravity.CENTER;
+        cardLp.leftMargin = dpToPx(20);
+        cardLp.rightMargin = dpToPx(20);
+        addControlOverlay.addView(card, cardLp);
+
+        // Tap backdrop to dismiss
+        addControlOverlay.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                    addControlOverlay.setVisibility(View.GONE);
+                    return true;
+                }
+                return false;
+            }
+        });
+        card.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                return true; // Consume taps inside card
+            }
+        });
+
+        hudRootLayout.addView(addControlOverlay, new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT
+        ));
+    }
+
+    private void showAddControlDialog() {
+        if (addControlOverlay != null) {
+            addControlOverlay.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void populateCatalogItems(List<HudConfig.ControlDef> items) {
+        addItemsContainer.removeAllViews();
+
+        // Arrange items in rows of 3
+        int cols = 3;
+        LinearLayout currentRow = null;
+        for (int i = 0; i < items.size(); i++) {
+            if (i % cols == 0) {
+                currentRow = new LinearLayout(this);
+                currentRow.setOrientation(LinearLayout.HORIZONTAL);
+                currentRow.setPadding(0, dpToPx(3), 0, dpToPx(3));
+                addItemsContainer.addView(currentRow);
+            }
+
+            final HudConfig.ControlDef template = items.get(i);
+            Button btnItem = new Button(this);
+            btnItem.setText(template.label);
+            btnItem.setTextSize(12f);
+            btnItem.setTypeface(null, Typeface.BOLD);
+            btnItem.setTextColor(0xFFF0F5FA);
+            btnItem.setPadding(dpToPx(8), dpToPx(10), dpToPx(8), dpToPx(10));
+            applyRoundedCardBg(btnItem, 0xCC1A2736, template.color, dpToPx(12));
+
+            btnItem.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    // Create new control with offset so it doesn't overlap perfectly
+                    HudConfig.ControlDef newDef = template.copy();
+                    newDef.id = template.id + "_" + System.currentTimeMillis() % 1000;
+                    float jitterX = (random.nextFloat() - 0.5f) * 0.16f;
+                    float jitterY = (random.nextFloat() - 0.5f) * 0.16f;
+                    newDef.xRatio = 0.50f + jitterX;
+                    newDef.yRatio = 0.50f + jitterY;
+
+                    touchHudView.addControl(newDef);
+                    touchHudView.setEditMode(true); // Automatically enable Move mode
+                    updateDockButtonStates();
+                    addControlOverlay.setVisibility(View.GONE);
+
+                    Toast.makeText(GameHubOverlayService.this, 
+                        "Added [" + newDef.label + "]! Drag to place, tap Save when done.", 
+                        Toast.LENGTH_SHORT).show();
+                }
+            });
+
+            LinearLayout.LayoutParams itemLp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            itemLp.setMargins(dpToPx(4), dpToPx(3), dpToPx(4), dpToPx(3));
+            currentRow.addView(btnItem, itemLp);
+        }
+    }
+
+    private Button createDockButton(String text, int textColor, int bgColor, int borderColor) {
+        Button btn = new Button(this);
+        btn.setText(text);
+        btn.setTextColor(textColor);
+        btn.setTextSize(11f);
+        btn.setTypeface(null, Typeface.BOLD);
+        btn.setPadding(dpToPx(12), dpToPx(6), dpToPx(12), dpToPx(6));
+        btn.setMinWidth(0);
+        btn.setMinHeight(0);
+        btn.setMinimumWidth(0);
+        btn.setMinimumHeight(0);
+        applyRoundedCardBg(btn, bgColor, borderColor, dpToPx(16));
+
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        lp.setMargins(dpToPx(3), 0, dpToPx(3), 0);
+        btn.setLayoutParams(lp);
+        return btn;
+    }
+
+    private Button createCategoryChip(String text, boolean active) {
+        Button btn = new Button(this);
+        btn.setText(text);
+        btn.setTextSize(10.5f);
+        btn.setTypeface(null, Typeface.BOLD);
+        btn.setPadding(dpToPx(10), dpToPx(4), dpToPx(10), dpToPx(4));
+        btn.setMinWidth(0);
+        btn.setMinHeight(0);
+        highlightCategoryChip(btn, active);
+
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        lp.setMargins(0, 0, dpToPx(6), 0);
+        btn.setLayoutParams(lp);
+        return btn;
+    }
+
+    private void highlightCategoryChip(Button btn, boolean active) {
+        if (active) {
+            btn.setTextColor(0xFF0E141D);
+            applyRoundedCardBg(btn, 0xFF00D2FF, 0xFF00D2FF, dpToPx(12));
+        } else {
+            btn.setTextColor(0xFF8FA5B8);
+            applyRoundedCardBg(btn, 0xCC1A2736, 0xFF2A425A, dpToPx(12));
+        }
+    }
+
+    private void applyRoundedCardBg(View v, int bgColor, int borderColor, int radiusPx) {
+        GradientDrawable gd = new GradientDrawable();
+        gd.setShape(GradientDrawable.RECTANGLE);
+        gd.setCornerRadius(radiusPx);
+        gd.setColor(bgColor);
+        gd.setStroke(dpToPx(1.5f), borderColor);
+        v.setBackground(gd);
+    }
+
+    private int dpToPx(float dp) {
+        DisplayMetrics metrics = getResources().getDisplayMetrics();
+        return (int) (dp * metrics.density + 0.5f);
     }
 
     @Override
@@ -245,8 +661,8 @@ public class GameHubOverlayService extends Service {
         if (floatingPill != null && floatingPill.isAttachedToWindow()) {
             windowManager.removeView(floatingPill);
         }
-        if (touchHudView != null && touchHudView.isAttachedToWindow()) {
-            windowManager.removeView(touchHudView);
+        if (hudRootLayout != null && hudRootLayout.isAttachedToWindow()) {
+            windowManager.removeView(hudRootLayout);
         }
     }
 }
