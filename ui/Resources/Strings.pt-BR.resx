@@ -1560,6 +1560,24 @@ Tem certeza?</value>
   <data name="AppUpdate_ReleaseNotes" xml:space="preserve">
     <value>Notas de lançamento</value>
   </data>
+  <data name="AppUpdate_AvailableBadge" xml:space="preserve">
+    <value>Atualizar: {0}</value>
+  </data>
+  <data name="AppUpdate_PromptTitle" xml:space="preserve">
+    <value>Nova Atualização Disponível</value>
+  </data>
+  <data name="AppUpdate_PromptMessage" xml:space="preserve">
+    <value>O CloudRedirect {0} está disponível! (Atual: {1})&#10;&#10;Deseja atualizar agora ou mais tarde?</value>
+  </data>
+  <data name="AppUpdate_Later" xml:space="preserve">
+    <value>Mais tarde</value>
+  </data>
+  <data name="AppUpdate_BadgeTooltip" xml:space="preserve">
+    <value>O CloudRedirect {0} está disponível. Clique para atualizar agora.</value>
+  </data>
+  <data name="AppUpdate_CurrentVersionTooltip" xml:space="preserve">
+    <value>Versão atual do CloudRedirect</value>
+  </data>
 
   <data name="Cleanup_OstBanner_Description" xml:space="preserve">
     <value>O OpenSteamTool não roteia os saves na nuvem pelo app 760. Esta página serve para limpar arquivos deixados por uma instalação anterior do SteamTools.</value>

@@ -73,6 +73,26 @@ public static class Dialog
         return await box.ShowDialogAsync() == MessageBoxResult.Primary;
     }
 
+    public static async Task<bool> PromptUpdateAsync(string title, string message, string primaryText, string secondaryText)
+    {
+        var box = new MessageBox
+        {
+            Title = title,
+            Content = new TextBlock
+            {
+                Text = message,
+                TextWrapping = TextWrapping.Wrap,
+                LineHeight = 22,
+                FontSize = 13
+            },
+            PrimaryButtonText = primaryText,
+            PrimaryButtonAppearance = ControlAppearance.Primary,
+            CloseButtonText = secondaryText
+        };
+        box.Loaded += (_, _) => CollapseEmptyFooterButtons(box);
+        return await box.ShowDialogAsync() == MessageBoxResult.Primary;
+    }
+
     public static async Task<bool> ConfirmDangerAsync(string title, string message)
     {
         var box = new MessageBox

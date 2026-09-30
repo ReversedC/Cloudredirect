@@ -147,6 +147,49 @@
                     </DockPanel>
                 </StackPanel>
             </Border>
+
+            <!-- Error / Connection Failed Card -->
+            <Border x:Name="ErrorCard"
+                    Background="#141E28"
+                    BorderBrush="#C42B1C"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="28"
+                    MaxWidth="560"
+                    MaxHeight="360"
+                    Visibility="Collapsed"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                        <ui:SymbolIcon Symbol="DismissCircle24" FontSize="24" Foreground="#E04040" Margin="0,0,10,0" VerticalAlignment="Center" />
+                        <TextBlock Text="Failed to Load Dashboard"
+                                   FontSize="18" FontWeight="Bold"
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+                    <TextBlock x:Name="ErrorCardText"
+                               Text="Could not connect to SUO Remote Dashboard."
+                               FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               TextWrapping="Wrap" LineHeight="18" Margin="0,0,0,16" />
+                    <DockPanel LastChildFill="False">
+                        <ui:Button Appearance="Primary"
+                                   Icon="{ui:SymbolIcon ArrowSync24}"
+                                   Content="Retry Connection"
+                                   FontWeight="SemiBold"
+                                   Click="Reload_Click"
+                                   Padding="16,8"
+                                   Cursor="Hand" />
+                        <ui:Button Appearance="Secondary"
+                                   Icon="{ui:SymbolIcon Globe24}"
+                                   Content="Open in Browser"
+                                   Click="OpenBrowser_Click"
+                                   DockPanel.Dock="Right"
+                                   Padding="14,8"
+                                   Cursor="Hand" />
+                    </DockPanel>
+                </StackPanel>
+            </Border>
         </Grid>
     </Grid>
 </Page>

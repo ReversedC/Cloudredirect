@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using Wpf.Ui.Appearance;
 using Wpf.Ui.Controls;
 using TextBlock = System.Windows.Controls.TextBlock;
@@ -33,10 +34,10 @@ public partial class MainWindow : FluentWindow
         var ver = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
         if (ver != null)
         {
-            var title = $"CloudRedirect v{ver.Major}.{ver.Minor}.{ver.Build}";
-            Title = title;
-            if (AppTitleBar != null)
-                AppTitleBar.Title = title;
+            var verStr = $"v{ver.Major}.{ver.Minor}.{ver.Build}";
+            Title = $"CloudRedirect {verStr}";
+            if (AppVersionText != null)
+                AppVersionText.Text = verStr;
         }
 
         var workArea = SystemParameters.WorkArea;
@@ -297,8 +298,11 @@ public partial class MainWindow : FluentWindow
     }
 
     /// <summary>
-    /// Checks GitHub for a newer version. If found, automatically downloads
-    /// and installs the update.
+    private bool _hasPromptedUpdateModal = false;
+
+    /// <summary>
+    /// Checks GitHub for a newer version. If found, displays the update badge in the title bar
+    /// and prompts the user to update now or later.
     /// </summary>
     private async Task CheckForAutoUpdateAsync()
     {
@@ -311,19 +315,75 @@ public partial class MainWindow : FluentWindow
             _pendingUpdate = result;
             var versionStr = result.TagName?.TrimStart('v') ?? result.TagName ?? "unknown";
 
-            // Automatically download and install new update
-            UpdateBannerTitle.Text = $"Updating CloudRedirect to v{versionStr}...";
-            UpdateBannerStatus.Text = "Downloading update from GitHub...";
-            UpdateNowButton.Visibility = Visibility.Collapsed;
-            UpdateSkipButton.Visibility = Visibility.Collapsed;
-            UpdateReleaseNotesButton.Visibility = Visibility.Collapsed;
-            UpdateChangelogScroll.Visibility = Visibility.Collapsed;
-            UpdateProgressBar.Visibility = Visibility.Visible;
-            UpdateProgressBar.IsIndeterminate = true;
-
+            // Always display update badge in TitleBar
+            TitleUpdateBadgeText.Text = S.Format("AppUpdate_AvailableBadge", $"v{versionStr}");
+            TitleUpdateBadge.ToolTip = S.Format("AppUpdate_BadgeTooltip", $"v{versionStr}");
+            TitleUpdateBadge.Visibility = Visibility.Visible;
             AppUpdateAvailable = true;
-            UpdateBanner.Visibility = Visibility.Visible;
 
+            // Prompt once on launch / detection
+            if (!_hasPromptedUpdateModal)
+            {
+                _hasPromptedUpdateModal = true;
+                await PromptUpdateNowOrLaterAsync(result, versionStr);
+            }
+        }
+        catch
+        {
+            // Auto-update check failures are non-fatal
+        }
+    }
+
+    private async Task PromptUpdateNowOrLaterAsync(Services.AppUpdater.CheckResult result, string versionStr)
+    {
+        var localVer = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+        var currentVer = localVer != null ? $"v{localVer.Major}.{localVer.Minor}.{localVer.Build}" : "current";
+
+        string title = S.Get("AppUpdate_PromptTitle");
+        string message = S.Format("AppUpdate_PromptMessage", $"v{versionStr}", currentVer);
+        string updateNowText = S.Get("AppUpdate_UpdateNow");
+        string laterText = S.Get("AppUpdate_Later");
+
+        bool updateNow = await Services.Dialog.PromptUpdateAsync(
+            string.IsNullOrEmpty(title) ? "New Update Available" : title,
+            string.IsNullOrEmpty(message)
+                ? $"CloudRedirect v{versionStr} is available! (Current: {currentVer})\n\nWould you like to update now or later?"
+                : message,
+            string.IsNullOrEmpty(updateNowText) ? "Update Now" : updateNowText,
+            string.IsNullOrEmpty(laterText) ? "Later" : laterText);
+
+        if (updateNow)
+        {
+            StartUpdateDownload(result);
+        }
+    }
+
+    private async void TitleUpdateBadge_Click(object sender, MouseButtonEventArgs e)
+    {
+        if (_pendingUpdate == null) return;
+        var versionStr = _pendingUpdate.TagName?.TrimStart('v') ?? _pendingUpdate.TagName ?? "unknown";
+        await PromptUpdateNowOrLaterAsync(_pendingUpdate, versionStr);
+    }
+
+    private void StartUpdateDownload(Services.AppUpdater.CheckResult result)
+    {
+        if (result?.DownloadUrl == null) return;
+        var versionStr = result.TagName?.TrimStart('v') ?? "unknown";
+
+        UpdateBannerTitle.Text = $"Updating CloudRedirect to v{versionStr}...";
+        UpdateBannerStatus.Text = "Downloading update from GitHub...";
+        UpdateNowButton.Visibility = Visibility.Collapsed;
+        UpdateSkipButton.Visibility = Visibility.Collapsed;
+        UpdateReleaseNotesButton.Visibility = Visibility.Collapsed;
+        UpdateChangelogScroll.Visibility = Visibility.Collapsed;
+        UpdateProgressBar.Visibility = Visibility.Visible;
+        UpdateProgressBar.IsIndeterminate = true;
+
+        AppUpdateAvailable = true;
+        UpdateBanner.Visibility = Visibility.Visible;
+
+        _ = Task.Run(async () =>
+        {
             var error = await Services.AppUpdater.DownloadAndApplyAsync(
                 result.DownloadUrl,
                 (pct, status) => Dispatcher.Invoke(() =>
@@ -342,64 +402,23 @@ public partial class MainWindow : FluentWindow
 
             if (error != null)
             {
-                UpdateBannerTitle.Text = $"Update to v{versionStr} failed";
-                UpdateBannerStatus.Text = error;
-                UpdateProgressBar.Visibility = Visibility.Collapsed;
-                UpdateNowButton.Content = "Retry";
-                UpdateNowButton.Visibility = Visibility.Visible;
-                UpdateSkipButton.Visibility = Visibility.Visible;
+                Dispatcher.Invoke(() =>
+                {
+                    UpdateBannerTitle.Text = $"Update to v{versionStr} failed";
+                    UpdateBannerStatus.Text = error;
+                    UpdateProgressBar.Visibility = Visibility.Collapsed;
+                    UpdateNowButton.Content = "Retry";
+                    UpdateNowButton.Visibility = Visibility.Visible;
+                    UpdateSkipButton.Visibility = Visibility.Visible;
+                });
             }
-        }
-        catch
-        {
-            // Auto-update check failures are non-fatal
-        }
+        });
     }
 
-    private async void UpdateNow_Click(object sender, RoutedEventArgs e)
+    private void UpdateNow_Click(object sender, RoutedEventArgs e)
     {
         if (_pendingUpdate?.DownloadUrl == null) return;
-
-        var versionStr = _pendingUpdate.TagName?.TrimStart('v') ?? "unknown";
-
-        // Switch banner to download mode
-        UpdateNowButton.Visibility = Visibility.Collapsed;
-        UpdateSkipButton.Visibility = Visibility.Collapsed;
-        UpdateReleaseNotesButton.Visibility = Visibility.Collapsed;
-        UpdateChangelogScroll.Visibility = Visibility.Collapsed;
-        UpdateBannerStatus.Text = $"Downloading v{versionStr}...";
-        UpdateProgressBar.Visibility = Visibility.Visible;
-        UpdateProgressBar.IsIndeterminate = true;
-
-        var error = await Services.AppUpdater.DownloadAndApplyAsync(
-            _pendingUpdate.DownloadUrl,
-            (pct, status) => Dispatcher.Invoke(() =>
-            {
-                UpdateBannerStatus.Text = status;
-                if (pct >= 0)
-                {
-                    UpdateProgressBar.IsIndeterminate = false;
-                    UpdateProgressBar.Value = pct;
-                }
-                else
-                {
-                    UpdateProgressBar.IsIndeterminate = true;
-                }
-            }));
-
-        if (error != null)
-        {
-            UpdateBannerTitle.Text = "Update failed";
-            UpdateBannerStatus.Text = error;
-            UpdateProgressBar.Visibility = Visibility.Collapsed;
-            UpdateBanner.Background = new System.Windows.Media.SolidColorBrush(
-                System.Windows.Media.Color.FromArgb(0x33, 0xC4, 0x2B, 0x1C));
-            UpdateBanner.BorderBrush = new System.Windows.Media.SolidColorBrush(
-                System.Windows.Media.Color.FromRgb(0xC4, 0x2B, 0x1C));
-            UpdateNowButton.Visibility = Visibility.Visible;
-            UpdateSkipButton.Visibility = Visibility.Visible;
-        }
-        // If successful, the process will have exited already
+        StartUpdateDownload(_pendingUpdate);
     }
 
     private void UpdateReleaseNotes_Click(object sender, RoutedEventArgs e)
@@ -465,12 +484,21 @@ public partial class MainWindow : FluentWindow
     {
         Dispatcher.Invoke(() =>
         {
-            AppTitleBar.Title = S.Get("MainWindow_TitleBar");
+            if (TitleBarAppNameText != null)
+                TitleBarAppNameText.Text = S.Get("MainWindow_TitleBar");
             Title = S.Get("MainWindow_Title");
             UpdateSkipButton.Content = S.Get("AppUpdate_Skip");
             UpdateNowButton.Content = S.Get("AppUpdate_UpdateNow");
             UpdateReleaseNotesButton.Content = S.Get("AppUpdate_ReleaseNotes");
             BackToDashboardBtn.Content = S.Get("Nav_BackToDashboard");
+
+            if (_pendingUpdate != null)
+            {
+                var versionStr = _pendingUpdate.TagName?.TrimStart('v') ?? _pendingUpdate.TagName ?? "unknown";
+                TitleUpdateBadgeText.Text = S.Format("AppUpdate_AvailableBadge", $"v{versionStr}");
+                TitleUpdateBadge.ToolTip = S.Format("AppUpdate_BadgeTooltip", $"v{versionStr}");
+            }
+
             Services.UiZoomManager.Instance.RefreshDisplay();
 
             RefreshCurrentPage();

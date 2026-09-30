@@ -63,6 +63,14 @@ public class UiZoomManager
         {
             _window.Dispatcher.InvokeAsync(() =>
             {
+                if (_rootFrame.Content is Pages.SuoRemotePage)
+                {
+                    // WebView2 (HwndHost) in WPF does not support LayoutTransform;
+                    // Any ScaleTransform != 1.0 causes WebView2 to render blank/black.
+                    ApplyScale(1.0, false);
+                    return;
+                }
+
                 if (IsAutoFit)
                 {
                     RecalculateAutoFitImmediate();
@@ -123,6 +131,12 @@ public class UiZoomManager
 
     public void ZoomIn()
     {
+        if (_rootFrame?.Content is Pages.SuoRemotePage suoPage)
+        {
+            suoPage.ZoomIn();
+            return;
+        }
+
         _debounceTimer?.Stop();
         IsAutoFit = false;
         AppSettings.AutoFitZoom = false;
@@ -136,6 +150,12 @@ public class UiZoomManager
 
     public void ZoomOut()
     {
+        if (_rootFrame?.Content is Pages.SuoRemotePage suoPage)
+        {
+            suoPage.ZoomOut();
+            return;
+        }
+
         _debounceTimer?.Stop();
         IsAutoFit = false;
         AppSettings.AutoFitZoom = false;
@@ -202,6 +222,12 @@ public class UiZoomManager
     {
         if (_contentHost == null || _rootFrame == null || _rootFrame.Content is not Page page)
             return;
+
+        if (page is Pages.SuoRemotePage)
+        {
+            ApplyScale(1.0, false);
+            return;
+        }
 
         double availableHeight = _contentHost.ActualHeight;
         double availableWidth = _contentHost.ActualWidth;

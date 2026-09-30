@@ -1926,6 +1926,24 @@ Are you sure?</value>
   <data name="AppUpdate_ReleaseNotes" xml:space="preserve">
     <value>Release Notes</value>
   </data>
+  <data name="AppUpdate_AvailableBadge" xml:space="preserve">
+    <value>Update: {0}</value>
+  </data>
+  <data name="AppUpdate_PromptTitle" xml:space="preserve">
+    <value>New Update Available</value>
+  </data>
+  <data name="AppUpdate_PromptMessage" xml:space="preserve">
+    <value>CloudRedirect {0} is available! (Current: {1})&#10;&#10;Would you like to update now or later?</value>
+  </data>
+  <data name="AppUpdate_Later" xml:space="preserve">
+    <value>Later</value>
+  </data>
+  <data name="AppUpdate_BadgeTooltip" xml:space="preserve">
+    <value>CloudRedirect {0} is available. Click to update now.</value>
+  </data>
+  <data name="AppUpdate_CurrentVersionTooltip" xml:space="preserve">
+    <value>Current CloudRedirect version</value>
+  </data>
 
   <!-- ═══════════════════════════════════════════════════════════════════ -->
   <!-- News Page                                                           -->

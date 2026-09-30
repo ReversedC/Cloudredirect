@@ -79,6 +79,30 @@ public partial class SuoRemotePage : Page
         }
     }
 
+    public void ZoomIn()
+    {
+        try
+        {
+            if (_isWebViewInitialized && DashboardWebView?.CoreWebView2 != null)
+            {
+                DashboardWebView.ZoomFactor = Math.Min(2.0, Math.Round(DashboardWebView.ZoomFactor + 0.1, 2));
+            }
+        }
+        catch { }
+    }
+
+    public void ZoomOut()
+    {
+        try
+        {
+            if (_isWebViewInitialized && DashboardWebView?.CoreWebView2 != null)
+            {
+                DashboardWebView.ZoomFactor = Math.Max(0.5, Math.Round(DashboardWebView.ZoomFactor - 0.1, 2));
+            }
+        }
+        catch { }
+    }
+
     private async Task InitWebViewAsync()
     {
         if (_isWebViewInitialized) return;
@@ -89,12 +113,28 @@ public partial class SuoRemotePage : Page
             var userDataFolder = Path.Combine(appData, "CloudRedirect", "webview2_profile");
             Directory.CreateDirectory(userDataFolder);
 
-            var env = await CoreWebView2Environment.CreateAsync(null, userDataFolder);
+            var options = new CoreWebView2EnvironmentOptions(
+                "--enable-features=DnsOverHttps --dns-over-https-mode=automatic");
+
+            var env = await CoreWebView2Environment.CreateAsync(null, userDataFolder, options);
             await DashboardWebView.EnsureCoreWebView2Async(env);
+
+            DashboardWebView.DefaultBackgroundColor = System.Drawing.Color.FromArgb(0x10, 0x18, 0x22);
+            DashboardWebView.CoreWebView2.Settings.IsStatusBarEnabled = false;
+            DashboardWebView.CoreWebView2.Settings.AreDevToolsEnabled = true;
+
+            DashboardWebView.NavigationStarting += (_, _) =>
+            {
+                ErrorCard.Visibility = Visibility.Collapsed;
+            };
 
             DashboardWebView.NavigationCompleted += (_, args) =>
             {
                 LoadingOverlay.Visibility = Visibility.Collapsed;
+                if (!args.IsSuccess)
+                {
+                    ShowError($"Could not connect to SUO Remote Dashboard ({args.WebErrorStatus}). Please check your connection or click 'Open in Browser'.");
+                }
             };
 
             DashboardWebView.CoreWebView2.Navigate(DashboardUrl);
@@ -103,9 +143,14 @@ public partial class SuoRemotePage : Page
         catch (Exception ex)
         {
             LoadingOverlay.Visibility = Visibility.Collapsed;
-            await Services.Dialog.ShowErrorAsync("WebView2 Initialization Failed",
-                $"Could not initialize embedded dashboard:\n{ex.Message}\n\nYou can click 'Open in Browser' to view the dashboard in your default browser.");
+            ShowError(ex.Message);
         }
+    }
+
+    private void ShowError(string message)
+    {
+        ErrorCardText.Text = message;
+        ErrorCard.Visibility = Visibility.Visible;
     }
 
     private async void UpdateSuo_Click(object sender, RoutedEventArgs e)
@@ -164,11 +209,16 @@ public partial class SuoRemotePage : Page
 
     private void Reload_Click(object sender, RoutedEventArgs e)
     {
+        ErrorCard.Visibility = Visibility.Collapsed;
         if (_isWebViewInitialized)
         {
             LoadingOverlay.Visibility = Visibility.Visible;
             LoadingStatusText.Text = "Reloading SUO Remote Dashboard...";
             DashboardWebView.Reload();
+        }
+        else
+        {
+            _ = InitWebViewAsync();
         }
     }
 

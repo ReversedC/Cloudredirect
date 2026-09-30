@@ -25,6 +25,57 @@
                 <ui:TitleBar.Icon>
                     <ui:ImageIcon Source="pack://application:,,,/steam_logo3.ico" />
                 </ui:TitleBar.Icon>
+                <ui:TitleBar.Header>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock x:Name="TitleBarAppNameText"
+                                   Text="{res:Loc MainWindow_TitleBar}"
+                                   FontSize="12"
+                                   FontWeight="Normal"
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                   VerticalAlignment="Center" />
+
+                        <!-- CloudRedirect Version Badge -->
+                        <Border x:Name="AppVersionBadge"
+                                Background="#141E28"
+                                BorderBrush="#253548"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="6,1"
+                                Margin="8,0,0,0"
+                                VerticalAlignment="Center"
+                                ToolTip="{res:Loc AppUpdate_CurrentVersionTooltip}">
+                            <TextBlock x:Name="AppVersionText"
+                                       Text="v2.9.65"
+                                       FontSize="11"
+                                       FontWeight="SemiBold"
+                                       Foreground="#66C0F4"
+                                       VerticalAlignment="Center" />
+                        </Border>
+
+                        <!-- Update Available Badge (Prompt to update now or later) -->
+                        <Border x:Name="TitleUpdateBadge"
+                                Visibility="Collapsed"
+                                Background="#16341B"
+                                BorderBrush="#5BA32B"
+                                BorderThickness="1"
+                                CornerRadius="9"
+                                Padding="7,2"
+                                Margin="8,0,0,0"
+                                Cursor="Hand"
+                                ToolTip="{res:Loc AppUpdate_BadgeTooltip}"
+                                MouseLeftButtonUp="TitleUpdateBadge_Click">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <ui:SymbolIcon Symbol="ArrowDownload16" FontSize="11" Foreground="#A4D007" Margin="0,0,4,0" VerticalAlignment="Center" />
+                                <TextBlock x:Name="TitleUpdateBadgeText"
+                                           Text="{res:Loc AppUpdate_AvailableBadge}"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           Foreground="#A4D007"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ui:TitleBar.Header>
                 <ui:TitleBar.TrailingContent>
                     <!-- Responsive Auto-Fit & Zoom Controls Pill -->
                     <Border VerticalAlignment="Center" Margin="0,0,8,0"

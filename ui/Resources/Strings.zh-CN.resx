@@ -1887,6 +1887,24 @@
   <data name="AppUpdate_ReleaseNotes" xml:space="preserve">
     <value>发行说明</value>
   </data>
+  <data name="AppUpdate_AvailableBadge" xml:space="preserve">
+    <value>更新: {0}</value>
+  </data>
+  <data name="AppUpdate_PromptTitle" xml:space="preserve">
+    <value>有新版本可用</value>
+  </data>
+  <data name="AppUpdate_PromptMessage" xml:space="preserve">
+    <value>CloudRedirect {0} 现已发布！（当前版本: {1}）&#10;&#10;您要立即更新还是稍后更新？</value>
+  </data>
+  <data name="AppUpdate_Later" xml:space="preserve">
+    <value>稍后</value>
+  </data>
+  <data name="AppUpdate_BadgeTooltip" xml:space="preserve">
+    <value>CloudRedirect {0} 可用。点击即可立即更新。</value>
+  </data>
+  <data name="AppUpdate_CurrentVersionTooltip" xml:space="preserve">
+    <value>当前 CloudRedirect 版本</value>
+  </data>
 
   <!-- ═══════════════════════════════════════════════════════════════════ -->
   <!-- News Page                                                           -->

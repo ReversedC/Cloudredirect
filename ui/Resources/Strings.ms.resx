@@ -1811,6 +1811,24 @@ Fail can be restored from the Pulihkan tab. Continue?</value>
   <data name="AppUpdate_ReleaseNotes" xml:space="preserve">
     <value>Nota Keluaran</value>
   </data>
+  <data name="AppUpdate_AvailableBadge" xml:space="preserve">
+    <value>Kemas Kini: {0}</value>
+  </data>
+  <data name="AppUpdate_PromptTitle" xml:space="preserve">
+    <value>Kemas Kini Baharu Tersedia</value>
+  </data>
+  <data name="AppUpdate_PromptMessage" xml:space="preserve">
+    <value>CloudRedirect {0} kini tersedia! (Semasa: {1})&#10;&#10;Adakah anda ingin mengemas kini sekarang atau kemudian?</value>
+  </data>
+  <data name="AppUpdate_Later" xml:space="preserve">
+    <value>Kemudian</value>
+  </data>
+  <data name="AppUpdate_BadgeTooltip" xml:space="preserve">
+    <value>CloudRedirect {0} tersedia. Klik untuk mengemas kini sekarang.</value>
+  </data>
+  <data name="AppUpdate_CurrentVersionTooltip" xml:space="preserve">
+    <value>Versi semasa CloudRedirect</value>
+  </data>
   <data name="News_WhatsNew" xml:space="preserve">
     <value>What&#x27;s new?</value>
   </data>
