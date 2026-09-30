@@ -201,6 +201,7 @@ public partial class UniversalSavesPage : Page
         var detected = await System.Threading.Tasks.Task.Run(() => GameSaveAutoDetector.ScanInstalledGameSaves());
         var existing = UniversalSaveWatcherService.GetProfiles();
         var newlyFound = detected.Where(d => !existing.Any(ex =>
+            (d.AppId > 0 && ex.SteamAppId == d.AppId) ||
             ex.GameName.Equals(d.GameName, StringComparison.OrdinalIgnoreCase) ||
             ex.ExpandedSavePath.Equals(d.SaveFolderPath, StringComparison.OrdinalIgnoreCase)
         )).ToList();
@@ -294,6 +295,7 @@ public partial class UniversalSavesPage : Page
         if (res == Wpf.Ui.Controls.MessageBoxResult.Primary)
         {
             int added = 0;
+            var steamPath = SteamDetector.FindSteamPath();
             foreach (var (cb, game) in checkBoxes)
             {
                 if (cb.IsChecked == true)
@@ -308,7 +310,9 @@ public partial class UniversalSavesPage : Page
                     {
                         GameName = game.GameName,
                         ProcessName = proc,
-                        SaveFolderPath = game.SaveFolderPath
+                        SaveFolderPath = game.SaveFolderPath,
+                        SteamAppId = game.AppId,
+                        IsGenuineSteamGame = game.AppId > 0 && !SteamDetector.IsLuaGame(game.AppId, steamPath)
                     });
                     added++;
                 }
@@ -317,6 +321,7 @@ public partial class UniversalSavesPage : Page
             RefreshList();
             if (added > 0)
             {
+                SteamWebUiPatcher.AutoRefreshIfEnabled(steamPath);
                 TrayIconService.Instance.ShowNotification(
                     "Game Saves Configured",
                     $"Successfully added {added} games to Universal Cloud Saves!");

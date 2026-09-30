@@ -12,7 +12,8 @@ public record DetectedGameSave(
     string SaveFolderPath,
     int FileCount,
     long TotalBytes,
-    DateTime LastModified
+    DateTime LastModified,
+    uint AppId = 0
 )
 {
     public string FormattedSize
@@ -184,8 +185,7 @@ public static class GameSaveAutoDetector
             }
         }
 
-        // 3. Dynamic fuzzy search across common save roots
-        var candidateTokens = GenerateFuzzyTokens(gameName, processName);
+        // 3. Dynamic search across common save roots matching the exact game
         foreach (var root in CommonSaveRoots)
         {
             if (!Directory.Exists(root)) continue;
@@ -195,14 +195,10 @@ public static class GameSaveAutoDetector
                 foreach (var dir in Directory.GetDirectories(root))
                 {
                     var dirName = Path.GetFileName(dir);
-                    if (candidateTokens.Any(token => dirName.Contains(token, StringComparison.OrdinalIgnoreCase)))
+                    if (IsValidGameDirectoryMatch(dirName, gameName, processName))
                     {
-                        // Check if this directory or a subfolder contains saves
                         var saveSubDir = FindSaveSubfolder(dir);
-                        if (saveSubDir != null)
-                            return saveSubDir;
-
-                        return dir;
+                        return saveSubDir ?? dir;
                     }
 
                     // For studio folders like "Larian Studios", "CD Projekt Red", "FromSoftware", check 1 level down
@@ -211,7 +207,7 @@ public static class GameSaveAutoDetector
                         foreach (var sub in Directory.GetDirectories(dir))
                         {
                             var subName = Path.GetFileName(sub);
-                            if (candidateTokens.Any(token => subName.Contains(token, StringComparison.OrdinalIgnoreCase)))
+                            if (IsValidGameDirectoryMatch(subName, gameName, processName))
                             {
                                 var deepSave = FindSaveSubfolder(sub);
                                 return deepSave ?? sub;
@@ -418,72 +414,181 @@ public static class GameSaveAutoDetector
     /// <summary>
     /// Scans the PC for all game save folders that currently exist on disk.
     /// </summary>
+    /// <summary>
+    /// Scans the PC for game save folders that currently exist on disk.
+    /// Strictly filters to only authentic Steam games installed in Steam libraries,
+    /// remote unlocked games, and intercepted games. Non-game AppData directories are excluded.
+    /// </summary>
     public static List<DetectedGameSave> ScanInstalledGameSaves()
     {
         var results = new List<DetectedGameSave>();
         var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var seenAppIds = new HashSet<uint>();
 
-        // 1. Check known signature games (Community Database)
-        if (AppSettings.AutoCommunityDatabase)
+        var steamPath = SteamDetector.FindSteamPath();
+        if (string.IsNullOrEmpty(steamPath) || !Directory.Exists(steamPath))
+            return results;
+
+        var libraryPaths = SteamGameScannerService.GetLibraryPaths(steamPath);
+
+        // 1. Enumerate all installed Steam games from all library folders
+        var steamGames = new List<(uint AppId, string Name, string InstallDir)>();
+        foreach (var libPath in libraryPaths)
         {
-            foreach (var kvp in KnownGameSaveRelativePaths)
+            var steamAppsDir = Path.Combine(libPath, "steamapps");
+            if (!Directory.Exists(steamAppsDir)) continue;
+
+            foreach (var manifestPath in Directory.EnumerateFiles(steamAppsDir, "appmanifest_*.acf"))
             {
-                foreach (var raw in kvp.Value)
+                try
                 {
-                    var expanded = ResolvePathWithWildcards(raw);
-                    if (expanded != null && Directory.Exists(expanded) && seenPaths.Add(expanded))
+                    var (appId, name, installDirName) = SteamGameScannerService.ParseManifest(manifestPath);
+                    if (appId == 0 || SteamGameScannerService.IgnoredAppIds.Contains(appId)) continue;
+                    if (string.IsNullOrWhiteSpace(name))
+                        name = $"Steam App {appId}";
+
+                    // Skip tools, servers, runtimes
+                    if (name.Contains("Steamworks", StringComparison.OrdinalIgnoreCase) ||
+                        name.Contains("Proton", StringComparison.OrdinalIgnoreCase) ||
+                        name.Contains("Soundtrack", StringComparison.OrdinalIgnoreCase) ||
+                        name.Contains("Dedicated Server", StringComparison.OrdinalIgnoreCase))
                     {
-                        try
-                        {
-                            var files = Directory.GetFiles(expanded, "*", SearchOption.AllDirectories);
-                            if (files.Length > 0)
-                            {
-                                long totalBytes = files.Sum(f => new FileInfo(f).Length);
-                                var lastMod = files.Max(f => File.GetLastWriteTime(f));
-                                var cleanName = FormatGameNameFromToken(kvp.Key);
-                                results.Add(new DetectedGameSave(cleanName, kvp.Key, expanded, files.Length, totalBytes, lastMod));
-                            }
-                        }
-                        catch { }
+                        continue;
+                    }
+
+                    var fullInstallDir = Path.Combine(steamAppsDir, "common", installDirName);
+                    if (seenAppIds.Add(appId))
+                    {
+                        steamGames.Add((appId, name, fullInstallDir));
                     }
                 }
+                catch { }
             }
         }
 
-        // 2. Scan CommonSaveRoots for existing game directories
-        foreach (var root in CommonSaveRoots)
+        // 2. Also include games from remote_unlock.json and intercept_apps
+        var remoteUnlocked = SteamDetector.GetRemoteUnlockedAppIds(steamPath);
+        var interceptApps = SteamDetector.GetInterceptAppIds(steamPath);
+        var extraAppIds = remoteUnlocked.Concat(interceptApps).Distinct();
+        foreach (var appId in extraAppIds)
         {
-            if (!Directory.Exists(root)) continue;
-
-            try
+            if (seenAppIds.Add(appId))
             {
-                foreach (var dir in Directory.GetDirectories(root))
-                {
-                    var dirName = Path.GetFileName(dir);
-                    if (IsIgnoredSystemFolder(dirName)) continue;
+                var installDir = AppCloudConfig.FindGameInstallDir(steamPath, appId);
+                var appName = !string.IsNullOrEmpty(installDir) ? Path.GetFileName(installDir) : $"Steam App {appId}";
+                steamGames.Add((appId, appName, installDir ?? ""));
+            }
+        }
 
-                    // If folder contains save indicators or subdirectories like "SavedGames", "Saves", "Save"
-                    var saveDir = FindSaveSubfolder(dir) ?? dir;
-                    if (seenPaths.Add(saveDir))
+        // 3. For each Steam game, detect its save directory
+        foreach (var (appId, name, installDir) in steamGames)
+        {
+            string? saveDir = DetectSaveFolder(name, null, appId);
+
+            if (string.IsNullOrEmpty(saveDir) && !string.IsNullOrEmpty(installDir) && Directory.Exists(installDir))
+            {
+                saveDir = ScanInstallDirForSaves(installDir);
+            }
+
+            if (!string.IsNullOrEmpty(saveDir) && Directory.Exists(saveDir) && seenPaths.Add(saveDir))
+            {
+                try
+                {
+                    var files = Directory.GetFiles(saveDir, "*", SearchOption.AllDirectories);
+                    if (files.Length > 0)
                     {
-                        try
-                        {
-                            var files = Directory.GetFiles(saveDir, "*", SearchOption.AllDirectories);
-                            if (files.Length > 0 && files.Length < 1000)
-                            {
-                                long totalBytes = files.Sum(f => new FileInfo(f).Length);
-                                var lastMod = files.Max(f => File.GetLastWriteTime(f));
-                                results.Add(new DetectedGameSave(dirName, dirName, saveDir, files.Length, totalBytes, lastMod));
-                            }
-                        }
-                        catch { }
+                        long totalBytes = files.Sum(f => new FileInfo(f).Length);
+                        var lastMod = files.Max(f => File.GetLastWriteTime(f));
+                        string procName = FindGameExecutable(installDir, name);
+
+                        results.Add(new DetectedGameSave(name, procName, saveDir, files.Length, totalBytes, lastMod, appId));
                     }
                 }
+                catch { }
             }
-            catch { }
         }
 
         return results.OrderByDescending(r => r.LastModified).ToList();
+    }
+
+    /// <summary>
+    /// Discovers the primary game executable inside an installation directory.
+    /// </summary>
+    public static string FindGameExecutable(string? installDir, string gameName)
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(installDir) && Directory.Exists(installDir))
+            {
+                var exeCandidates = Directory.GetFiles(installDir, "*.exe", SearchOption.AllDirectories)
+                    .Select(Path.GetFileName)
+                    .Where(e => !string.IsNullOrEmpty(e))
+                    .Where(e => !e.StartsWith("UnityCrashHandler", StringComparison.OrdinalIgnoreCase) &&
+                                !e.StartsWith("CrashReportClient", StringComparison.OrdinalIgnoreCase) &&
+                                !e.StartsWith("unins", StringComparison.OrdinalIgnoreCase) &&
+                                !e.StartsWith("DXSETUP", StringComparison.OrdinalIgnoreCase) &&
+                                !e.StartsWith("vcredist", StringComparison.OrdinalIgnoreCase) &&
+                                !e.StartsWith("EasyAntiCheat", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+                var exact = exeCandidates.FirstOrDefault(e =>
+                    e.Equals(Path.GetFileName(installDir) + ".exe", StringComparison.OrdinalIgnoreCase) ||
+                    e.Equals(gameName.Replace(" ", "") + ".exe", StringComparison.OrdinalIgnoreCase) ||
+                    e.Equals(gameName + ".exe", StringComparison.OrdinalIgnoreCase));
+
+                if (exact != null) return exact;
+                if (exeCandidates.Count > 0) return exeCandidates[0];
+            }
+        }
+        catch { }
+
+        return !string.IsNullOrWhiteSpace(gameName) ? gameName.Replace(" ", "") + ".exe" : "game.exe";
+    }
+
+    /// <summary>
+    /// Validates whether a filesystem folder name belongs to the specific game, preventing false positive matches.
+    /// </summary>
+    public static bool IsValidGameDirectoryMatch(string dirName, string gameName, string? processName)
+    {
+        if (string.IsNullOrWhiteSpace(dirName) || string.IsNullOrWhiteSpace(gameName))
+            return false;
+
+        // Never match generic system, driver, or launcher directories
+        if (dirName.Equals("Steam", StringComparison.OrdinalIgnoreCase) ||
+            dirName.Equals("IObit", StringComparison.OrdinalIgnoreCase) ||
+            dirName.Equals("Microsoft", StringComparison.OrdinalIgnoreCase) ||
+            dirName.Equals("Temp", StringComparison.OrdinalIgnoreCase) ||
+            dirName.Equals("Packages", StringComparison.OrdinalIgnoreCase) ||
+            dirName.Equals("CrashReportClient", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var cleanDir = System.Text.RegularExpressions.Regex.Replace(dirName, @"[^\w]", "").ToLowerInvariant();
+        var cleanGame = System.Text.RegularExpressions.Regex.Replace(gameName, @"[^\w]", "").ToLowerInvariant();
+
+        if (cleanGame.StartsWith("steamapp") || cleanGame.StartsWith("steamgame"))
+            return false;
+
+        if (cleanDir == cleanGame || cleanDir.Contains(cleanGame) || (cleanGame.Length >= 5 && cleanDir.StartsWith(cleanGame)))
+            return true;
+
+        if (!string.IsNullOrEmpty(processName))
+        {
+            var cleanProc = Path.GetFileNameWithoutExtension(processName).ToLowerInvariant()
+                .Replace("-win64-shipping", "").Replace("win64", "");
+            if (cleanProc.Length >= 4 && (cleanDir == cleanProc || cleanDir.Contains(cleanProc)))
+                return true;
+        }
+
+        // For multi-word games (e.g. "Mars Attracts", "Dragon Shelter"), ensure all significant words match
+        var words = gameName.Split(new[] { ' ', ':', '-', '_' }, StringSplitOptions.RemoveEmptyEntries)
+            .Where(w => w.Length >= 3 && !w.Equals("the", StringComparison.OrdinalIgnoreCase) && !w.Equals("demo", StringComparison.OrdinalIgnoreCase))
+            .Select(w => w.ToLowerInvariant())
+            .ToList();
+
+        if (words.Count >= 2 && words.All(w => cleanDir.Contains(w)))
+            return true;
+
+        return false;
     }
 
     private static string? ResolvePathWithWildcards(string rawPath)

@@ -34,7 +34,7 @@ public record SteamScanSummary(
 /// </summary>
 public static class SteamGameScannerService
 {
-    private static readonly HashSet<uint> IgnoredAppIds = new()
+    public static readonly HashSet<uint> IgnoredAppIds = new()
     {
         228980,  // Steamworks Common Redistributables
         1070560, // Steam Linux Runtime
@@ -170,7 +170,7 @@ public static class SteamGameScannerService
         });
     }
 
-    private static (uint AppId, string Name, string InstallDir) ParseManifest(string path)
+    public static (uint AppId, string Name, string InstallDir) ParseManifest(string path)
     {
         uint appId = 0;
         string name = "";
@@ -215,7 +215,7 @@ public static class SteamGameScannerService
         return line.Substring(firstQuote + 1, secondQuote - firstQuote - 1);
     }
 
-    private static List<string> GetLibraryPaths(string steamPath)
+    public static List<string> GetLibraryPaths(string steamPath)
     {
         var paths = new List<string> { steamPath };
         try

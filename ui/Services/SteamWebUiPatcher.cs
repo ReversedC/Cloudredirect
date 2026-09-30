@@ -157,6 +157,42 @@ public static class SteamWebUiPatcher
         }
         catch { }
 
+        // 3. Scan remote_unlock.json fallback
+        try
+        {
+            var remoteUnlocked = SteamDetector.GetRemoteUnlockedAppIds(steamPath);
+            foreach (var id in remoteUnlocked)
+            {
+                appIds.Add(id);
+            }
+        }
+        catch { }
+
+        // 4. Scan Zero-Lua intercepted apps
+        try
+        {
+            var intercepted = SteamDetector.GetInterceptAppIds(steamPath);
+            foreach (var id in intercepted)
+            {
+                appIds.Add(id);
+            }
+        }
+        catch { }
+
+        // 5. Scan Universal Cloud Saves monitored Steam games
+        try
+        {
+            var profiles = UniversalSaveWatcherService.GetProfiles();
+            foreach (var p in profiles)
+            {
+                if (p.SteamAppId > 0)
+                {
+                    appIds.Add(p.SteamAppId);
+                }
+            }
+        }
+        catch { }
+
         return appIds;
     }
 
@@ -173,7 +209,8 @@ public static class SteamWebUiPatcher
         var targetKeys = new[]
         {
             "CloudIconSVG", "PlayBarCloudStatusContainer", "CloudStatusIcon", "CloudStatusRow",
-            "PlayBar", "Container", "CapsuleContainer", "GridItem", "GameListEntryContainer"
+            "PlayBar", "Container", "InnerContainer", "AppDetailsOverviewPanel", "Header",
+            "CapsuleContainer", "GridItem", "GameListEntryContainer", "AppBody"
         };
         var regexes = new Dictionary<string, Regex>();
         foreach (var key in targetKeys)
@@ -235,17 +272,34 @@ public static class SteamWebUiPatcher
             catch { }
         }
 
-        // Build selectors matching any asset/link of the Lua games
+        // Build selectors matching any asset/link of the Lua / managed games
         var appSelectors = new List<string>();
         foreach (var appId in luaAppIds.OrderBy(id => id))
         {
             appSelectors.Add($"[data-appid=\"{appId}\"]");
+            appSelectors.Add($"a[href*=\"/app/{appId}\"]");
+            appSelectors.Add($"[data-panel*=\"{appId}\"]");
         }
 
         var hasClause = string.Join(", ", appSelectors);
 
-        // Containers: PlayBar, Game Details Container, or App Properties Dialog
-        var containers = new List<string> { "div[class*=\"PlayBar\"]", "div[class*=\"Container\"]", "dialog" };
+        // Containers: InnerContainer, AppDetailsOverviewPanel, Game Details Container, PlayBar, or App Properties Dialog
+        var containers = new List<string>
+        {
+            "div[class*=\"InnerContainer\"]",
+            "div[class*=\"AppDetailsOverviewPanel\"]",
+            "div[class*=\"Container\"]",
+            "div[class*=\"gamepagedetails\"]",
+            "div[class*=\"GameDetails\"]",
+            "div[class*=\"DesktopUI\"]",
+            "div[class*=\"FullAnchor\"]",
+            "dialog",
+            "body"
+        };
+        if (dynamicClasses.TryGetValue("InnerContainer", out var ic) && !string.IsNullOrWhiteSpace(ic))
+            containers.Add($"div.{ic}");
+        if (dynamicClasses.TryGetValue("AppDetailsOverviewPanel", out var adop) && !string.IsNullOrWhiteSpace(adop))
+            containers.Add($"div.{adop}");
         if (dynamicClasses.TryGetValue("PlayBar", out var pb) && !string.IsNullOrWhiteSpace(pb))
             containers.Add($"div.{pb}");
         if (dynamicClasses.TryGetValue("Container", out var ct) && !string.IsNullOrWhiteSpace(ct))
@@ -256,9 +310,12 @@ public static class SteamWebUiPatcher
         // Targets: Cloud status SVG icon elements
         var targets = new List<string>
         {
-            "svg[class*=\"CloudIconSVG\"]",
             "div[class*=\"PlayBarCloudStatusContainer\"] svg",
-            "span[class*=\"CloudStatusIcon\"] svg"
+            "span[class*=\"CloudStatusIcon\"] svg",
+            "svg[class*=\"CloudIconSVG\"]",
+            "div._2cRYms-zZc4misk9tj3bt8 svg",
+            "span._1PrjvpmQ3CUjn45PN1Ed6V svg",
+            "svg.MbTRimZpGCATmn39ae8RT"
         };
         if (dynamicClasses.TryGetValue("CloudIconSVG", out var cloudSvg) && !string.IsNullOrWhiteSpace(cloudSvg))
             targets.Add($"svg.{cloudSvg}");
@@ -270,7 +327,7 @@ public static class SteamWebUiPatcher
         var targetStr = string.Join(", ", targets.Distinct());
 
         // Capsules
-        var capsuleContainers = new List<string> { "div[class*=\"CapsuleContainer\"]", "div[class*=\"Capsule\"]", "div[class*=\"GridItem\"]" };
+        var capsuleContainers = new List<string> { "div[class*=\"CapsuleContainer\"]", "div[class*=\"Capsule\"]", "div[class*=\"GridItem\"]", "div[class*=\"AppBody\"]" };
         if (dynamicClasses.TryGetValue("CapsuleContainer", out var cc) && !string.IsNullOrWhiteSpace(cc))
             capsuleContainers.Add($"div.{cc}");
         if (dynamicClasses.TryGetValue("GridItem", out var gi) && !string.IsNullOrWhiteSpace(gi))
@@ -278,7 +335,7 @@ public static class SteamWebUiPatcher
         var capsuleStr = string.Join(", ", capsuleContainers.Distinct());
 
         // Sidebar game list entries
-        var sidebarContainers = new List<string> { "div[class*=\"GameListEntryContainer\"]", "div[class*=\"_1vO6BoiVslZgs1kqDGdUs8\"]" };
+        var sidebarContainers = new List<string> { "div[class*=\"GameListEntryContainer\"]", "div[class*=\"_1vO6BoiVslZgs1kqDGdUs8\"]", "div._1vO6BoiVslZgs1kqDGdUs8" };
         if (dynamicClasses.TryGetValue("GameListEntryContainer", out var glec) && !string.IsNullOrWhiteSpace(glec))
             sidebarContainers.Add($"div.{glec}");
         var sidebarStr = string.Join(", ", sidebarContainers.Distinct());
@@ -292,19 +349,22 @@ public static class SteamWebUiPatcher
     background-repeat: no-repeat !important;
     background-position: center !important;
     background-size: contain !important;
-    width: 100% !important;
-    height: 100% !important;
-    min-width: 16px !important;
-    min-height: 16px !important;
-    max-width: 32px !important;
-    max-height: 32px !important;
-    filter: drop-shadow(0 0 4px rgba(0, 210, 255, 0.45)) !important;
+    display: inline-block !important;
+    width: 22px !important;
+    height: 22px !important;
+    min-width: 18px !important;
+    min-height: 18px !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    filter: drop-shadow(0 0 4px rgba(0, 210, 255, 0.55)) !important;
 }}
 
 :is({containerStr}):has(
     :is({hasClause})
 ) :is({targetStr}) > * {{
     display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
 }}
 
 /* 2. Steam Library Grid: Visual Glow & Cloud Badge for Redirected/SUO Games */
@@ -378,27 +438,6 @@ public static class SteamWebUiPatcher
                 if (string.IsNullOrEmpty(steamPath) || !Directory.Exists(steamPath))
                     return (false, "Steam installation path could not be located.");
 
-                var cssDir = Path.Combine(steamPath, "steamui", "css");
-                var cssPath = Path.Combine(cssDir, "library.css");
-
-                // Clean native library.css if present to preserve exact stock checksum/size (75426 bytes)
-                const string legacyMarkerStart = "/* === BEGIN CLOUDREDIRECT STEAM CLOUD ICON === */";
-                const string legacyMarkerEnd = "/* === END CLOUDREDIRECT STEAM CLOUD ICON === */";
-                if (File.Exists(cssPath))
-                {
-                    try
-                    {
-                        var existingContent = File.ReadAllText(cssPath);
-                        var cleaned = StripMarkerSection(existingContent, legacyMarkerStart, legacyMarkerEnd);
-                        cleaned = StripMarkerSection(cleaned, MarkerStart, MarkerEnd);
-                        if (existingContent != cleaned)
-                        {
-                            FileUtils.AtomicWriteAllText(cssPath, cleaned);
-                        }
-                    }
-                    catch { }
-                }
-
                 var dynamicClasses = ScanDynamicClasses(steamPath);
                 var luaAppIds = GetLuaAppIds(steamPath);
 
@@ -406,7 +445,37 @@ public static class SteamWebUiPatcher
                 var customIcon = Path.Combine(steamPath, "cloud_redirect", "cloud_icon.png");
                 var patchCss = GenerateCss(luaAppIds, dynamicClasses, File.Exists(customIcon) ? customIcon : null);
 
-                // Millennium quick.css (live hot-reload without modifying Steam core files)
+                const string legacyMarkerStart = "/* === BEGIN CLOUDREDIRECT STEAM CLOUD ICON === */";
+                const string legacyMarkerEnd = "/* === END CLOUDREDIRECT STEAM CLOUD ICON === */";
+
+                var cssDir = Path.Combine(steamPath, "steamui", "css");
+                var cssPath = Path.Combine(cssDir, "library.css");
+
+                // 1. Native Steam library.css (direct WebUI styling)
+                if (File.Exists(cssPath))
+                {
+                    try
+                    {
+                        var existingContent = File.ReadAllText(cssPath);
+                        existingContent = StripMarkerSection(existingContent, legacyMarkerStart, legacyMarkerEnd);
+                        existingContent = StripMarkerSection(existingContent, MarkerStart, MarkerEnd);
+
+                        var newContent = string.IsNullOrEmpty(patchCss)
+                            ? existingContent.TrimEnd() + "\n"
+                            : existingContent.TrimEnd() + "\n\n" + patchCss;
+
+                        if (File.ReadAllText(cssPath) != newContent)
+                        {
+                            FileUtils.AtomicWriteAllText(cssPath, newContent);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"[SteamWebUiPatcher] library.css write error: {ex.Message}");
+                    }
+                }
+
+                // 2. Millennium quick.css (live hot-reload)
                 var quickCss = GetMillenniumQuickCssPath(steamPath);
                 bool millenniumSynced = false;
                 if (quickCss != null)
