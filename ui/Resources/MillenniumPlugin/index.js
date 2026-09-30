@@ -82,39 +82,20 @@ var PluginEntryPointMain = function () {
             } catch (e) { }
         }
 
-        function triggerBackup(doc) {
-            __call_server_method__("trigger_backup", {});
-            try {
-                const d = doc || document;
-                const link = d.createElement('a');
-                link.href = 'cloudredirect://backup';
-                d.body.appendChild(link);
-                link.click();
-                link.remove();
-            } catch (e) { }
-        }
-
-        function openSaves(doc) {
-            __call_server_method__("open_saves", {});
-            try {
-                const d = doc || document;
-                const link = d.createElement('a');
-                link.href = 'cloudredirect://saves';
-                d.body.appendChild(link);
-                link.click();
-                link.remove();
-            } catch (e) { }
-        }
-
         function ensureStyles(doc) {
             if (!doc || !doc.head) return;
             if (doc.getElementById('cr-millennium-styles')) return;
             const style = doc.createElement('style');
             style.id = 'cr-millennium-styles';
             style.textContent = `
-                /* Never show legacy titlebar header buttons in window controls */
+                /* Never show legacy titlebar buttons in window controls */
                 #cloudredirect-header-btn,
                 .cr-nav-btn {
+                    display: none !important;
+                }
+
+                /* Suppress any clipped dropdown containers */
+                .cr-dropdown-menu {
                     display: none !important;
                 }
 
@@ -150,10 +131,6 @@ var PluginEntryPointMain = function () {
                 .cr-supernav-menu:hover .cr-supernav-btn {
                     color: #ffffff !important;
                     text-shadow: 0 0 10px rgba(255, 255, 255, 0.45) !important;
-                }
-                .cr-supernav-menu.cr-active .cr-supernav-btn {
-                    color: #ffffff !important;
-                    border-bottom: 3px solid #1a9fff !important;
                 }
                 .cr-supernav-label {
                     letter-spacing: 0.04em !important;
@@ -197,11 +174,6 @@ var PluginEntryPointMain = function () {
                     color: #ffffff;
                     box-shadow: 0 0 10px rgba(102, 192, 244, 0.35);
                 }
-                .cr-bottom-bar-btn.cr-active {
-                    background: #1c3852;
-                    border-color: #66c0f4;
-                    color: #ffffff;
-                }
 
                 .cr-status-dot {
                     width: 7px;
@@ -220,144 +192,6 @@ var PluginEntryPointMain = function () {
                     flex-shrink: 0;
                 }
 
-                /* Dropdown Menu Container */
-                .cr-dropdown-menu {
-                    position: fixed;
-                    width: 320px;
-                    background: linear-gradient(135deg, #1b2838 0%, #171d25 100%);
-                    border: 1px solid #36506c;
-                    border-radius: 8px;
-                    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.8), 0 0 1px rgba(102, 192, 244, 0.4);
-                    color: #c6d4df;
-                    font-family: "Motiva Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-                    font-size: 13px;
-                    padding: 14px;
-                    z-index: 999999;
-                    animation: crFadeIn 0.18s ease-out forwards;
-                    backdrop-filter: blur(12px);
-                }
-                @keyframes crFadeIn {
-                    from { opacity: 0; transform: translateY(-6px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-
-                .cr-dropdown-header {
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    padding-bottom: 10px;
-                    border-bottom: 1px solid rgba(102, 192, 244, 0.2);
-                    margin-bottom: 12px;
-                }
-                .cr-title-group {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                }
-                .cr-title {
-                    font-size: 15px;
-                    font-weight: 700;
-                    color: #ffffff;
-                    letter-spacing: 0.3px;
-                }
-                .cr-version-badge {
-                    background: #142332;
-                    border: 1px solid #23425e;
-                    color: #66c0f4;
-                    font-size: 10px;
-                    font-weight: 700;
-                    padding: 2px 6px;
-                    border-radius: 4px;
-                }
-                .cr-status-badge {
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 5px;
-                    background: rgba(164, 208, 7, 0.12);
-                    border: 1px solid rgba(164, 208, 7, 0.35);
-                    color: #a4d007;
-                    font-size: 11px;
-                    font-weight: 600;
-                    padding: 2px 8px;
-                    border-radius: 12px;
-                }
-                .cr-dropdown-desc {
-                    font-size: 12px;
-                    color: #8f98a0;
-                    line-height: 1.4;
-                    margin-bottom: 12px;
-                }
-                .cr-stats-card {
-                    background: rgba(15, 23, 33, 0.6);
-                    border: 1px solid #233446;
-                    border-radius: 6px;
-                    padding: 10px 12px;
-                    margin-bottom: 14px;
-                }
-                .cr-stat-row {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    font-size: 11px;
-                    padding: 2px 0;
-                }
-                .cr-stat-label { color: #8f98a0; }
-                .cr-stat-val { color: #66c0f4; font-weight: 600; }
-                .cr-stat-val.cr-good { color: #a4d007; }
-                .cr-btn-primary {
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 8px;
-                    width: 100%;
-                    height: 36px;
-                    background: linear-gradient(90deg, #5c7e10 0%, #476508 100%);
-                    border: none;
-                    border-radius: 4px;
-                    color: #ffffff;
-                    font-size: 13px;
-                    font-weight: 700;
-                    cursor: pointer;
-                    transition: all 0.18s ease;
-                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-                    margin-bottom: 8px;
-                }
-                .cr-btn-primary:hover {
-                    background: linear-gradient(90deg, #6e9713 0%, #55790a 100%);
-                    box-shadow: 0 0 12px rgba(164, 208, 7, 0.4);
-                }
-                .cr-btn-secondary {
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 6px;
-                    width: 100%;
-                    height: 32px;
-                    background: #213244;
-                    border: 1px solid #36506c;
-                    border-radius: 4px;
-                    color: #c6d4df;
-                    font-size: 12px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    transition: all 0.18s ease;
-                    margin-bottom: 6px;
-                }
-                .cr-btn-secondary:hover {
-                    background: #2a415a;
-                    border-color: #66c0f4;
-                    color: #ffffff;
-                }
-                .cr-footer {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    font-size: 10px;
-                    color: #626e7b;
-                    margin-top: 10px;
-                    padding-top: 8px;
-                    border-top: 1px solid rgba(255, 255, 255, 0.05);
-                }
                 /* Game Detail Page Badge */
                 .cr-game-badge {
                     display: inline-flex;
@@ -389,106 +223,6 @@ var PluginEntryPointMain = function () {
                 }
             `;
             doc.head.appendChild(style);
-        }
-
-        let dropdownElement = null;
-
-        function toggleDropdown(btn, isBottom, doc) {
-            const targetDoc = doc || btn.ownerDocument || document;
-            if (dropdownElement) {
-                dropdownElement.remove();
-                dropdownElement = null;
-                targetDoc.querySelectorAll('.cr-supernav-menu, .cr-bottom-bar-btn').forEach(b => b.classList.remove('cr-active'));
-                return;
-            }
-
-            btn.classList.add('cr-active');
-            const rect = btn.getBoundingClientRect();
-
-            dropdownElement = targetDoc.createElement('div');
-            dropdownElement.className = 'cr-dropdown-menu';
-
-            const winWidth = targetDoc.defaultView?.innerWidth || window.innerWidth || 1200;
-            const winHeight = targetDoc.defaultView?.innerHeight || window.innerHeight || 800;
-
-            if (isBottom) {
-                const left = Math.min(Math.max(10, rect.left), winWidth - 330);
-                dropdownElement.style.left = left + 'px';
-                dropdownElement.style.top = 'auto';
-                dropdownElement.style.bottom = Math.max(38, (winHeight - rect.top + 8)) + 'px';
-            } else {
-                const left = Math.min(Math.max(10, rect.left), winWidth - 330);
-                dropdownElement.style.left = left + 'px';
-                dropdownElement.style.top = (rect.bottom + 6) + 'px';
-                dropdownElement.style.bottom = 'auto';
-            }
-
-            dropdownElement.innerHTML = `
-                <div class="cr-dropdown-header">
-                    <div class="cr-title-group">
-                        <span class="cr-title">CloudRedirect</span>
-                        <span class="cr-version-badge">NATIVE</span>
-                    </div>
-                    <div class="cr-status-badge">
-                        <span class="cr-status-dot"></span>
-                        <span>Protected</span>
-                    </div>
-                </div>
-                <div class="cr-dropdown-desc">
-                    Universal cloud save redirection and automatic cloud backup for Steam.
-                </div>
-                <div class="cr-stats-card">
-                    <div class="cr-stat-row">
-                        <span class="cr-stat-label">Save Protection Engine</span>
-                        <span class="cr-stat-val cr-good">Active &amp; Monitoring</span>
-                    </div>
-                    <div class="cr-stat-row">
-                        <span class="cr-stat-label">Cloud Storage</span>
-                        <span class="cr-stat-val">Connected</span>
-                    </div>
-                    <div class="cr-stat-row">
-                        <span class="cr-stat-label">Local Snapshots</span>
-                        <span class="cr-stat-val cr-good">Safe Mode OK</span>
-                    </div>
-                </div>
-                <button id="cr-action-launch" class="cr-btn-primary">
-                    ${cloudSvg}
-                    <span>Open CloudRedirect App</span>
-                </button>
-                <button id="cr-action-backup" class="cr-btn-secondary">
-                    <span>⚡ Backup All Saves Now</span>
-                </button>
-                <button id="cr-action-saves" class="cr-btn-secondary">
-                    <span>📁 Open Save Manager</span>
-                </button>
-                <div class="cr-footer">
-                    <span>Steam Millennium Plugin</span>
-                    <span>v2.9.71</span>
-                </div>
-            `;
-
-            targetDoc.body.appendChild(dropdownElement);
-
-            dropdownElement.querySelector('#cr-action-launch').onclick = () => {
-                launchApp(targetDoc);
-                toggleDropdown(btn, isBottom, targetDoc);
-            };
-            dropdownElement.querySelector('#cr-action-backup').onclick = () => {
-                triggerBackup(targetDoc);
-                toggleDropdown(btn, isBottom, targetDoc);
-            };
-            dropdownElement.querySelector('#cr-action-saves').onclick = () => {
-                openSaves(targetDoc);
-                toggleDropdown(btn, isBottom, targetDoc);
-            };
-
-            const outsideClickListener = (e) => {
-                if (dropdownElement && !dropdownElement.contains(e.target) && !btn.contains(e.target)) {
-                    toggleDropdown(btn, isBottom, targetDoc);
-                    targetDoc.removeEventListener('click', outsideClickListener);
-                }
-            };
-            setTimeout(() => targetDoc.addEventListener('click', outsideClickListener), 10);
         }
 
         // Helper to locate the exact SuperNav tab bar container in doc
@@ -563,7 +297,7 @@ var PluginEntryPointMain = function () {
             navItem.className = (sampleTab.className || '').replace(/\bactive\b/gi, '').trim() + ' cr-supernav-menu';
             navItem.setAttribute('role', 'button');
             navItem.setAttribute('tabindex', '0');
-            navItem.title = 'CloudRedirect Universal Cloud Save Protection';
+            navItem.title = 'CloudRedirect v2.9.72 (Save Protection Active - Click to Open App)';
 
             // Find child button / inner element if present in sampleTab
             const sampleInner = sampleTab.querySelector('div, a, span') || sampleTab;
@@ -576,16 +310,16 @@ var PluginEntryPointMain = function () {
 
             navItem.appendChild(innerBtn);
 
-            // Handle clicks and keydowns
+            // Directly launch CloudRedirect application when tab is clicked
             navItem.onclick = (e) => {
                 e.stopPropagation();
                 e.preventDefault();
-                toggleDropdown(navItem, false, doc);
+                launchApp(doc);
             };
             navItem.onkeydown = (e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
-                    toggleDropdown(navItem, false, doc);
+                    launchApp(doc);
                 }
             };
 
@@ -650,7 +384,7 @@ var PluginEntryPointMain = function () {
             const btn = doc.createElement('div');
             btn.id = 'cloudredirect-bottom-btn';
             btn.className = 'cr-bottom-bar-btn';
-            btn.title = 'CloudRedirect Native Save Protection';
+            btn.title = 'CloudRedirect v2.9.72 (Save Protection Active - Click to Open App)';
             btn.innerHTML = `
                 ${cloudSvg}
                 <span>CloudRedirect</span>
@@ -659,7 +393,8 @@ var PluginEntryPointMain = function () {
 
             btn.onclick = (e) => {
                 e.stopPropagation();
-                toggleDropdown(btn, true, doc);
+                e.preventDefault();
+                launchApp(doc);
             };
 
             if (targetSibling && targetSibling.parentNode === parentContainer) {
@@ -680,7 +415,7 @@ var PluginEntryPointMain = function () {
 
                 const badge = doc.createElement('div');
                 badge.className = 'cr-game-badge';
-                badge.title = 'Game save files are actively redirected and backed up by CloudRedirect';
+                badge.title = 'Game save files are actively redirected and backed up by CloudRedirect (Click to Open)';
                 badge.innerHTML = `
                     ${cloudSvg}
                     <span>CloudRedirect</span>
@@ -688,6 +423,7 @@ var PluginEntryPointMain = function () {
                 `;
                 badge.onclick = (e) => {
                     e.stopPropagation();
+                    e.preventDefault();
                     launchApp(doc);
                 };
 
@@ -698,10 +434,14 @@ var PluginEntryPointMain = function () {
         function runInjectionsForDoc(doc) {
             if (!doc || !doc.body) return;
 
-            // Explicitly remove any legacy titlebar header buttons that caused window control overlap
+            // Remove any legacy header buttons or clipped dropdown menus
             const legacyBtn = doc.getElementById('cloudredirect-header-btn');
             if (legacyBtn) legacyBtn.remove();
-            doc.querySelectorAll('.cr-nav-btn, [id*="cloudredirect-header"]').forEach(el => el.remove());
+            doc.querySelectorAll('.cr-nav-btn, [id*="cloudredirect-header"], .cr-dropdown-menu').forEach(el => el.remove());
+
+            // Remove any stuck cr-active class on supernav item
+            const superItem = doc.getElementById('cloudredirect-supernav-item');
+            if (superItem) superItem.classList.remove('cr-active');
 
             ensureStyles(doc);
             injectSuperNavTab(doc);
@@ -791,16 +531,12 @@ var PluginEntryPointMain = function () {
                             if (superTab) superTab.remove();
                             const topBtn = d.getElementById('cloudredirect-header-btn');
                             if (topBtn) topBtn.remove();
-                            d.querySelectorAll('.cr-nav-btn, [id*="cloudredirect-header"]').forEach(el => el.remove());
+                            d.querySelectorAll('.cr-nav-btn, [id*="cloudredirect-header"], .cr-dropdown-menu').forEach(el => el.remove());
                             const btmBtn = d.getElementById('cloudredirect-bottom-btn');
                             if (btmBtn) btmBtn.remove();
                             const style = d.getElementById('cr-millennium-styles');
                             if (style) style.remove();
                         } catch (e) { }
-                    }
-                    if (dropdownElement) {
-                        dropdownElement.remove();
-                        dropdownElement = null;
                     }
                 }
             };
