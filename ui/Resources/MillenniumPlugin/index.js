@@ -57,6 +57,57 @@ var PluginEntryPointMain = function () {
             const style = document.createElement('style');
             style.id = 'cr-millennium-styles';
             style.textContent = `
+                /* SuperNav Top Header Tab (STORE / LIBRARY / COMMUNITY / USER / CLOUDREDIRECT) */
+                .cr-supernav-menu {
+                    cursor: pointer !important;
+                    user-select: none !important;
+                    display: inline-flex !important;
+                    align-items: center !important;
+                    height: 100% !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    position: relative !important;
+                    transition: all 0.2s ease !important;
+                }
+                .cr-supernav-btn {
+                    display: inline-flex !important;
+                    align-items: center !important;
+                    gap: 7px !important;
+                    cursor: pointer !important;
+                    font-family: "Motiva Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+                    font-size: 14px !important;
+                    font-weight: 500 !important;
+                    letter-spacing: 0.04em !important;
+                    text-transform: uppercase !important;
+                    color: #dcdedf !important;
+                    padding: 0 10px !important;
+                    height: 100% !important;
+                    box-sizing: border-box !important;
+                    transition: color 0.15s ease, text-shadow 0.15s ease !important;
+                }
+                .cr-supernav-menu:hover .cr-supernav-btn {
+                    color: #ffffff !important;
+                    text-shadow: 0 0 10px rgba(255, 255, 255, 0.45) !important;
+                }
+                .cr-supernav-menu.cr-active .cr-supernav-btn {
+                    color: #ffffff !important;
+                    border-bottom: 3px solid #1a9fff !important;
+                }
+                .cr-supernav-label {
+                    letter-spacing: 0.04em !important;
+                    font-weight: 600 !important;
+                }
+                .cr-supernav-dot {
+                    width: 6px !important;
+                    height: 6px !important;
+                    background: #a4d007 !important;
+                    border-radius: 50% !important;
+                    box-shadow: 0 0 6px #a4d007 !important;
+                    display: inline-block !important;
+                    flex-shrink: 0 !important;
+                    margin-left: 2px !important;
+                }
+
                 /* Top Nav Button */
                 .cr-nav-btn {
                     display: inline-flex;
@@ -406,6 +457,189 @@ var PluginEntryPointMain = function () {
             setTimeout(() => document.addEventListener('click', outsideClickListener), 10);
         }
 
+        // Injects tab right into STORE / LIBRARY / COMMUNITY / USER / CLOUDREDIRECT row
+        function injectSuperNavTab() {
+            if (document.getElementById('cloudredirect-supernav-item')) return;
+
+            // 1. Locate the SuperNav container using the exact Steam classes and selectors
+            const superNavSelectors = [
+                'div._2D64jIEK7wpUR_NlObDW76',
+                'div[class*="_2D64jIEK7wpUR_NlObDW76"]',
+                'div[class*="SuperNav_"]',
+                'div[class*="supernav_"]',
+                'div[class*="SuperNav"]',
+                'nav[class*="SuperNav"]',
+                'div[class*="supernav_container"]',
+                '.supernav_container'
+            ];
+
+            let superNavContainer = null;
+            for (const sel of superNavSelectors) {
+                const el = document.querySelector(sel);
+                if (el && (el.offsetParent !== null || el.offsetWidth > 0)) {
+                    superNavContainer = el;
+                    break;
+                }
+            }
+
+            // Fallback 2: Search by finding the container that has STORE, LIBRARY, COMMUNITY
+            if (!superNavContainer) {
+                const candidates = document.querySelectorAll('div, nav');
+                for (const c of candidates) {
+                    const txt = c.textContent || '';
+                    if (txt.includes('STORE') && txt.includes('LIBRARY') && txt.includes('COMMUNITY')) {
+                        const children = Array.from(c.children);
+                        const hasStoreChild = children.some(child => (child.textContent || '').includes('STORE'));
+                        if (hasStoreChild) {
+                            superNavContainer = c;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!superNavContainer) return;
+
+            // 2. Identify the tabs inside superNavContainer to match styling and find insertion spot
+            const children = Array.from(superNavContainer.children);
+            let sampleTab = null;
+            let lastNavTab = null;
+
+            for (const child of children) {
+                const txt = (child.textContent || '').trim();
+                // Skip back/forward navigation arrows (no alphanumeric text)
+                if (!/[A-Za-z0-9]/.test(txt)) continue;
+
+                if (txt.includes('STORE') || txt.includes('LIBRARY') || txt.includes('COMMUNITY')) {
+                    sampleTab = child;
+                    lastNavTab = child;
+                } else if (!txt.includes('http') && !txt.includes('search') && !txt.includes('🔍')) {
+                    // Profile tab (e.g. MINTAMAAF5) or console tab
+                    lastNavTab = child;
+                }
+            }
+
+            if (!sampleTab) return;
+
+            // 3. Create the CloudRedirect SuperNav item
+            const navItem = document.createElement('div');
+            navItem.id = 'cloudredirect-supernav-item';
+            // Inherit the exact class name from Steam's supernav menu tabs
+            navItem.className = sampleTab.className + ' cr-supernav-menu';
+            navItem.setAttribute('role', 'button');
+            navItem.setAttribute('tabindex', '0');
+            navItem.title = 'CloudRedirect Universal Cloud Save Protection';
+
+            // Find child button / inner element if present in sampleTab
+            const sampleInner = sampleTab.querySelector('div, a, span') || sampleTab;
+            const innerBtn = document.createElement('div');
+            innerBtn.className = (sampleInner.className || '') + ' cr-supernav-btn';
+            innerBtn.innerHTML = `
+                <span class="cr-supernav-label">CLOUDREDIRECT</span>
+                <span class="cr-supernav-dot" title="Save Protection Active"></span>
+            `;
+
+            navItem.appendChild(innerBtn);
+
+            // 4. Handle clicks
+            navItem.onclick = (e) => {
+                e.stopPropagation();
+                toggleSuperNavDropdown(navItem);
+            };
+
+            // 5. Insert directly into the row after the last tab (after MINTAMAAF5)
+            if (lastNavTab && lastNavTab.nextSibling) {
+                superNavContainer.insertBefore(navItem, lastNavTab.nextSibling);
+            } else {
+                superNavContainer.appendChild(navItem);
+            }
+        }
+
+        function toggleSuperNavDropdown(navItem) {
+            if (dropdownElement) {
+                dropdownElement.remove();
+                dropdownElement = null;
+                document.querySelectorAll('.cr-supernav-menu, .cr-nav-btn, .cr-bottom-bar-btn').forEach(b => b.classList.remove('cr-active'));
+                return;
+            }
+
+            navItem.classList.add('cr-active');
+            const rect = navItem.getBoundingClientRect();
+
+            dropdownElement = document.createElement('div');
+            dropdownElement.className = 'cr-dropdown-menu';
+            dropdownElement.style.top = (rect.bottom + 4) + 'px';
+            dropdownElement.style.left = Math.max(10, rect.left) + 'px';
+            dropdownElement.style.bottom = 'auto';
+
+            dropdownElement.innerHTML = `
+                <div class="cr-dropdown-header">
+                    <div class="cr-title-group">
+                        <span class="cr-title">CloudRedirect</span>
+                        <span class="cr-version-badge">NATIVE</span>
+                    </div>
+                    <div class="cr-status-badge">
+                        <span class="cr-status-dot"></span>
+                        <span>Protected</span>
+                    </div>
+                </div>
+                <div class="cr-dropdown-desc">
+                    Real-time universal save redirection and cloud backup active for Steam games.
+                </div>
+                <div class="cr-stats-card">
+                    <div class="cr-stat-row">
+                        <span class="cr-stat-label">Save Protection Engine</span>
+                        <span class="cr-stat-val cr-good">Active &amp; Monitoring</span>
+                    </div>
+                    <div class="cr-stat-row">
+                        <span class="cr-stat-label">Cloud Storage</span>
+                        <span class="cr-stat-val">Connected</span>
+                    </div>
+                    <div class="cr-stat-row">
+                        <span class="cr-stat-label">Local Snapshots</span>
+                        <span class="cr-stat-val cr-good">Safe Mode OK</span>
+                    </div>
+                </div>
+                <button id="cr-action-launch" class="cr-btn-primary">
+                    ${cloudSvg}
+                    <span>Open CloudRedirect App</span>
+                </button>
+                <button id="cr-action-backup" class="cr-btn-secondary">
+                    <span>⚡ Backup All Saves Now</span>
+                </button>
+                <button id="cr-action-saves" class="cr-btn-secondary">
+                    <span>📁 Open Save Manager</span>
+                </button>
+                <div class="cr-footer">
+                    <span>Steam Millennium Plugin</span>
+                    <span>v2.9.69</span>
+                </div>
+            `;
+
+            document.body.appendChild(dropdownElement);
+
+            dropdownElement.querySelector('#cr-action-launch').onclick = () => {
+                launchApp();
+                toggleSuperNavDropdown(navItem);
+            };
+            dropdownElement.querySelector('#cr-action-backup').onclick = () => {
+                triggerBackup();
+                toggleSuperNavDropdown(navItem);
+            };
+            dropdownElement.querySelector('#cr-action-saves').onclick = () => {
+                openSaves();
+                toggleSuperNavDropdown(navItem);
+            };
+
+            const outsideClickListener = (e) => {
+                if (dropdownElement && !dropdownElement.contains(e.target) && !navItem.contains(e.target)) {
+                    toggleSuperNavDropdown(navItem);
+                    document.removeEventListener('click', outsideClickListener);
+                }
+            };
+            setTimeout(() => document.addEventListener('click', outsideClickListener), 10);
+        }
+
         // 1. Inject Button in Bottom Bar (next to Add Game / Steam Unlock)
         function injectBottomBarButton() {
             if (document.getElementById('cloudredirect-bottom-btn')) return;
@@ -551,6 +785,7 @@ var PluginEntryPointMain = function () {
 
         function runInjections() {
             ensureStyles();
+            injectSuperNavTab();
             injectBottomBarButton();
             injectHeaderButton();
             injectGameBadge();
@@ -568,7 +803,7 @@ var PluginEntryPointMain = function () {
                 subtree: true
             });
 
-            setInterval(runInjections, 1500);
+            setInterval(runInjections, 1000);
         }
 
         const index = async function PluginMain() {
@@ -594,6 +829,8 @@ var PluginEntryPointMain = function () {
                     return div;
                 },
                 onDismount() {
+                    const superTab = document.getElementById('cloudredirect-supernav-item');
+                    if (superTab) superTab.remove();
                     const topBtn = document.getElementById('cloudredirect-header-btn');
                     if (topBtn) topBtn.remove();
                     const btmBtn = document.getElementById('cloudredirect-bottom-btn');
@@ -606,6 +843,7 @@ var PluginEntryPointMain = function () {
         };
 
         exports.default = index;
+        Object.defineProperty(exports, '__esModule', { value: true });
         return exports;
     })({}, window.MILLENNIUM_API, window.SP_REACTDOM, window.SP_REACT);
 

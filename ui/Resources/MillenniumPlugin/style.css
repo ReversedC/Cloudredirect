@@ -1,5 +1,61 @@
 /* CloudRedirect Native Millennium Plugin Styles */
 
+/* SuperNav Top Header Tab (STORE / LIBRARY / COMMUNITY / USER / CLOUDREDIRECT) */
+.cr-supernav-menu {
+    cursor: pointer !important;
+    user-select: none !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    position: relative !important;
+    transition: all 0.2s ease !important;
+}
+
+.cr-supernav-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 7px !important;
+    cursor: pointer !important;
+    font-family: "Motiva Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.04em !important;
+    text-transform: uppercase !important;
+    color: #dcdedf !important;
+    padding: 0 10px !important;
+    height: 100% !important;
+    box-sizing: border-box !important;
+    transition: color 0.15s ease, text-shadow 0.15s ease !important;
+}
+
+.cr-supernav-menu:hover .cr-supernav-btn {
+    color: #ffffff !important;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.45) !important;
+}
+
+.cr-supernav-menu.cr-active .cr-supernav-btn {
+    color: #ffffff !important;
+    border-bottom: 3px solid #1a9fff !important;
+}
+
+.cr-supernav-label {
+    letter-spacing: 0.04em !important;
+    font-weight: 600 !important;
+}
+
+.cr-supernav-dot {
+    width: 6px !important;
+    height: 6px !important;
+    background: #a4d007 !important;
+    border-radius: 50% !important;
+    box-shadow: 0 0 6px #a4d007 !important;
+    display: inline-block !important;
+    flex-shrink: 0 !important;
+    margin-left: 2px !important;
+}
+
 .cr-nav-btn {
     display: inline-flex;
     align-items: center;
