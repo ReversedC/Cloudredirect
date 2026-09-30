@@ -19,42 +19,97 @@ const __call_server_method__ = (methodName, kwargs) => {
     return Promise.resolve(null);
 };
 
+// Returns all active Steam documents (SharedJSContext, main desktop window SP Desktop_uid0, and popups)
+function getAllSteamDocuments() {
+    const docs = [];
+    if (typeof document !== 'undefined' && document && document.body) {
+        docs.push(document);
+    }
+
+    try {
+        if (typeof g_PopupManager !== 'undefined' && g_PopupManager) {
+            if (typeof g_PopupManager.GetPopups === 'function') {
+                const popups = g_PopupManager.GetPopups();
+                if (popups) {
+                    for (const p of popups) {
+                        const d = p?.window?.document || p?.m_popup?.window?.document || p?.m_popup?.document;
+                        if (d && d.body && !docs.includes(d)) docs.push(d);
+                    }
+                }
+            }
+            if (typeof g_PopupManager.GetExistingPopup === 'function') {
+                const sp = g_PopupManager.GetExistingPopup("SP Desktop_uid0");
+                const d = sp?.window?.document || sp?.m_popup?.window?.document || sp?.m_popup?.document;
+                if (d && d.body && !docs.includes(d)) docs.push(d);
+            }
+            if (g_PopupManager.m_mapPopups && g_PopupManager.m_mapPopups.data_) {
+                g_PopupManager.m_mapPopups.data_.forEach(entry => {
+                    const val = entry?.value_ || entry;
+                    const d = val?.m_popup?.window?.document || val?.window?.document || val?.m_popup?.document;
+                    if (d && d.body && !docs.includes(d)) docs.push(d);
+                });
+            }
+        }
+    } catch (e) {
+        console.warn('[CloudRedirect] Error retrieving popup documents:', e);
+    }
+
+    try {
+        if (typeof window !== 'undefined' && window.PLUGIN_LIST && window.PLUGIN_LIST.core && window.PLUGIN_LIST.core.mainWindow) {
+            const d = window.PLUGIN_LIST.core.mainWindow.document;
+            if (d && d.body && !docs.includes(d)) docs.push(d);
+        }
+    } catch (e) { }
+
+    return docs;
+}
+
 var PluginEntryPointMain = function () {
     var millennium_main = (function (exports, client, reactDom, React) {
         'use strict';
 
         const cloudSvg = `<svg class="cr-cloud-icon-svg" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>`;
 
-        function launchApp() {
+        function launchApp(doc) {
             __call_server_method__("launch_cloudredirect", {});
             try {
-                const link = document.createElement('a');
+                const d = doc || document;
+                const link = d.createElement('a');
                 link.href = 'cloudredirect://open';
+                d.body.appendChild(link);
                 link.click();
+                link.remove();
             } catch (e) { }
         }
 
-        function triggerBackup() {
+        function triggerBackup(doc) {
             __call_server_method__("trigger_backup", {});
             try {
-                const link = document.createElement('a');
+                const d = doc || document;
+                const link = d.createElement('a');
                 link.href = 'cloudredirect://backup';
+                d.body.appendChild(link);
                 link.click();
+                link.remove();
             } catch (e) { }
         }
 
-        function openSaves() {
+        function openSaves(doc) {
             __call_server_method__("open_saves", {});
             try {
-                const link = document.createElement('a');
+                const d = doc || document;
+                const link = d.createElement('a');
                 link.href = 'cloudredirect://saves';
+                d.body.appendChild(link);
                 link.click();
+                link.remove();
             } catch (e) { }
         }
 
-        function ensureStyles() {
-            if (document.getElementById('cr-millennium-styles')) return;
-            const style = document.createElement('style');
+        function ensureStyles(doc) {
+            if (!doc || !doc.head) return;
+            if (doc.getElementById('cr-millennium-styles')) return;
+            const style = doc.createElement('style');
             style.id = 'cr-millennium-styles';
             style.textContent = `
                 /* SuperNav Top Header Tab (STORE / LIBRARY / COMMUNITY / USER / CLOUDREDIRECT) */
@@ -329,7 +384,6 @@ var PluginEntryPointMain = function () {
                     padding-top: 8px;
                     border-top: 1px solid rgba(255, 255, 255, 0.05);
                 }
-
                 /* Game Detail Page Badge */
                 .cr-game-badge {
                     display: inline-flex;
@@ -360,23 +414,24 @@ var PluginEntryPointMain = function () {
                     font-weight: bold;
                 }
             `;
-            document.head.appendChild(style);
+            doc.head.appendChild(style);
         }
 
         let dropdownElement = null;
 
-        function toggleDropdown(btn, isBottom) {
+        function toggleDropdown(btn, isBottom, doc) {
+            const targetDoc = doc || btn.ownerDocument || document;
             if (dropdownElement) {
                 dropdownElement.remove();
                 dropdownElement = null;
-                document.querySelectorAll('.cr-nav-btn, .cr-bottom-bar-btn').forEach(b => b.classList.remove('cr-active'));
+                targetDoc.querySelectorAll('.cr-nav-btn, .cr-bottom-bar-btn').forEach(b => b.classList.remove('cr-active'));
                 return;
             }
 
             btn.classList.add('cr-active');
             const rect = btn.getBoundingClientRect();
 
-            dropdownElement = document.createElement('div');
+            dropdownElement = targetDoc.createElement('div');
             dropdownElement.className = 'cr-dropdown-menu';
 
             if (isBottom) {
@@ -429,37 +484,38 @@ var PluginEntryPointMain = function () {
                 </button>
                 <div class="cr-footer">
                     <span>Steam Millennium Plugin</span>
-                    <span>v1.0.0</span>
+                    <span>v2.9.70</span>
                 </div>
             `;
 
-            document.body.appendChild(dropdownElement);
+            targetDoc.body.appendChild(dropdownElement);
 
             dropdownElement.querySelector('#cr-action-launch').onclick = () => {
-                launchApp();
-                toggleDropdown(btn, isBottom);
+                launchApp(targetDoc);
+                toggleDropdown(btn, isBottom, targetDoc);
             };
             dropdownElement.querySelector('#cr-action-backup').onclick = () => {
-                triggerBackup();
-                toggleDropdown(btn, isBottom);
+                triggerBackup(targetDoc);
+                toggleDropdown(btn, isBottom, targetDoc);
             };
             dropdownElement.querySelector('#cr-action-saves').onclick = () => {
-                openSaves();
-                toggleDropdown(btn, isBottom);
+                openSaves(targetDoc);
+                toggleDropdown(btn, isBottom, targetDoc);
             };
 
             const outsideClickListener = (e) => {
                 if (dropdownElement && !dropdownElement.contains(e.target) && !btn.contains(e.target)) {
-                    toggleDropdown(btn, isBottom);
-                    document.removeEventListener('click', outsideClickListener);
+                    toggleDropdown(btn, isBottom, targetDoc);
+                    targetDoc.removeEventListener('click', outsideClickListener);
                 }
             };
-            setTimeout(() => document.addEventListener('click', outsideClickListener), 10);
+            setTimeout(() => targetDoc.addEventListener('click', outsideClickListener), 10);
         }
 
         // Injects tab right into STORE / LIBRARY / COMMUNITY / USER / CLOUDREDIRECT row
-        function injectSuperNavTab() {
-            if (document.getElementById('cloudredirect-supernav-item')) return;
+        function injectSuperNavTab(doc) {
+            if (!doc || !doc.body) return;
+            if (doc.getElementById('cloudredirect-supernav-item')) return;
 
             // 1. Locate the SuperNav container using the exact Steam classes and selectors
             const superNavSelectors = [
@@ -475,22 +531,21 @@ var PluginEntryPointMain = function () {
 
             let superNavContainer = null;
             for (const sel of superNavSelectors) {
-                const el = document.querySelector(sel);
-                if (el && (el.offsetParent !== null || el.offsetWidth > 0)) {
+                const el = doc.querySelector(sel);
+                if (el && (el.offsetParent !== null || el.offsetWidth > 0 || el.children.length > 0)) {
                     superNavContainer = el;
                     break;
                 }
             }
 
-            // Fallback 2: Search by finding the container that has STORE, LIBRARY, COMMUNITY
+            // Fallback: Search by finding the container that has STORE, LIBRARY, COMMUNITY
             if (!superNavContainer) {
-                const candidates = document.querySelectorAll('div, nav');
+                const candidates = doc.querySelectorAll('div, nav');
                 for (const c of candidates) {
                     const txt = c.textContent || '';
                     if (txt.includes('STORE') && txt.includes('LIBRARY') && txt.includes('COMMUNITY')) {
                         const children = Array.from(c.children);
-                        const hasStoreChild = children.some(child => (child.textContent || '').includes('STORE'));
-                        if (hasStoreChild) {
+                        if (children.some(child => (child.textContent || '').includes('STORE'))) {
                             superNavContainer = c;
                             break;
                         }
@@ -522,7 +577,7 @@ var PluginEntryPointMain = function () {
             if (!sampleTab) return;
 
             // 3. Create the CloudRedirect SuperNav item
-            const navItem = document.createElement('div');
+            const navItem = doc.createElement('div');
             navItem.id = 'cloudredirect-supernav-item';
             // Inherit the exact class name from Steam's supernav menu tabs
             navItem.className = sampleTab.className + ' cr-supernav-menu';
@@ -532,7 +587,7 @@ var PluginEntryPointMain = function () {
 
             // Find child button / inner element if present in sampleTab
             const sampleInner = sampleTab.querySelector('div, a, span') || sampleTab;
-            const innerBtn = document.createElement('div');
+            const innerBtn = doc.createElement('div');
             innerBtn.className = (sampleInner.className || '') + ' cr-supernav-btn';
             innerBtn.innerHTML = `
                 <span class="cr-supernav-label">CLOUDREDIRECT</span>
@@ -544,7 +599,7 @@ var PluginEntryPointMain = function () {
             // 4. Handle clicks
             navItem.onclick = (e) => {
                 e.stopPropagation();
-                toggleSuperNavDropdown(navItem);
+                toggleSuperNavDropdown(navItem, doc);
             };
 
             // 5. Insert directly into the row after the last tab (after MINTAMAAF5)
@@ -555,18 +610,19 @@ var PluginEntryPointMain = function () {
             }
         }
 
-        function toggleSuperNavDropdown(navItem) {
+        function toggleSuperNavDropdown(navItem, doc) {
+            const targetDoc = doc || navItem.ownerDocument || document;
             if (dropdownElement) {
                 dropdownElement.remove();
                 dropdownElement = null;
-                document.querySelectorAll('.cr-supernav-menu, .cr-nav-btn, .cr-bottom-bar-btn').forEach(b => b.classList.remove('cr-active'));
+                targetDoc.querySelectorAll('.cr-supernav-menu, .cr-nav-btn, .cr-bottom-bar-btn').forEach(b => b.classList.remove('cr-active'));
                 return;
             }
 
             navItem.classList.add('cr-active');
             const rect = navItem.getBoundingClientRect();
 
-            dropdownElement = document.createElement('div');
+            dropdownElement = targetDoc.createElement('div');
             dropdownElement.className = 'cr-dropdown-menu';
             dropdownElement.style.top = (rect.bottom + 4) + 'px';
             dropdownElement.style.left = Math.max(10, rect.left) + 'px';
@@ -612,43 +668,44 @@ var PluginEntryPointMain = function () {
                 </button>
                 <div class="cr-footer">
                     <span>Steam Millennium Plugin</span>
-                    <span>v2.9.69</span>
+                    <span>v2.9.70</span>
                 </div>
             `;
 
-            document.body.appendChild(dropdownElement);
+            targetDoc.body.appendChild(dropdownElement);
 
             dropdownElement.querySelector('#cr-action-launch').onclick = () => {
-                launchApp();
-                toggleSuperNavDropdown(navItem);
+                launchApp(targetDoc);
+                toggleSuperNavDropdown(navItem, targetDoc);
             };
             dropdownElement.querySelector('#cr-action-backup').onclick = () => {
-                triggerBackup();
-                toggleSuperNavDropdown(navItem);
+                triggerBackup(targetDoc);
+                toggleSuperNavDropdown(navItem, targetDoc);
             };
             dropdownElement.querySelector('#cr-action-saves').onclick = () => {
-                openSaves();
-                toggleSuperNavDropdown(navItem);
+                openSaves(targetDoc);
+                toggleSuperNavDropdown(navItem, targetDoc);
             };
 
             const outsideClickListener = (e) => {
                 if (dropdownElement && !dropdownElement.contains(e.target) && !navItem.contains(e.target)) {
-                    toggleSuperNavDropdown(navItem);
-                    document.removeEventListener('click', outsideClickListener);
+                    toggleSuperNavDropdown(navItem, targetDoc);
+                    targetDoc.removeEventListener('click', outsideClickListener);
                 }
             };
-            setTimeout(() => document.addEventListener('click', outsideClickListener), 10);
+            setTimeout(() => targetDoc.addEventListener('click', outsideClickListener), 10);
         }
 
         // 1. Inject Button in Bottom Bar (next to Add Game / Steam Unlock)
-        function injectBottomBarButton() {
-            if (document.getElementById('cloudredirect-bottom-btn')) return;
+        function injectBottomBarButton(doc) {
+            if (!doc || !doc.body) return;
+            if (doc.getElementById('cloudredirect-bottom-btn')) return;
 
             let targetSibling = null;
             let parentContainer = null;
 
             // Strategy 1: Find existing mod buttons like "Steam Unlock"
-            const allElements = document.querySelectorAll('button, div, a');
+            const allElements = doc.querySelectorAll('button, div, a');
             for (const el of allElements) {
                 const text = el.textContent || '';
                 if (text.includes('Steam Unlock') || (el.className && typeof el.className === 'string' && el.className.includes('activation'))) {
@@ -672,7 +729,7 @@ var PluginEntryPointMain = function () {
 
             // Strategy 3: Try standard selectors for Add a Game
             if (!targetSibling) {
-                const addGameCandidates = document.querySelectorAll('button[class*="addgamebutton_"], div[class*="addgamebutton_"], [class*="AddGameButton"]');
+                const addGameCandidates = doc.querySelectorAll('button[class*="addgamebutton_"], div[class*="addgamebutton_"], [class*="AddGameButton"]');
                 for (const el of addGameCandidates) {
                     if (el.offsetParent !== null || el.offsetWidth > 0) {
                         targetSibling = el;
@@ -684,12 +741,12 @@ var PluginEntryPointMain = function () {
 
             // Strategy 4: Fallback to bottom bar container
             if (!parentContainer) {
-                parentContainer = document.querySelector('div[class*="bottombar_"], div[class*="bottombarcontrols_"], footer, .bottom_bar');
+                parentContainer = doc.querySelector('div[class*="bottombar_"], div[class*="bottombarcontrols_"], footer, .bottom_bar');
             }
 
             if (!parentContainer) return;
 
-            const btn = document.createElement('div');
+            const btn = doc.createElement('div');
             btn.id = 'cloudredirect-bottom-btn';
             btn.className = 'cr-bottom-bar-btn';
             btn.title = 'CloudRedirect Native Save Protection';
@@ -701,7 +758,7 @@ var PluginEntryPointMain = function () {
 
             btn.onclick = (e) => {
                 e.stopPropagation();
-                toggleDropdown(btn, true);
+                toggleDropdown(btn, true, doc);
             };
 
             if (targetSibling && targetSibling.parentNode === parentContainer) {
@@ -714,8 +771,9 @@ var PluginEntryPointMain = function () {
         }
 
         // 2. Inject Button in Header / Top Bar
-        function injectHeaderButton() {
-            if (document.getElementById('cloudredirect-header-btn')) return;
+        function injectHeaderButton(doc) {
+            if (!doc || !doc.body) return;
+            if (doc.getElementById('cloudredirect-header-btn')) return;
 
             const selectors = [
                 '.title-bar-actions',
@@ -729,8 +787,8 @@ var PluginEntryPointMain = function () {
 
             let target = null;
             for (const sel of selectors) {
-                const el = document.querySelector(sel);
-                if (el && el.offsetWidth > 0) {
+                const el = doc.querySelector(sel);
+                if (el && (el.offsetWidth > 0 || el.offsetParent !== null)) {
                     target = el;
                     break;
                 }
@@ -738,7 +796,7 @@ var PluginEntryPointMain = function () {
 
             if (!target) return;
 
-            const btn = document.createElement('div');
+            const btn = doc.createElement('div');
             btn.id = 'cloudredirect-header-btn';
             btn.className = 'cr-nav-btn';
             btn.title = 'CloudRedirect Native Save Protection';
@@ -750,7 +808,7 @@ var PluginEntryPointMain = function () {
 
             btn.onclick = (e) => {
                 e.stopPropagation();
-                toggleDropdown(btn, false);
+                toggleDropdown(btn, false, doc);
             };
 
             if (target.firstChild) {
@@ -761,12 +819,13 @@ var PluginEntryPointMain = function () {
         }
 
         // 3. Inject Game Details Page Badge
-        function injectGameBadge() {
-            const gameActionBars = document.querySelectorAll('div[class*="playbar_"], div[class*="appactionandstats_"], div[class*="appdetailsheader_"]');
+        function injectGameBadge(doc) {
+            if (!doc || !doc.body) return;
+            const gameActionBars = doc.querySelectorAll('div[class*="playbar_"], div[class*="appactionandstats_"], div[class*="appdetailsheader_"]');
             gameActionBars.forEach(bar => {
                 if (bar.querySelector('.cr-game-badge')) return;
 
-                const badge = document.createElement('div');
+                const badge = doc.createElement('div');
                 badge.className = 'cr-game-badge';
                 badge.title = 'Game save files are actively redirected and backed up by CloudRedirect';
                 badge.innerHTML = `
@@ -776,34 +835,72 @@ var PluginEntryPointMain = function () {
                 `;
                 badge.onclick = (e) => {
                     e.stopPropagation();
-                    launchApp();
+                    launchApp(doc);
                 };
 
                 bar.appendChild(badge);
             });
         }
 
+        function runInjectionsForDoc(doc) {
+            if (!doc || !doc.body) return;
+            ensureStyles(doc);
+            injectSuperNavTab(doc);
+            injectBottomBarButton(doc);
+            injectHeaderButton(doc);
+            injectGameBadge(doc);
+        }
+
         function runInjections() {
-            ensureStyles();
-            injectSuperNavTab();
-            injectBottomBarButton();
-            injectHeaderButton();
-            injectGameBadge();
+            const docs = getAllSteamDocuments();
+            for (const doc of docs) {
+                try {
+                    runInjectionsForDoc(doc);
+                } catch (e) {
+                    console.warn('[CloudRedirect] Injection error:', e);
+                }
+            }
         }
 
         function setupObserver() {
             runInjections();
 
-            const observer = new MutationObserver(() => {
+            const observedDocs = new WeakSet();
+            function registerDocObserver(d) {
+                if (!d || !d.body || observedDocs.has(d)) return;
+                observedDocs.add(d);
+                try {
+                    const observer = new MutationObserver(() => {
+                        runInjectionsForDoc(d);
+                    });
+                    observer.observe(d.body, {
+                        childList: true,
+                        subtree: true
+                    });
+                } catch (e) { }
+            }
+
+            // Periodically check all windows (including after page transitions)
+            setInterval(() => {
+                const docs = getAllSteamDocuments();
+                for (const d of docs) {
+                    registerDocObserver(d);
+                }
                 runInjections();
-            });
+            }, 800);
 
-            observer.observe(document.body, {
-                childList: true,
-                subtree: true
-            });
+            try {
+                if (typeof Millennium !== 'undefined' && typeof Millennium.AddWindowCreateHook === 'function') {
+                    Millennium.AddWindowCreateHook((popup) => {
+                        setTimeout(() => runInjections(), 300);
+                        setTimeout(() => runInjections(), 1500);
+                    });
+                }
+            } catch (e) { }
 
-            setInterval(runInjections, 1000);
+            window.addEventListener("millennium-main-window-ready", () => {
+                setTimeout(() => runInjections(), 300);
+            });
         }
 
         const index = async function PluginMain() {
@@ -829,15 +926,20 @@ var PluginEntryPointMain = function () {
                     return div;
                 },
                 onDismount() {
-                    const superTab = document.getElementById('cloudredirect-supernav-item');
-                    if (superTab) superTab.remove();
-                    const topBtn = document.getElementById('cloudredirect-header-btn');
-                    if (topBtn) topBtn.remove();
-                    const btmBtn = document.getElementById('cloudredirect-bottom-btn');
-                    if (btmBtn) btmBtn.remove();
+                    const docs = getAllSteamDocuments();
+                    for (const d of docs) {
+                        try {
+                            const superTab = d.getElementById('cloudredirect-supernav-item');
+                            if (superTab) superTab.remove();
+                            const topBtn = d.getElementById('cloudredirect-header-btn');
+                            if (topBtn) topBtn.remove();
+                            const btmBtn = d.getElementById('cloudredirect-bottom-btn');
+                            if (btmBtn) btmBtn.remove();
+                            const style = d.getElementById('cr-millennium-styles');
+                            if (style) style.remove();
+                        } catch (e) { }
+                    }
                     if (dropdownElement) dropdownElement.remove();
-                    const style = document.getElementById('cr-millennium-styles');
-                    if (style) style.remove();
                 }
             };
         };
