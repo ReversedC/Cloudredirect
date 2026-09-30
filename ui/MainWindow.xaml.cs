@@ -80,6 +80,7 @@ public partial class MainWindow : FluentWindow
                 _ = Task.Run(() =>
                 {
                     Services.SteamWebUiPatcher.EnsureStockIconRestored();
+                    Services.MillenniumPluginService.SyncWithSettings();
                 });
 
                 App.LogStartup("Loaded: ActiveGameTrackerService.Start");

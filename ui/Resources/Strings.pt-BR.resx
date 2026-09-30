@@ -2472,6 +2472,18 @@ Deseja reiniciar a Steam agora para limpar o erro "Não foi possível sincroniza
   <data name="Settings_GlobalHotkeyHint" xml:space="preserve">
     <value>Atalho em todo o sistema para invocar, abrir ou alternar o CloudRedirect a qualquer momento, mesmo durante o jogo ou minimizado na bandeja.</value>
   </data>
+  <data name="Settings_MillenniumPluginTitle" xml:space="preserve">
+    <value>Plugin nativo do Steam Millennium</value>
+  </data>
+  <data name="Settings_MillenniumPluginDescription" xml:space="preserve">
+    <value>Integre o CloudRedirect diretamente na interface do cliente Steam com emblemas de proteção de salvamento em tempo real, ações rápidas e painel de status.</value>
+  </data>
+  <data name="Settings_MillenniumInstalled" xml:space="preserve">
+    <value>Millennium Ativo</value>
+  </data>
+  <data name="Settings_MillenniumNotFound" xml:space="preserve">
+    <value>Millennium Não Instalado</value>
+  </data>
   <data name="Nav_LuaSync" xml:space="preserve">
     <value>Sincronização Lua</value>
   </data>

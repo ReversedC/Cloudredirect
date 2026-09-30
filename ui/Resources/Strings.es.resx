@@ -2467,6 +2467,18 @@ Esto puede causar pérdida de datos en algunos casos.
   <data name="Settings_GlobalHotkeyHint" xml:space="preserve">
     <value>Atajo en todo el sistema para invocar, abrir o alternar CloudRedirect en cualquier momento, incluso dentro del juego o minimizado en la bandeja.</value>
   </data>
+  <data name="Settings_MillenniumPluginTitle" xml:space="preserve">
+    <value>Plugin nativo de Steam Millennium</value>
+  </data>
+  <data name="Settings_MillenniumPluginDescription" xml:space="preserve">
+    <value>Integra CloudRedirect directamente en la interfaz del cliente de Steam con insignias de protección de guardado en tiempo real, acciones rápidas y panel de estado.</value>
+  </data>
+  <data name="Settings_MillenniumInstalled" xml:space="preserve">
+    <value>Millennium activo</value>
+  </data>
+  <data name="Settings_MillenniumNotFound" xml:space="preserve">
+    <value>Millennium no encontrado</value>
+  </data>
   <data name="Nav_LuaSync" xml:space="preserve">
     <value>Sincronización Lua</value>
   </data>

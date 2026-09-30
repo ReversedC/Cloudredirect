@@ -101,6 +101,30 @@ public partial class App : System.Windows.Application
             return;
         }
 
+        if (e.Args.Any(a => string.Equals(a, "--install-millennium", StringComparison.OrdinalIgnoreCase)))
+        {
+            var success = Services.MillenniumPluginService.DeployPlugin();
+            Console.WriteLine(success ? "Millennium plugin installed successfully." : "Failed to install Millennium plugin.");
+            Environment.Exit(success ? 0 : 1);
+            return;
+        }
+
+        if (e.Args.Any(a => string.Equals(a, "--uninstall-millennium", StringComparison.OrdinalIgnoreCase)))
+        {
+            var success = Services.MillenniumPluginService.RemovePlugin();
+            Console.WriteLine(success ? "Millennium plugin removed." : "Failed to remove Millennium plugin.");
+            Environment.Exit(success ? 0 : 1);
+            return;
+        }
+
+        if (e.Args.Any(a => string.Equals(a, "--sync-millennium", StringComparison.OrdinalIgnoreCase)))
+        {
+            Services.MillenniumPluginService.SyncWithSettings();
+            Console.WriteLine("Millennium plugin synchronized with settings.");
+            Environment.Exit(0);
+            return;
+        }
+
         AppDomain.CurrentDomain.UnhandledException += (s, args) =>
         {
             try
@@ -140,6 +164,19 @@ public partial class App : System.Windows.Application
         if (!isNewInstance)
         {
             // Another instance might already be running.
+            // Record any protocol arguments so the running instance can execute them.
+            var uriArg = e.Args.FirstOrDefault(a => a.StartsWith("cloudredirect://", StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrEmpty(uriArg))
+            {
+                try
+                {
+                    var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CloudRedirect");
+                    Directory.CreateDirectory(dir);
+                    File.WriteAllText(Path.Combine(dir, "ipc_command.txt"), uriArg);
+                }
+                catch { }
+            }
+
             // Try signaling the running instance to open / restore from tray and bring to foreground.
             bool signaled = false;
             try
@@ -187,6 +224,28 @@ public partial class App : System.Windows.Application
                         {
                             Current?.Dispatcher.BeginInvoke(new Action(() =>
                             {
+                                try
+                                {
+                                    var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CloudRedirect");
+                                    var ipcFile = Path.Combine(dir, "ipc_command.txt");
+                                    if (File.Exists(ipcFile))
+                                    {
+                                        var cmd = File.ReadAllText(ipcFile).Trim();
+                                        File.Delete(ipcFile);
+                                        if (cmd.Contains("backup", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            _ = Services.UniversalCloudSyncService.SyncAllProfilesAsync();
+                                        }
+                                        else if (cmd.Contains("saves", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            if (Current.MainWindow is MainWindow mw)
+                                            {
+                                                mw.NavigateTo(typeof(Pages.UniversalSavesPage));
+                                            }
+                                        }
+                                    }
+                                }
+                                catch { }
                                 BringToForeground();
                             }));
                         }

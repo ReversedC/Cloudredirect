@@ -2517,6 +2517,18 @@ Steam의 '동기화할 수 없음' 오류를 지우기 위해 지금 Steam을 �
   <data name="Settings_GlobalHotkeyHint" xml:space="preserve">
     <value>게임 중이거나 시스템 트레이에 최소화되어 있을 때도 언제든지 CloudRedirect를 불러오거나 토글할 수 있는 전역 단축키입니다.</value>
   </data>
+  <data name="Settings_MillenniumPluginTitle" xml:space="preserve">
+    <value>Steam Millennium 네이티브 플러그인</value>
+  </data>
+  <data name="Settings_MillenniumPluginDescription" xml:space="preserve">
+    <value>실시간 세이브 보호 배지, 빠른 작업 및 상태 패널을 통해 CloudRedirect를 Steam 클라이언트 인터페이스에 직접 통합합니다.</value>
+  </data>
+  <data name="Settings_MillenniumInstalled" xml:space="preserve">
+    <value>Millennium 활성화됨</value>
+  </data>
+  <data name="Settings_MillenniumNotFound" xml:space="preserve">
+    <value>Millennium 설치되지 않음</value>
+  </data>
   <data name="Nav_LuaSync" xml:space="preserve">
     <value>Lua 스크립트 동기화</value>
   </data>

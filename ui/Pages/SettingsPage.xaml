@@ -272,6 +272,29 @@
                                                  Unchecked="AppSettingsToggle_Changed" />
                             </ui:CardControl>
 
+                            <!-- Steam Millennium Native Plugin -->
+                            <ui:CardControl Margin="0,8,0,0">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <TextBlock Text="{res:Loc Settings_MillenniumPluginTitle}"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                            <Border x:Name="MillenniumStatusBorder" Background="#162332" BorderBrush="#25425F" BorderThickness="1"
+                                                    CornerRadius="4" Padding="6,2" Margin="8,0,0,0">
+                                                <TextBlock x:Name="MillenniumStatusText" Text="Millennium Active" FontSize="11" FontWeight="Bold" Foreground="#66C0F4" />
+                                            </Border>
+                                        </StackPanel>
+                                        <TextBlock Text="{res:Loc Settings_MillenniumPluginDescription}"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch x:Name="MillenniumPluginToggle"
+                                                 Checked="AppSettingsToggle_Changed"
+                                                 Unchecked="AppSettingsToggle_Changed" />
+                            </ui:CardControl>
+
                             <!-- Auto-Fit Window (No Scrolling) -->
                             <ui:CardControl Margin="0,8,0,0">
                                 <ui:CardControl.Header>

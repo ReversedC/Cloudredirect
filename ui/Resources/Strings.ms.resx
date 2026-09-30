@@ -2388,6 +2388,18 @@ Adakah anda mahu memulakan semula (restart) Steam sekarang untuk membersihkan ra
   <data name="Settings_GlobalHotkeyHint" xml:space="preserve">
     <value>Pintasan seluruh sistem untuk memanggil, membuka, atau menogol CloudRedirect pada bila-bila masa, walaupun semasa bermain permainan atau diminimumkan ke dulang sistem.</value>
   </data>
+  <data name="Settings_MillenniumPluginTitle" xml:space="preserve">
+    <value>Plugin Asal Steam Millennium</value>
+  </data>
+  <data name="Settings_MillenniumPluginDescription" xml:space="preserve">
+    <value>Sepadukan CloudRedirect terus ke dalam antara muka klien Steam dengan lencana perlindungan simpanan masa nyata, tindakan pantas dan panel status.</value>
+  </data>
+  <data name="Settings_MillenniumInstalled" xml:space="preserve">
+    <value>Millennium Aktif</value>
+  </data>
+  <data name="Settings_MillenniumNotFound" xml:space="preserve">
+    <value>Millennium Tidak Dijumpai</value>
+  </data>
   <data name="Nav_LuaSync" xml:space="preserve">
     <value>Penyegerakan Skrip Lua</value>
   </data>

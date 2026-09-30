@@ -2520,6 +2520,18 @@ Would you like to restart Steam now to clear the Steam UI 'Unable to sync' error
   <data name="Settings_GlobalHotkeyHint" xml:space="preserve">
     <value>System-wide shortcut to summon, open, or toggle CloudRedirect anytime, even while in-game or minimized to tray.</value>
   </data>
+  <data name="Settings_MillenniumPluginTitle" xml:space="preserve">
+    <value>Steam Millennium Native Plugin</value>
+  </data>
+  <data name="Settings_MillenniumPluginDescription" xml:space="preserve">
+    <value>Integrate CloudRedirect directly into the Steam client interface with real-time save protection badges, quick actions, and status panel.</value>
+  </data>
+  <data name="Settings_MillenniumInstalled" xml:space="preserve">
+    <value>Millennium Active</value>
+  </data>
+  <data name="Settings_MillenniumNotFound" xml:space="preserve">
+    <value>Millennium Not Found</value>
+  </data>
   <data name="Nav_LuaSync" xml:space="preserve">
     <value>Lua Scripts Sync</value>
   </data>

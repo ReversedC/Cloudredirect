@@ -84,6 +84,12 @@ public static class AppSettings
         set => WriteBool("auto_protect_non_cloud_games", value);
     }
 
+    public static bool EnableMillenniumPlugin
+    {
+        get => ReadBool("enable_millennium_plugin", true);
+        set => WriteBool("enable_millennium_plugin", value);
+    }
+
     public static bool AutoSyncOnGameExit
     {
         get => ReadBool("auto_sync_on_game_exit", true);

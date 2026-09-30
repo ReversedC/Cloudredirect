@@ -57,6 +57,25 @@ public static class UniversalCloudSyncService
         return new SyncResult(true, saveFiles.Length, 0, "Local snapshots active (Safe Mode).");
     }
 
+    /// <summary>
+    /// Synchronizes all enabled game save profiles to the cloud.
+    /// </summary>
+    public static async Task<int> SyncAllProfilesAsync()
+    {
+        var profiles = UniversalSaveWatcherService.GetProfiles();
+        int count = 0;
+        foreach (var profile in profiles.Where(p => p.Enabled))
+        {
+            try
+            {
+                var res = await UploadProfileSavesToCloudAsync(profile);
+                if (res.Success) count++;
+            }
+            catch { }
+        }
+        return count;
+    }
+
     private static async Task<SyncResult> UploadToGoogleDriveAsync(
         UniversalGameProfile profile,
         string saveDir,

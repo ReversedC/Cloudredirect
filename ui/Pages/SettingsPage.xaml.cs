@@ -79,6 +79,13 @@ public partial class SettingsPage : Page
             GlobalHotkeyToggle.IsChecked = AppSettings.GlobalHotkeyEnabled;
             PopulateHotkeyPresets();
             AutoProtectNonCloudToggle.IsChecked = AppSettings.AutoProtectNonCloudGames;
+            MillenniumPluginToggle.IsChecked = AppSettings.EnableMillenniumPlugin;
+            bool millInstalled = MillenniumPluginService.IsMillenniumInstalled();
+            MillenniumStatusText.Text = millInstalled ? S.Get("Settings_MillenniumInstalled") : S.Get("Settings_MillenniumNotFound");
+            MillenniumStatusText.Foreground = new System.Windows.Media.SolidColorBrush(
+                millInstalled ? System.Windows.Media.Color.FromRgb(0x66, 0xC0, 0xF4) : System.Windows.Media.Color.FromRgb(0x8F, 0x98, 0xA0));
+            MillenniumStatusBorder.BorderBrush = new System.Windows.Media.SolidColorBrush(
+                millInstalled ? System.Windows.Media.Color.FromRgb(0x25, 0x42, 0x5F) : System.Windows.Media.Color.FromRgb(0x36, 0x3E, 0x45));
             AutoFitZoomToggle.IsChecked = AppSettings.AutoFitZoom;
 
             AutoSyncExitToggle.IsChecked = AppSettings.AutoSyncOnGameExit;
@@ -172,6 +179,13 @@ public partial class SettingsPage : Page
         AppSettings.MinimizeToTrayOnClose = MinimizeToTrayToggle.IsChecked == true;
         AppSettings.ShowSyncNotifications = ShowNotificationsToggle.IsChecked == true;
         AppSettings.AutoProtectNonCloudGames = AutoProtectNonCloudToggle.IsChecked == true;
+        bool prevMillennium = AppSettings.EnableMillenniumPlugin;
+        bool newMillennium = MillenniumPluginToggle.IsChecked == true;
+        AppSettings.EnableMillenniumPlugin = newMillennium;
+        if (prevMillennium != newMillennium)
+        {
+            Task.Run(() => MillenniumPluginService.SyncWithSettings());
+        }
         AppSettings.AutoSyncOnGameExit = AutoSyncExitToggle.IsChecked == true;
         AppSettings.AutoMidGameCheckpoint = AutoCheckpointToggle.IsChecked == true;
         AppSettings.AutoConflictHealing = AutoConflictHealingToggle.IsChecked == true;

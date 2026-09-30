@@ -2493,6 +2493,18 @@
   <data name="Settings_GlobalHotkeyHint" xml:space="preserve">
     <value>随时呼出、打开或切换 CloudRedirect 的全局快捷键，即使在游戏中或最小化到系统托盘时也能立即唤醒。</value>
   </data>
+  <data name="Settings_MillenniumPluginTitle" xml:space="preserve">
+    <value>Steam Millennium 原生插件</value>
+  </data>
+  <data name="Settings_MillenniumPluginDescription" xml:space="preserve">
+    <value>将 CloudRedirect 直接集成到 Steam 客户端界面中，提供实时存档保护徽章、快捷操作和状态面板。</value>
+  </data>
+  <data name="Settings_MillenniumInstalled" xml:space="preserve">
+    <value>Millennium 已激活</value>
+  </data>
+  <data name="Settings_MillenniumNotFound" xml:space="preserve">
+    <value>未检测到 Millennium</value>
+  </data>
   <data name="Nav_LuaSync" xml:space="preserve">
     <value>Lua 脚本同步</value>
   </data>

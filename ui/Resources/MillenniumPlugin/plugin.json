@@ -1,0 +1,9 @@
+{
+  "$schema": "https://raw.githubusercontent.com/SteamClientHomebrew/Millennium/main/src/sys/plugin-schema.json",
+  "name": "CloudRedirect",
+  "common_name": "CloudRedirect",
+  "description": "Native Steam integration for CloudRedirect cloud save backup, sync, and status.",
+  "version": "1.0.0",
+  "author": "CloudRedirect",
+  "backendType": "lua"
+}
