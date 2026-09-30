@@ -93,9 +93,10 @@ public static class SteamGameScannerService
                         bool hasCloud = AppInfoParser.HasCloudSave(appId, steamPath);
                         bool hasCloudDenied = SteamDetector.HasCloudAccessDenied(appId, steamPath);
                         bool isSuoGame = SuoDetector.IsAppInCatalog(appId);
+                        bool isRemoteUnlocked = SteamDetector.IsRemoteUnlockedApp(appId, steamPath);
                         bool hasAppIdTxt = File.Exists(Path.Combine(fullInstallDir, "steam_appid.txt"));
 
-                        bool isUnlockedNoLua = !isIntercepted && (hasCloudDenied || isSuoGame || hasAppIdTxt);
+                        bool isUnlockedNoLua = !isIntercepted && (hasCloudDenied || isSuoGame || isRemoteUnlocked || hasAppIdTxt);
                         bool isGenuineWithCloud = !isIntercepted && !isUnlockedNoLua && hasCloud;
                         bool isGenuineNoCloud = !isIntercepted && !isUnlockedNoLua && !hasCloud;
 

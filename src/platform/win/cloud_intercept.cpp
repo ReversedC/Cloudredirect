@@ -520,6 +520,7 @@ static std::mutex g_namespaceAppsMutex;
 
 static FILETIME g_lastConfigJsonTime = {};
 static FILETIME g_lastInterceptTxtTime = {};
+static FILETIME g_lastRemoteUnlockTime = {};
 
 #ifdef _WIN32
 static FILETIME GetFileWriteTime(const std::wstring& path) {
@@ -542,17 +543,21 @@ bool IsNamespaceApp(uint32_t appId) {
     if (!g_steamPath.empty()) {
         std::wstring configPathW = FileUtil::Utf8ToPath(g_steamPath + "cloud_redirect\\config.json").wstring();
         std::wstring textListPathW = FileUtil::Utf8ToPath(g_steamPath + "cloud_redirect\\intercept_apps.txt").wstring();
+        std::wstring remoteUnlockPathW = FileUtil::Utf8ToPath(g_steamPath + "remote_unlock.json").wstring();
         FILETIME curCfgTime = GetFileWriteTime(configPathW);
         FILETIME curTxtTime = GetFileWriteTime(textListPathW);
+        FILETIME curUnlockTime = GetFileWriteTime(remoteUnlockPathW);
 
         bool filesChanged = false;
         {
             std::lock_guard<std::mutex> lock(g_namespaceAppsMutex);
             if (FileTimeDifferent(curCfgTime, g_lastConfigJsonTime) ||
-                FileTimeDifferent(curTxtTime, g_lastInterceptTxtTime)) {
+                FileTimeDifferent(curTxtTime, g_lastInterceptTxtTime) ||
+                FileTimeDifferent(curUnlockTime, g_lastRemoteUnlockTime)) {
                 filesChanged = true;
                 g_lastConfigJsonTime = curCfgTime;
                 g_lastInterceptTxtTime = curTxtTime;
+                g_lastRemoteUnlockTime = curUnlockTime;
                 g_checkedNegativeApps.clear(); // invalidate negative cache on file modification!
             }
         }
@@ -592,6 +597,27 @@ bool IsNamespaceApp(uint32_t appId) {
                     uint32_t txtAppId = (uint32_t)strtoul(tline.c_str() + s, nullptr, 10);
                     if (txtAppId != 0) {
                         AddNamespaceApp(txtAppId);
+                    }
+                }
+            }
+
+            // Reload remote_unlock.json fallback
+            std::ifstream unlockFile(remoteUnlockPathW);
+            if (unlockFile) {
+                std::string unlockStr((std::istreambuf_iterator<char>(unlockFile)), {});
+                unlockFile.close();
+                auto unlockCfg = Json::Parse(unlockStr);
+                auto& arr = unlockCfg["remote_unlock_appid"];
+                if (arr.type == Json::Type::Array) {
+                    for (auto& val : arr.arrVal) {
+                        uint32_t id = 0;
+                        if (val.type == Json::Type::Number)
+                            id = (uint32_t)val.integer();
+                        else if (val.type == Json::Type::String)
+                            id = (uint32_t)strtoul(val.str().c_str(), nullptr, 10);
+                        if (id != 0) {
+                            AddNamespaceApp(id);
+                        }
                     }
                 }
             }
@@ -4562,6 +4588,31 @@ void Init(const std::string& steamPath, bool cloudSaveOnly, CR_NotifyFn notifyCa
                 if (appId != 0) {
                     AddNamespaceApp(appId);
                     LOG("[Config] Added Zero-Lua intercept_app from txt: %u", appId);
+                }
+            }
+        }
+    }
+
+    // Load remote_unlock.json fallback (detected unlocked AppIDs)
+    {
+        std::string unlockPath = g_steamPath + "remote_unlock.json";
+        std::ifstream unlockFile(FileUtil::Utf8ToPath(unlockPath));
+        if (unlockFile) {
+            std::string unlockStr((std::istreambuf_iterator<char>(unlockFile)), {});
+            unlockFile.close();
+            auto unlockCfg = Json::Parse(unlockStr);
+            auto& arr = unlockCfg["remote_unlock_appid"];
+            if (arr.type == Json::Type::Array) {
+                for (auto& val : arr.arrVal) {
+                    uint32_t id = 0;
+                    if (val.type == Json::Type::Number)
+                        id = (uint32_t)val.integer();
+                    else if (val.type == Json::Type::String)
+                        id = (uint32_t)strtoul(val.str().c_str(), nullptr, 10);
+                    if (id != 0) {
+                        AddNamespaceApp(id);
+                        LOG("[Config] Added Zero-Lua intercept_app from remote_unlock.json: %u", id);
+                    }
                 }
             }
         }

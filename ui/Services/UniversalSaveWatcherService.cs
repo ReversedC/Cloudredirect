@@ -215,6 +215,12 @@ public static class UniversalSaveWatcherService
                         p.Status = "Monitoring";
                         modified = true;
                     }
+
+                    if (p.IsGenuineSteamGame && p.SteamAppId > 0 && SteamDetector.IsAppUnlocked(p.SteamAppId))
+                    {
+                        p.IsGenuineSteamGame = false;
+                        modified = true;
+                    }
                 }
 
                 if (modified)
@@ -292,6 +298,11 @@ public static class UniversalSaveWatcherService
         if (existing != null)
             return existing;
 
+        if (isGenuine && appId > 0 && SteamDetector.IsAppUnlocked(appId))
+        {
+            isGenuine = false;
+        }
+
         var profile = new UniversalGameProfile
         {
             GameName = gameName,
@@ -315,6 +326,11 @@ public static class UniversalSaveWatcherService
             profile.GameName.Equals("Windows Input Experience", StringComparison.OrdinalIgnoreCase))
         {
             return;
+        }
+
+        if (profile.IsGenuineSteamGame && profile.SteamAppId > 0 && SteamDetector.IsAppUnlocked(profile.SteamAppId))
+        {
+            profile.IsGenuineSteamGame = false;
         }
 
         var list = GetProfiles();

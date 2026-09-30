@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Text.Json;
 using System.Threading.Tasks;
 using CloudRedirect.Resources;
 using Microsoft.Win32;
@@ -777,6 +779,110 @@ public static class SteamDetector
             }
         }
         catch { }
+
+        return false;
+    }
+
+    private static readonly object _remoteUnlockLock = new();
+    private static HashSet<uint>? _cachedRemoteUnlockAppIds;
+    private static DateTime _lastRemoteUnlockCheck = DateTime.MinValue;
+
+    /// <summary>
+    /// Checks whether an AppID is marked as unlocked in remote_unlock.json inside the Steam directory.
+    /// Format: { "steamid64": "...", "remote_unlock_appid": [ "19000", "21690", "33220", ... ] }
+    /// </summary>
+    public static bool IsRemoteUnlockedApp(uint appId, string? steamPath = null)
+    {
+        if (appId == 0) return false;
+        var set = GetRemoteUnlockedAppIds(steamPath);
+        return set.Contains(appId);
+    }
+
+    /// <summary>
+    /// Retrieves all AppIDs listed under 'remote_unlock_appid' in remote_unlock.json inside the Steam folder.
+    /// </summary>
+    public static HashSet<uint> GetRemoteUnlockedAppIds(string? steamPath = null)
+    {
+        lock (_remoteUnlockLock)
+        {
+            if (_cachedRemoteUnlockAppIds != null && (DateTime.UtcNow - _lastRemoteUnlockCheck).TotalSeconds < 15)
+            {
+                return _cachedRemoteUnlockAppIds;
+            }
+        }
+
+        var set = new HashSet<uint>();
+        try
+        {
+            steamPath ??= FindSteamPath();
+            if (!string.IsNullOrEmpty(steamPath) && Directory.Exists(steamPath))
+            {
+                var candidates = new[]
+                {
+                    Path.Combine(steamPath, "remote_unlock.json"),
+                    Path.Combine(steamPath, "config", "remote_unlock.json")
+                };
+
+                foreach (var p in candidates)
+                {
+                    if (!File.Exists(p)) continue;
+
+                    using var fs = new FileStream(p, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                    using var doc = JsonDocument.Parse(fs);
+                    if (doc.RootElement.TryGetProperty("remote_unlock_appid", out var arr) && arr.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var elem in arr.EnumerateArray())
+                        {
+                            if (elem.ValueKind == JsonValueKind.String)
+                            {
+                                if (uint.TryParse(elem.GetString(), out var id) && id > 0)
+                                    set.Add(id);
+                            }
+                            else if (elem.ValueKind == JsonValueKind.Number)
+                            {
+                                if (elem.TryGetUInt32(out var id) && id > 0)
+                                    set.Add(id);
+                            }
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"GetRemoteUnlockedAppIds error: {ex.Message}");
+        }
+
+        lock (_remoteUnlockLock)
+        {
+            _cachedRemoteUnlockAppIds = set;
+            _lastRemoteUnlockCheck = DateTime.UtcNow;
+        }
+
+        return set;
+    }
+
+    /// <summary>
+    /// Comprehensive check whether an AppID is an unlocked game (remote_unlock.json, SUO catalog, steam_appid.txt, or cloud denied).
+    /// </summary>
+    public static bool IsAppUnlocked(uint appId, string? steamPath = null, string? installDir = null)
+    {
+        if (appId == 0) return false;
+        steamPath ??= FindSteamPath();
+
+        // 1. Check remote_unlock.json inside Steam directory
+        if (IsRemoteUnlockedApp(appId, steamPath)) return true;
+
+        // 2. Check Steam Unlock ONENNABE (SUO) catalog
+        if (SuoDetector.IsAppInCatalog(appId)) return true;
+
+        // 3. Check Steam Cloud upload rejection by Valve (Upload Access Denied / syncstate 3)
+        if (HasCloudAccessDenied(appId, steamPath)) return true;
+
+        // 4. Check steam_appid.txt in game directory
+        if (!string.IsNullOrEmpty(installDir) && File.Exists(Path.Combine(installDir, "steam_appid.txt"))) return true;
+        if (HasAppIdTxt(appId, steamPath)) return true;
 
         return false;
     }

@@ -73,7 +73,7 @@ public static class UniversalCloudSyncService
                 return new SyncResult(false, 0, 0, "Google Drive authentication token expired. Please re-authenticate in Cloud Settings.");
             }
 
-            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
             http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
             // Step 1: Resolve or create root 'CloudRedirect' folder
@@ -101,10 +101,21 @@ public static class UniversalCloudSyncService
             // Fetch web link of the game folder for direct opening
             var folderLink = await GetDriveFolderWebLinkAsync(http, gameFolderId);
 
-            // Step 4: List existing files in this game folder to avoid redundant uploads
-            var existingFiles = await ListDriveFolderFilesAsync(http, gameFolderId);
+            // Step 4: List existing files in this game folder recursively to support nested paths and in-place PATCH updates
+            var existingFilesList = new List<CloudDriveFileInfo>();
+            await ListDriveFilesRecursivelyAsync(http, gameFolderId, "", existingFilesList);
+            var existingFilesMap = existingFilesList
+                .Where(f => !f.IsDirectory)
+                .GroupBy(f => f.Name.Replace('\\', '/'), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+            var folderIdCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [""] = gameFolderId
+            };
 
             int uploadedCount = 0;
+            int failedCount = 0;
             long totalBytesUploaded = 0;
 
             foreach (var filePath in saveFiles)
@@ -116,21 +127,43 @@ public static class UniversalCloudSyncService
 
                 // Handle nested directories if any
                 var targetFolderId = gameFolderId;
-                var subDir = Path.GetDirectoryName(Path.GetRelativePath(saveDir, filePath));
+                var subDir = Path.GetDirectoryName(Path.GetRelativePath(saveDir, filePath))?.Replace('\\', '/');
                 if (!string.IsNullOrEmpty(subDir))
                 {
-                    var parts = subDir.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
-                    var curParent = gameFolderId;
-                    foreach (var part in parts)
+                    if (folderIdCache.TryGetValue(subDir, out var cachedId))
                     {
-                        curParent = await EnsureDriveFolderAsync(http, part, curParent);
-                        if (string.IsNullOrEmpty(curParent)) break;
+                        targetFolderId = cachedId;
                     }
-                    if (!string.IsNullOrEmpty(curParent)) targetFolderId = curParent;
+                    else
+                    {
+                        var parts = subDir.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+                        var curParent = gameFolderId;
+                        string accumulatedPath = "";
+                        foreach (var part in parts)
+                        {
+                            accumulatedPath = string.IsNullOrEmpty(accumulatedPath) ? part : $"{accumulatedPath}/{part}";
+                            if (!folderIdCache.TryGetValue(accumulatedPath, out var nextId))
+                            {
+                                nextId = await EnsureDriveFolderAsync(http, part, curParent);
+                                if (!string.IsNullOrEmpty(nextId))
+                                {
+                                    folderIdCache[accumulatedPath] = nextId;
+                                }
+                            }
+                            if (string.IsNullOrEmpty(nextId)) break;
+                            curParent = nextId;
+                        }
+                        if (!string.IsNullOrEmpty(curParent))
+                        {
+                            targetFolderId = curParent;
+                            folderIdCache[subDir] = targetFolderId;
+                        }
+                    }
                 }
 
                 // Check if file already exists with same size
-                if (existingFiles.TryGetValue(relPath, out var driveFile) && driveFile.Size == fileSize)
+                existingFilesMap.TryGetValue(relPath, out var driveFile);
+                if (driveFile != null && driveFile.Size == fileSize)
                 {
                     totalBytesUploaded += fileSize;
                     continue; // Up-to-date, skip re-uploading
@@ -138,22 +171,38 @@ public static class UniversalCloudSyncService
 
                 // Upload new / updated file
                 byte[] fileBytes = await File.ReadAllBytesAsync(filePath);
-                bool ok = await UploadFileToDriveAsync(http, targetFolderId, fileName, fileBytes);
+                bool ok = await UploadFileToDriveAsync(http, targetFolderId, fileName, fileBytes, driveFile?.Id);
                 if (ok)
                 {
                     uploadedCount++;
                     totalBytesUploaded += fileBytes.Length;
+                }
+                else
+                {
+                    failedCount++;
                 }
             }
 
             // Write telemetry entry to log for SaveUploadWatcher
             LogUploadActivity(profile, uploadedCount, totalBytesUploaded);
 
+            if (failedCount > 0)
+            {
+                return new SyncResult(
+                    false,
+                    uploadedCount,
+                    totalBytesUploaded,
+                    $"Failed to upload {failedCount} of {saveFiles.Length} file(s) to Google Drive. Check internet connection or quota.",
+                    folderLink);
+            }
+
             return new SyncResult(
                 true,
                 saveFiles.Length,
                 totalBytesUploaded,
-                $"Successfully synced {saveFiles.Length} file(s) ({uploadedCount} uploaded) to Google Drive.",
+                uploadedCount > 0
+                    ? $"Successfully synced {saveFiles.Length} file(s) ({uploadedCount} uploaded) to Google Drive."
+                    : $"All {saveFiles.Length} save file(s) are already up to date on Google Drive.",
                 folderLink);
         }
         catch (Exception ex)
@@ -217,7 +266,7 @@ public static class UniversalCloudSyncService
     {
         try
         {
-            var escapedName = name.Replace("'", "\\'");
+            var escapedName = name.Replace("\\", "\\\\").Replace("'", "\\'");
             var parentClause = string.IsNullOrEmpty(parentId)
                 ? "'root' in parents"
                 : $"'{parentId}' in parents";
@@ -354,28 +403,79 @@ public static class UniversalCloudSyncService
         return dict;
     }
 
-    private static async Task<bool> UploadFileToDriveAsync(HttpClient http, string parentFolderId, string fileName, byte[] content)
+    private static async Task<bool> UploadFileToDriveAsync(
+        HttpClient http,
+        string parentFolderId,
+        string fileName,
+        byte[] content,
+        string? existingFileId = null)
     {
         try
         {
-            var boundary = "----CloudRedirectUploadBoundary" + Guid.NewGuid().ToString("N");
-            var multipart = new MultipartFormDataContent(boundary);
+            var boundary = "cr_boundary_" + Guid.NewGuid().ToString("N");
+            var multipart = new MultipartContent("related", boundary);
 
-            var metaObj = new
+            string metaJson;
+            if (string.IsNullOrEmpty(existingFileId))
             {
-                name = fileName,
-                parents = new[] { parentFolderId }
-            };
-            var metaContent = new StringContent(JsonSerializer.Serialize(metaObj), Encoding.UTF8, "application/json");
+                var metaObj = new
+                {
+                    name = fileName,
+                    parents = new[] { parentFolderId }
+                };
+                metaJson = JsonSerializer.Serialize(metaObj);
+            }
+            else
+            {
+                var metaObj = new
+                {
+                    name = fileName
+                };
+                metaJson = JsonSerializer.Serialize(metaObj);
+            }
+
+            var metaContent = new StringContent(metaJson, Encoding.UTF8, "application/json");
             multipart.Add(metaContent);
 
             var fileContent = new ByteArrayContent(content);
             fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
             multipart.Add(fileContent);
 
-            var url = "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart";
-            var resp = await http.PostAsync(url, multipart);
-            return resp.IsSuccessStatusCode;
+            HttpResponseMessage resp;
+            if (string.IsNullOrEmpty(existingFileId))
+            {
+                var url = "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart";
+                resp = await http.PostAsync(url, multipart);
+            }
+            else
+            {
+                var url = $"https://www.googleapis.com/upload/drive/v3/files/{existingFileId}?uploadType=multipart";
+                resp = await http.PatchAsync(url, multipart);
+                if (resp.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    // Fallback to POST if previously tracked file was deleted from Drive
+                    var fallbackBoundary = "cr_boundary_" + Guid.NewGuid().ToString("N");
+                    var fallbackMultipart = new MultipartContent("related", fallbackBoundary);
+                    var postMeta = new
+                    {
+                        name = fileName,
+                        parents = new[] { parentFolderId }
+                    };
+                    fallbackMultipart.Add(new StringContent(JsonSerializer.Serialize(postMeta), Encoding.UTF8, "application/json"));
+                    var postBytes = new ByteArrayContent(content);
+                    postBytes.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+                    fallbackMultipart.Add(postBytes);
+                    resp = await http.PostAsync("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart", fallbackMultipart);
+                }
+            }
+
+            if (!resp.IsSuccessStatusCode)
+            {
+                var err = await resp.Content.ReadAsStringAsync();
+                Debug.WriteLine($"UploadFileToDriveAsync failed for {fileName} ({resp.StatusCode}): {err}");
+                return false;
+            }
+            return true;
         }
         catch (Exception ex)
         {
@@ -431,7 +531,7 @@ public static class UniversalCloudSyncService
     {
         try
         {
-            var escapedName = name.Replace("'", "\\'");
+            var escapedName = name.Replace("\\", "\\\\").Replace("'", "\\'");
             var parentClause = string.IsNullOrEmpty(parentId)
                 ? "'root' in parents"
                 : $"'{parentId}' in parents";

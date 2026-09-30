@@ -107,10 +107,11 @@ public static class ActiveGameTrackerService
 
                     bool hasCloudDenied = SteamDetector.HasCloudAccessDenied(runningAppId);
                     bool isSuoGame = SuoDetector.IsAppInCatalog(runningAppId);
+                    bool isRemoteUnlocked = SteamDetector.IsRemoteUnlockedApp(runningAppId);
                     bool hasAppIdTxt = SteamDetector.HasAppIdTxt(runningAppId);
 
-                    // Unlocked/Non-genuine without interception if cloud upload was rejected by Valve, or in SUO catalog, or has steam_appid.txt
-                    bool isUnlockedNoLua = !isIntercepted && (hasCloudDenied || isSuoGame || hasAppIdTxt);
+                    // Unlocked/Non-genuine without interception if cloud upload was rejected by Valve, in remote_unlock.json, in SUO catalog, or has steam_appid.txt
+                    bool isUnlockedNoLua = !isIntercepted && (hasCloudDenied || isSuoGame || isRemoteUnlocked || hasAppIdTxt);
                     bool isGenuine = !isIntercepted && !isUnlockedNoLua;
 
                     string? procName = null;

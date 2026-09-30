@@ -943,8 +943,8 @@ public static class LuaCloudSyncService
     {
         try
         {
-            var boundary = "----CloudRedirectUploadBoundary" + Guid.NewGuid().ToString("N");
-            var multipart = new MultipartFormDataContent(boundary);
+            var boundary = "cr_boundary_" + Guid.NewGuid().ToString("N");
+            var multipart = new MultipartContent("related", boundary);
 
             var metaObj = new
             {
