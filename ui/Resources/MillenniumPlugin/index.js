@@ -112,6 +112,12 @@ var PluginEntryPointMain = function () {
             const style = doc.createElement('style');
             style.id = 'cr-millennium-styles';
             style.textContent = `
+                /* Never show legacy titlebar header buttons in window controls */
+                #cloudredirect-header-btn,
+                .cr-nav-btn {
+                    display: none !important;
+                }
+
                 /* SuperNav Top Header Tab (STORE / LIBRARY / COMMUNITY / USER / CLOUDREDIRECT) */
                 .cr-supernav-menu {
                     cursor: pointer !important;
@@ -123,6 +129,7 @@ var PluginEntryPointMain = function () {
                     padding: 0 !important;
                     position: relative !important;
                     transition: all 0.2s ease !important;
+                    vertical-align: middle !important;
                 }
                 .cr-supernav-btn {
                     display: inline-flex !important;
@@ -161,39 +168,6 @@ var PluginEntryPointMain = function () {
                     display: inline-block !important;
                     flex-shrink: 0 !important;
                     margin-left: 2px !important;
-                }
-
-                /* Top Nav Button */
-                .cr-nav-btn {
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 6px;
-                    height: 24px;
-                    padding: 0 8px;
-                    background: #17222d;
-                    border: 1px solid #233b53;
-                    border-radius: 4px;
-                    color: #c6d4df;
-                    font-family: "Motiva Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-                    font-size: 11px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    user-select: none;
-                    transition: all 0.2s ease;
-                    vertical-align: middle;
-                    margin: 0 4px;
-                    z-index: 1000;
-                }
-                .cr-nav-btn:hover {
-                    background: #203548;
-                    border-color: #66c0f4;
-                    color: #ffffff;
-                    box-shadow: 0 0 8px rgba(102, 192, 244, 0.3);
-                }
-                .cr-nav-btn.cr-active {
-                    background: #1c3852;
-                    border-color: #66c0f4;
-                    color: #ffffff;
                 }
 
                 /* Bottom Bar Button (Next to Add Game / Steam Unlock) */
@@ -424,7 +398,7 @@ var PluginEntryPointMain = function () {
             if (dropdownElement) {
                 dropdownElement.remove();
                 dropdownElement = null;
-                targetDoc.querySelectorAll('.cr-nav-btn, .cr-bottom-bar-btn').forEach(b => b.classList.remove('cr-active'));
+                targetDoc.querySelectorAll('.cr-supernav-menu, .cr-bottom-bar-btn').forEach(b => b.classList.remove('cr-active'));
                 return;
             }
 
@@ -434,12 +408,17 @@ var PluginEntryPointMain = function () {
             dropdownElement = targetDoc.createElement('div');
             dropdownElement.className = 'cr-dropdown-menu';
 
+            const winWidth = targetDoc.defaultView?.innerWidth || window.innerWidth || 1200;
+            const winHeight = targetDoc.defaultView?.innerHeight || window.innerHeight || 800;
+
             if (isBottom) {
-                dropdownElement.style.left = Math.max(10, rect.left) + 'px';
+                const left = Math.min(Math.max(10, rect.left), winWidth - 330);
+                dropdownElement.style.left = left + 'px';
                 dropdownElement.style.top = 'auto';
-                dropdownElement.style.bottom = Math.max(38, (window.innerHeight - rect.top + 8)) + 'px';
+                dropdownElement.style.bottom = Math.max(38, (winHeight - rect.top + 8)) + 'px';
             } else {
-                dropdownElement.style.left = Math.max(10, rect.right - 320) + 'px';
+                const left = Math.min(Math.max(10, rect.left), winWidth - 330);
+                dropdownElement.style.left = left + 'px';
                 dropdownElement.style.top = (rect.bottom + 6) + 'px';
                 dropdownElement.style.bottom = 'auto';
             }
@@ -456,7 +435,7 @@ var PluginEntryPointMain = function () {
                     </div>
                 </div>
                 <div class="cr-dropdown-desc">
-                    Real-time universal save redirection and cloud backup active for Steam games.
+                    Universal cloud save redirection and automatic cloud backup for Steam.
                 </div>
                 <div class="cr-stats-card">
                     <div class="cr-stat-row">
@@ -484,7 +463,7 @@ var PluginEntryPointMain = function () {
                 </button>
                 <div class="cr-footer">
                     <span>Steam Millennium Plugin</span>
-                    <span>v2.9.70</span>
+                    <span>v2.9.71</span>
                 </div>
             `;
 
@@ -512,75 +491,76 @@ var PluginEntryPointMain = function () {
             setTimeout(() => targetDoc.addEventListener('click', outsideClickListener), 10);
         }
 
+        // Helper to locate the exact SuperNav tab bar container in doc
+        function findSuperNavInfo(doc) {
+            const allEls = doc.querySelectorAll('div, a, span, button');
+
+            for (const el of allEls) {
+                const t = (el.textContent || '').trim().toUpperCase();
+                if (t === 'COMMUNITY' || t === 'STORE' || t === 'LIBRARY') {
+                    // Traverse up within 5 levels to locate the SuperNav container
+                    let curr = el;
+                    let depth = 0;
+                    while (curr && curr !== doc.body && depth < 5) {
+                        const parent = curr.parentElement;
+                        if (!parent) break;
+                        const pText = (parent.textContent || '').toUpperCase();
+                        if (pText.includes('STORE') && pText.includes('LIBRARY') && pText.includes('COMMUNITY')) {
+                            const children = Array.from(parent.children);
+                            let sampleTab = null;
+                            let lastNavTab = null;
+                            let passedCommunity = false;
+
+                            for (const child of children) {
+                                const cText = (child.textContent || '').trim().toUpperCase();
+                                if (cText.includes('COMMUNITY')) {
+                                    sampleTab = child;
+                                    lastNavTab = child;
+                                    passedCommunity = true;
+                                } else if (cText.includes('STORE') || cText.includes('LIBRARY')) {
+                                    if (!sampleTab) sampleTab = child;
+                                    if (!passedCommunity) lastNavTab = child;
+                                } else if (passedCommunity) {
+                                    if (cText.length > 0 && !cText.includes('HTTP') && !cText.includes('🔍') && !cText.includes('SEARCH') && !cText.includes('✕')) {
+                                        lastNavTab = child;
+                                    }
+                                    break;
+                                }
+                            }
+
+                            if (!sampleTab) sampleTab = lastNavTab;
+
+                            if (parent && lastNavTab) {
+                                return {
+                                    container: parent,
+                                    sampleTab: sampleTab,
+                                    insertAfter: lastNavTab
+                                };
+                            }
+                        }
+                        curr = parent;
+                        depth++;
+                    }
+                }
+            }
+
+            return null;
+        }
+
         // Injects tab right into STORE / LIBRARY / COMMUNITY / USER / CLOUDREDIRECT row
         function injectSuperNavTab(doc) {
             if (!doc || !doc.body) return;
             if (doc.getElementById('cloudredirect-supernav-item')) return;
 
-            // 1. Locate the SuperNav container using the exact Steam classes and selectors
-            const superNavSelectors = [
-                'div._2D64jIEK7wpUR_NlObDW76',
-                'div[class*="_2D64jIEK7wpUR_NlObDW76"]',
-                'div[class*="SuperNav_"]',
-                'div[class*="supernav_"]',
-                'div[class*="SuperNav"]',
-                'nav[class*="SuperNav"]',
-                'div[class*="supernav_container"]',
-                '.supernav_container'
-            ];
+            const navInfo = findSuperNavInfo(doc);
+            if (!navInfo || !navInfo.container || !navInfo.insertAfter) return;
 
-            let superNavContainer = null;
-            for (const sel of superNavSelectors) {
-                const el = doc.querySelector(sel);
-                if (el && (el.offsetParent !== null || el.offsetWidth > 0 || el.children.length > 0)) {
-                    superNavContainer = el;
-                    break;
-                }
-            }
+            const { container, sampleTab, insertAfter } = navInfo;
 
-            // Fallback: Search by finding the container that has STORE, LIBRARY, COMMUNITY
-            if (!superNavContainer) {
-                const candidates = doc.querySelectorAll('div, nav');
-                for (const c of candidates) {
-                    const txt = c.textContent || '';
-                    if (txt.includes('STORE') && txt.includes('LIBRARY') && txt.includes('COMMUNITY')) {
-                        const children = Array.from(c.children);
-                        if (children.some(child => (child.textContent || '').includes('STORE'))) {
-                            superNavContainer = c;
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if (!superNavContainer) return;
-
-            // 2. Identify the tabs inside superNavContainer to match styling and find insertion spot
-            const children = Array.from(superNavContainer.children);
-            let sampleTab = null;
-            let lastNavTab = null;
-
-            for (const child of children) {
-                const txt = (child.textContent || '').trim();
-                // Skip back/forward navigation arrows (no alphanumeric text)
-                if (!/[A-Za-z0-9]/.test(txt)) continue;
-
-                if (txt.includes('STORE') || txt.includes('LIBRARY') || txt.includes('COMMUNITY')) {
-                    sampleTab = child;
-                    lastNavTab = child;
-                } else if (!txt.includes('http') && !txt.includes('search') && !txt.includes('🔍')) {
-                    // Profile tab (e.g. MINTAMAAF5) or console tab
-                    lastNavTab = child;
-                }
-            }
-
-            if (!sampleTab) return;
-
-            // 3. Create the CloudRedirect SuperNav item
+            // Create the CloudRedirect SuperNav item
             const navItem = doc.createElement('div');
             navItem.id = 'cloudredirect-supernav-item';
-            // Inherit the exact class name from Steam's supernav menu tabs
-            navItem.className = sampleTab.className + ' cr-supernav-menu';
+            navItem.className = (sampleTab.className || '').replace(/\bactive\b/gi, '').trim() + ' cr-supernav-menu';
             navItem.setAttribute('role', 'button');
             navItem.setAttribute('tabindex', '0');
             navItem.title = 'CloudRedirect Universal Cloud Save Protection';
@@ -588,7 +568,7 @@ var PluginEntryPointMain = function () {
             // Find child button / inner element if present in sampleTab
             const sampleInner = sampleTab.querySelector('div, a, span') || sampleTab;
             const innerBtn = doc.createElement('div');
-            innerBtn.className = (sampleInner.className || '') + ' cr-supernav-btn';
+            innerBtn.className = (sampleInner.className || '').replace(/\bactive\b/gi, '').trim() + ' cr-supernav-btn';
             innerBtn.innerHTML = `
                 <span class="cr-supernav-label">CLOUDREDIRECT</span>
                 <span class="cr-supernav-dot" title="Save Protection Active"></span>
@@ -596,104 +576,25 @@ var PluginEntryPointMain = function () {
 
             navItem.appendChild(innerBtn);
 
-            // 4. Handle clicks
+            // Handle clicks and keydowns
             navItem.onclick = (e) => {
                 e.stopPropagation();
-                toggleSuperNavDropdown(navItem, doc);
+                e.preventDefault();
+                toggleDropdown(navItem, false, doc);
             };
-
-            // 5. Insert directly into the row after the last tab (after MINTAMAAF5)
-            if (lastNavTab && lastNavTab.nextSibling) {
-                superNavContainer.insertBefore(navItem, lastNavTab.nextSibling);
-            } else {
-                superNavContainer.appendChild(navItem);
-            }
-        }
-
-        function toggleSuperNavDropdown(navItem, doc) {
-            const targetDoc = doc || navItem.ownerDocument || document;
-            if (dropdownElement) {
-                dropdownElement.remove();
-                dropdownElement = null;
-                targetDoc.querySelectorAll('.cr-supernav-menu, .cr-nav-btn, .cr-bottom-bar-btn').forEach(b => b.classList.remove('cr-active'));
-                return;
-            }
-
-            navItem.classList.add('cr-active');
-            const rect = navItem.getBoundingClientRect();
-
-            dropdownElement = targetDoc.createElement('div');
-            dropdownElement.className = 'cr-dropdown-menu';
-            dropdownElement.style.top = (rect.bottom + 4) + 'px';
-            dropdownElement.style.left = Math.max(10, rect.left) + 'px';
-            dropdownElement.style.bottom = 'auto';
-
-            dropdownElement.innerHTML = `
-                <div class="cr-dropdown-header">
-                    <div class="cr-title-group">
-                        <span class="cr-title">CloudRedirect</span>
-                        <span class="cr-version-badge">NATIVE</span>
-                    </div>
-                    <div class="cr-status-badge">
-                        <span class="cr-status-dot"></span>
-                        <span>Protected</span>
-                    </div>
-                </div>
-                <div class="cr-dropdown-desc">
-                    Real-time universal save redirection and cloud backup active for Steam games.
-                </div>
-                <div class="cr-stats-card">
-                    <div class="cr-stat-row">
-                        <span class="cr-stat-label">Save Protection Engine</span>
-                        <span class="cr-stat-val cr-good">Active &amp; Monitoring</span>
-                    </div>
-                    <div class="cr-stat-row">
-                        <span class="cr-stat-label">Cloud Storage</span>
-                        <span class="cr-stat-val">Connected</span>
-                    </div>
-                    <div class="cr-stat-row">
-                        <span class="cr-stat-label">Local Snapshots</span>
-                        <span class="cr-stat-val cr-good">Safe Mode OK</span>
-                    </div>
-                </div>
-                <button id="cr-action-launch" class="cr-btn-primary">
-                    ${cloudSvg}
-                    <span>Open CloudRedirect App</span>
-                </button>
-                <button id="cr-action-backup" class="cr-btn-secondary">
-                    <span>⚡ Backup All Saves Now</span>
-                </button>
-                <button id="cr-action-saves" class="cr-btn-secondary">
-                    <span>📁 Open Save Manager</span>
-                </button>
-                <div class="cr-footer">
-                    <span>Steam Millennium Plugin</span>
-                    <span>v2.9.70</span>
-                </div>
-            `;
-
-            targetDoc.body.appendChild(dropdownElement);
-
-            dropdownElement.querySelector('#cr-action-launch').onclick = () => {
-                launchApp(targetDoc);
-                toggleSuperNavDropdown(navItem, targetDoc);
-            };
-            dropdownElement.querySelector('#cr-action-backup').onclick = () => {
-                triggerBackup(targetDoc);
-                toggleSuperNavDropdown(navItem, targetDoc);
-            };
-            dropdownElement.querySelector('#cr-action-saves').onclick = () => {
-                openSaves(targetDoc);
-                toggleSuperNavDropdown(navItem, targetDoc);
-            };
-
-            const outsideClickListener = (e) => {
-                if (dropdownElement && !dropdownElement.contains(e.target) && !navItem.contains(e.target)) {
-                    toggleSuperNavDropdown(navItem, targetDoc);
-                    targetDoc.removeEventListener('click', outsideClickListener);
+            navItem.onkeydown = (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggleDropdown(navItem, false, doc);
                 }
             };
-            setTimeout(() => targetDoc.addEventListener('click', outsideClickListener), 10);
+
+            // Insert directly into the row after the last tab (after MINTAMAAF5)
+            if (insertAfter.nextSibling) {
+                container.insertBefore(navItem, insertAfter.nextSibling);
+            } else {
+                container.appendChild(navItem);
+            }
         }
 
         // 1. Inject Button in Bottom Bar (next to Add Game / Steam Unlock)
@@ -770,55 +671,7 @@ var PluginEntryPointMain = function () {
             }
         }
 
-        // 2. Inject Button in Header / Top Bar
-        function injectHeaderButton(doc) {
-            if (!doc || !doc.body) return;
-            if (doc.getElementById('cloudredirect-header-btn')) return;
-
-            const selectors = [
-                '.title-bar-actions',
-                '[class*="titlebarcontrols_"]',
-                '[class*="supernav_"]',
-                '#desktop_titlebar',
-                '.supernav_container',
-                '#header_notifications',
-                '[class*="notificationbutton_"]'
-            ];
-
-            let target = null;
-            for (const sel of selectors) {
-                const el = doc.querySelector(sel);
-                if (el && (el.offsetWidth > 0 || el.offsetParent !== null)) {
-                    target = el;
-                    break;
-                }
-            }
-
-            if (!target) return;
-
-            const btn = doc.createElement('div');
-            btn.id = 'cloudredirect-header-btn';
-            btn.className = 'cr-nav-btn';
-            btn.title = 'CloudRedirect Native Save Protection';
-            btn.innerHTML = `
-                ${cloudSvg}
-                <span>CloudRedirect</span>
-                <span class="cr-status-dot"></span>
-            `;
-
-            btn.onclick = (e) => {
-                e.stopPropagation();
-                toggleDropdown(btn, false, doc);
-            };
-
-            if (target.firstChild) {
-                target.insertBefore(btn, target.firstChild);
-            } else {
-                target.appendChild(btn);
-            }
-        }
-
-        // 3. Inject Game Details Page Badge
+        // 2. Inject Game Details Page Badge
         function injectGameBadge(doc) {
             if (!doc || !doc.body) return;
             const gameActionBars = doc.querySelectorAll('div[class*="playbar_"], div[class*="appactionandstats_"], div[class*="appdetailsheader_"]');
@@ -844,10 +697,15 @@ var PluginEntryPointMain = function () {
 
         function runInjectionsForDoc(doc) {
             if (!doc || !doc.body) return;
+
+            // Explicitly remove any legacy titlebar header buttons that caused window control overlap
+            const legacyBtn = doc.getElementById('cloudredirect-header-btn');
+            if (legacyBtn) legacyBtn.remove();
+            doc.querySelectorAll('.cr-nav-btn, [id*="cloudredirect-header"]').forEach(el => el.remove());
+
             ensureStyles(doc);
             injectSuperNavTab(doc);
             injectBottomBarButton(doc);
-            injectHeaderButton(doc);
             injectGameBadge(doc);
         }
 
@@ -933,13 +791,17 @@ var PluginEntryPointMain = function () {
                             if (superTab) superTab.remove();
                             const topBtn = d.getElementById('cloudredirect-header-btn');
                             if (topBtn) topBtn.remove();
+                            d.querySelectorAll('.cr-nav-btn, [id*="cloudredirect-header"]').forEach(el => el.remove());
                             const btmBtn = d.getElementById('cloudredirect-bottom-btn');
                             if (btmBtn) btmBtn.remove();
                             const style = d.getElementById('cr-millennium-styles');
                             if (style) style.remove();
                         } catch (e) { }
                     }
-                    if (dropdownElement) dropdownElement.remove();
+                    if (dropdownElement) {
+                        dropdownElement.remove();
+                        dropdownElement = null;
+                    }
                 }
             };
         };

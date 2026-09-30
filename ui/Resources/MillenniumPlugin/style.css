@@ -56,38 +56,10 @@
     margin-left: 2px !important;
 }
 
+/* Never show legacy titlebar header buttons in window controls */
+#cloudredirect-header-btn,
 .cr-nav-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    height: 28px;
-    padding: 0 10px;
-    background: #17222d;
-    border: 1px solid #233b53;
-    border-radius: 4px;
-    color: #c6d4df;
-    font-family: "Motiva Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    user-select: none;
-    transition: all 0.2s ease;
-    vertical-align: middle;
-    margin: 0 4px;
-    z-index: 1000;
-}
-
-.cr-nav-btn:hover {
-    background: #203548;
-    border-color: #66c0f4;
-    color: #ffffff;
-    box-shadow: 0 0 8px rgba(102, 192, 244, 0.3);
-}
-
-.cr-nav-btn.cr-active {
-    background: #1c3852;
-    border-color: #66c0f4;
-    color: #ffffff;
+    display: none !important;
 }
 
 .cr-status-dot {
