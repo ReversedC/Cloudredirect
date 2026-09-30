@@ -57,23 +57,13 @@ public partial class SettingsPage : Page
         ExtraSection.Visibility = Visibility.Visible;
 
         ApplySyncToggles(snap.SyncAchievements, snap.SyncPlaytime, snap.SyncLuas, snap.AutoUpdateDll,
-                         snap.ShowNonSteamGame, snap.CustomCloudIcon);
-
-        var steamPath = Services.SteamDetector.FindSteamPath();
-        if (!string.IsNullOrEmpty(steamPath) && Services.SteamWebUiPatcher.IsMillenniumActive(steamPath))
-        {
-            MillenniumBadge.Visibility = Visibility.Visible;
-        }
-        else
-        {
-            MillenniumBadge.Visibility = Visibility.Collapsed;
-        }
+                         snap.ShowNonSteamGame);
 
         _ = LoadPlatformStatusAsync();
     }
 
     private void ApplySyncToggles(bool? achievements, bool? playtime, bool? luas, bool? autoUpdateDll,
-                                   bool? showNonSteamGame, bool? customCloudIcon)
+                                   bool? showNonSteamGame)
     {
         _syncLoading = true;
         try
@@ -82,7 +72,6 @@ public partial class SettingsPage : Page
             if (playtime == true) SyncPlaytimeToggle.IsChecked = true;
             if (autoUpdateDll == true) AutoUpdateDllToggle.IsChecked = true;
             if (showNonSteamGame == true) ShowNonSteamGameToggle.IsChecked = true;
-            if (customCloudIcon != false) SteamCloudIconToggle.IsChecked = true;
 
             StartWithWindowsToggle.IsChecked = AppSettings.StartWithWindows;
             MinimizeToTrayToggle.IsChecked = AppSettings.MinimizeToTrayOnClose;
@@ -266,73 +255,6 @@ public partial class SettingsPage : Page
         }
     }
 
-    private async void SteamCloudIconToggle_Changed(object sender, RoutedEventArgs e)
-    {
-        if (_syncLoading) return;
-
-        bool isChecked = SteamCloudIconToggle.IsChecked == true;
-        try
-        {
-            var steamPath = Services.SteamDetector.FindSteamPath();
-            if (string.IsNullOrEmpty(steamPath))
-            {
-                _syncLoading = true;
-                try { SteamCloudIconToggle.IsChecked = !isChecked; }
-                finally { _syncLoading = false; }
-
-                await Services.Dialog.ShowErrorAsync(
-                    S.Get("Common_Error"),
-                    "Steam installation path could not be located.");
-                return;
-            }
-
-            if (isChecked)
-            {
-                var (success, msg) = Services.SteamWebUiPatcher.ApplyPatch(steamPath);
-                if (!success)
-                {
-                    _syncLoading = true;
-                    try { SteamCloudIconToggle.IsChecked = false; }
-                    finally { _syncLoading = false; }
-
-                    await Services.Dialog.ShowErrorAsync(S.Get("Common_Error"), msg);
-                    return;
-                }
-
-                await Services.Dialog.ShowInfoAsync(
-                    S.Get("Settings_Done"),
-                    S.Get("Settings_CustomCloudIconSuccess"));
-            }
-            else
-            {
-                var (success, msg) = Services.SteamWebUiPatcher.RemovePatch(steamPath);
-                if (!success)
-                {
-                    _syncLoading = true;
-                    try { SteamCloudIconToggle.IsChecked = true; }
-                    finally { _syncLoading = false; }
-
-                    await Services.Dialog.ShowErrorAsync(S.Get("Common_Error"), msg);
-                    return;
-                }
-
-                await Services.Dialog.ShowInfoAsync(
-                    S.Get("Settings_Done"),
-                    S.Get("Settings_CustomCloudIconReverted"));
-            }
-        }
-        catch (Exception ex)
-        {
-            _syncLoading = true;
-            try { SteamCloudIconToggle.IsChecked = !isChecked; }
-            finally { _syncLoading = false; }
-
-            await Services.Dialog.ShowErrorAsync(
-                S.Get("Common_Error"),
-                ex.Message);
-        }
-    }
-
     /// <summary>Persists sync toggles to config.json; throws on I/O failure for caller to revert.</summary>
     private void SaveSyncToggles()
     {
@@ -353,7 +275,6 @@ public partial class SettingsPage : Page
                 writer.WriteBoolean("sync_luas_restore", false);
                 writer.WriteBoolean("auto_update_dll", AutoUpdateDllToggle.IsChecked == true);
                 writer.WriteBoolean("show_non_steam_game", ShowNonSteamGameToggle.IsChecked == true);
-                writer.WriteBoolean("custom_cloud_icon", SteamCloudIconToggle.IsChecked == true);
             });
     }
 
@@ -391,25 +312,11 @@ public partial class SettingsPage : Page
         }
     }
 
-    private async void RefreshSteamGui_Click(object sender, RoutedEventArgs e)
+    private void OpenSuoRemote_Click(object sender, RoutedEventArgs e)
     {
-        try
+        if (Application.Current.MainWindow is MainWindow mw)
         {
-            var steamPath = Services.SteamDetector.FindSteamPath();
-            var (success, msg) = Services.SteamWebUiPatcher.ApplyPatch(steamPath);
-            await LoadPlatformStatusAsync();
-            if (success)
-            {
-                await Services.Dialog.ShowInfoAsync(S.Get("Settings_Done"), msg);
-            }
-            else
-            {
-                await Services.Dialog.ShowErrorAsync(S.Get("Common_Error"), msg);
-            }
-        }
-        catch (Exception ex)
-        {
-            await Services.Dialog.ShowErrorAsync(S.Get("Common_Error"), ex.Message);
+            mw.NavigateTo(typeof(SuoRemotePage));
         }
     }
 
@@ -441,6 +348,8 @@ public partial class SettingsPage : Page
             }
 
             var suoInfo = await SuoDetector.DetectAsync();
+            OpenSuoRemoteSettingsBtn.Visibility = (suoInfo.IsInstalled || suoInfo.IsOnline) ? Visibility.Visible : Visibility.Collapsed;
+
             if (suoInfo.IsInstalled)
             {
                 SuoVersionText.Text = $"{suoInfo.Version} • {(suoInfo.IsOnline ? "Local daemon active" : "Daemon offline")}";

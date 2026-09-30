@@ -321,7 +321,6 @@ public partial class UniversalSavesPage : Page
             RefreshList();
             if (added > 0)
             {
-                SteamWebUiPatcher.AutoRefreshIfEnabled(steamPath);
                 TrayIconService.Instance.ShowNotification(
                     "Game Saves Configured",
                     $"Successfully added {added} games to Universal Cloud Saves!");

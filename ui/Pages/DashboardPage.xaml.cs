@@ -206,6 +206,9 @@ public partial class DashboardPage : Page
 
             var uniCount = Services.UniversalSaveWatcherService.GetProfiles().Count;
             UniversalSavesCountText.Text = S.Format("Dashboard_UniversalSavesConfiguredFormat", uniCount);
+
+            var suo = await Services.SuoDetector.DetectAsync();
+            SuoRemoteTopBtn.Visibility = (suo.IsInstalled || suo.IsOnline) ? Visibility.Visible : Visibility.Collapsed;
         }
         }
         finally
@@ -485,6 +488,14 @@ public partial class DashboardPage : Page
             Owner = Window.GetWindow(this)
         };
         dlg.ShowDialog();
+    }
+
+    private void SuoRemote_Click(object sender, RoutedEventArgs e)
+    {
+        if (Window.GetWindow(this) is MainWindow mw)
+        {
+            mw.NavigateTo(typeof(SuoRemotePage));
+        }
     }
 
     private void UniversalSavesCard_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)

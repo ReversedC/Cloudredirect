@@ -64,6 +64,16 @@
                                Margin="0,0,10,0"
                                Padding="12,6"
                                Cursor="Hand" />
+                    <ui:Button x:Name="SuoRemoteTopBtn"
+                               Appearance="Secondary"
+                               Icon="{ui:SymbolIcon Globe24}"
+                               Content="SUO Remote"
+                               ToolTip="Open SUO Remote Web Dashboard"
+                               Click="SuoRemote_Click"
+                               Visibility="Collapsed"
+                               Margin="0,0,10,0"
+                               Padding="12,6"
+                               Cursor="Hand" />
                     <ui:Button Appearance="Secondary"
                                Icon="{ui:SymbolIcon Settings24}"
                                Content="{res:Loc Nav_Settings}"
