@@ -51,10 +51,43 @@
     flex-shrink: 0;
 }
 
+.cr-bottom-bar-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 12px;
+    background: #142230;
+    border: 1px solid #274563;
+    border-radius: 4px;
+    color: #c6d4df;
+    font-family: "Motiva Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s ease;
+    margin: 0 6px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+}
+
+.cr-bottom-bar-btn:hover {
+    background: #1c3247;
+    border-color: #66c0f4;
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(102, 192, 244, 0.35);
+}
+
+.cr-bottom-bar-btn.cr-active {
+    background: #1c3852;
+    border-color: #66c0f4;
+    color: #ffffff;
+}
+
 /* Dropdown Menu Container */
 .cr-dropdown-menu {
     position: fixed;
-    top: 42px;
     width: 320px;
     background: linear-gradient(135deg, #1b2838 0%, #171d25 100%);
     border: 1px solid #36506c;
@@ -64,7 +97,7 @@
     font-family: "Motiva Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     font-size: 13px;
     padding: 14px;
-    z-index: 99999;
+    z-index: 999999;
     animation: crFadeIn 0.18s ease-out forwards;
     backdrop-filter: blur(12px);
 }

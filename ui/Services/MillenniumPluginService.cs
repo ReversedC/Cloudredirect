@@ -143,6 +143,34 @@ public static class MillenniumPluginService
         }
     }
 
+    private static string GetResourceContent(string exactResourceSuffix, string fallback)
+    {
+        try
+        {
+            var asm = typeof(MillenniumPluginService).Assembly;
+            var resourceName = asm.GetManifestResourceNames()
+                .FirstOrDefault(n => n.EndsWith(exactResourceSuffix, StringComparison.OrdinalIgnoreCase));
+
+            if (resourceName != null)
+            {
+                using var stream = asm.GetManifestResourceStream(resourceName);
+                if (stream != null)
+                {
+                    using var reader = new StreamReader(stream);
+                    var text = reader.ReadToEnd();
+                    if (!string.IsNullOrWhiteSpace(text))
+                        return text;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[MillenniumPluginService] GetResourceContent failed for {exactResourceSuffix}: {ex}");
+        }
+
+        return fallback;
+    }
+
     /// <summary>
     /// Deploys or updates the CloudRedirect Millennium plugin into Steam's millennium directory.
     /// </summary>
@@ -162,17 +190,19 @@ public static class MillenniumPluginService
             Directory.CreateDirectory(distDir);
 
             // 1. Write plugin.json
-            File.WriteAllText(Path.Combine(pluginDir, "plugin.json"), PluginJsonContent);
+            File.WriteAllText(Path.Combine(pluginDir, "plugin.json"), GetResourceContent("plugin.json", PluginJsonContent));
 
             // 2. Write backend/main.lua
-            File.WriteAllText(Path.Combine(backendDir, "main.lua"), BackendLuaContent);
+            File.WriteAllText(Path.Combine(backendDir, "main.lua"), GetResourceContent("backend.main.lua", BackendLuaContent));
 
             // 3. Write style.css
-            File.WriteAllText(Path.Combine(pluginDir, "style.css"), StyleCssContent);
+            File.WriteAllText(Path.Combine(pluginDir, "style.css"), GetResourceContent("style.css", StyleCssContent));
 
             // 4. Write index.js (root and .millennium/Dist)
-            File.WriteAllText(Path.Combine(pluginDir, "index.js"), FrontendJsContent);
-            File.WriteAllText(Path.Combine(distDir, "index.js"), FrontendJsContent);
+            string rootJs = GetResourceContent("MillenniumPlugin.index.js", FrontendJsContent);
+            string distJs = GetResourceContent("Dist.index.js", rootJs);
+            File.WriteAllText(Path.Combine(pluginDir, "index.js"), rootJs);
+            File.WriteAllText(Path.Combine(distDir, "index.js"), distJs);
 
             // 5. Update millennium/config/config.json enabledPlugins
             EnableInMillenniumConfig();
