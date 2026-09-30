@@ -123,19 +123,25 @@ public class UiZoomManager
 
     public void ZoomIn()
     {
+        _debounceTimer?.Stop();
         IsAutoFit = false;
         AppSettings.AutoFitZoom = false;
-        double newScale = Math.Round(CurrentScale + 0.05, 2);
-        if (newScale > 1.40) newScale = 1.40;
+        // Snap to clean 10% steps
+        double current = Math.Round(CurrentScale * 10.0) / 10.0;
+        double newScale = Math.Round(current + 0.10, 2);
+        if (newScale > 1.50) newScale = 1.50;
         ApplyScale(newScale, false);
         AppSettings.ZoomScale = newScale;
     }
 
     public void ZoomOut()
     {
+        _debounceTimer?.Stop();
         IsAutoFit = false;
         AppSettings.AutoFitZoom = false;
-        double newScale = Math.Round(CurrentScale - 0.05, 2);
+        // Snap to clean 10% steps
+        double current = Math.Round(CurrentScale * 10.0) / 10.0;
+        double newScale = Math.Round(current - 0.10, 2);
         if (newScale < 0.60) newScale = 0.60;
         ApplyScale(newScale, false);
         AppSettings.ZoomScale = newScale;
@@ -145,7 +151,7 @@ public class UiZoomManager
     {
         IsAutoFit = isAuto;
         AppSettings.AutoFitZoom = isAuto;
-        double clamped = Math.Clamp(scale, 0.60, 1.40);
+        double clamped = Math.Clamp(scale, 0.60, 1.50);
         ApplyScale(clamped, isAuto);
         if (!isAuto)
         {
@@ -155,7 +161,21 @@ public class UiZoomManager
 
     public void ToggleAutoFit()
     {
-        SetAutoFit(!IsAutoFit);
+        if (IsAutoFit)
+        {
+            // If currently in AutoFit, toggle to 100% manual scale
+            SetScale(1.0, isAuto: false);
+        }
+        else
+        {
+            // If in manual scale, toggle back to AutoFit
+            SetAutoFit(true);
+        }
+    }
+
+    public void RefreshDisplay()
+    {
+        ApplyScale(CurrentScale, IsAutoFit);
     }
 
     public void SetAutoFit(bool enable)

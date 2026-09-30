@@ -166,11 +166,11 @@
                         Margin="0,0,12,6" />
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,6">
                 <RadioButton x:Name="FilterAllRadio" Style="{StaticResource SteamFilterChipStyle}"
-                             Content="All Games" IsChecked="True" Click="FilterChip_Click" Tag="all" />
+                             Content="{res:Loc UniversalSaves_FilterAll}" IsChecked="True" Click="FilterChip_Click" Tag="all" />
                 <RadioButton x:Name="FilterMonitoringRadio" Style="{StaticResource SteamFilterChipStyle}"
-                             Content="Monitoring 🟢" Click="FilterChip_Click" Tag="monitoring" />
+                             Content="{res:Loc UniversalSaves_FilterMonitoring}" Click="FilterChip_Click" Tag="monitoring" />
                 <RadioButton x:Name="FilterAntiCheatRadio" Style="{StaticResource SteamFilterChipStyle}"
-                             Content="Anti-Cheat Safe 🛡️" Click="FilterChip_Click" Tag="anticheat" />
+                             Content="{res:Loc UniversalSaves_FilterAntiCheat}" Click="FilterChip_Click" Tag="anticheat" />
             </StackPanel>
         </WrapPanel>
 
@@ -186,21 +186,21 @@
                     Margin="0,0,0,16">
                 <StackPanel HorizontalAlignment="Center">
                     <ui:SymbolIcon Symbol="FolderZip24" FontSize="44" Foreground="#475C73" HorizontalAlignment="Center" />
-                    <TextBlock Text="No Universal Games Configured Yet"
+                    <TextBlock Text="{res:Loc UniversalSaves_EmptyTitle}"
                                FontSize="16" FontWeight="SemiBold"
                                Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                HorizontalAlignment="Center" Margin="0,12,0,4" />
-                    <TextBlock Text="CloudRedirect can automatically scan your PC to find game save folders and monitor games as you play with zero configuration."
+                    <TextBlock Text="{res:Loc UniversalSaves_EmptyDesc}"
                                FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                HorizontalAlignment="Center" TextAlignment="Center" MaxWidth="500" />
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,16,0,0">
-                        <ui:Button Content="⚡ Auto-Detect &amp; Scan Game Saves on this PC"
+                        <ui:Button Content="{res:Loc UniversalSaves_EmptyAutoDetect}"
                                    Appearance="Primary"
                                    Icon="{ui:SymbolIcon Search24}"
                                    Click="AutoScan_Click"
                                    Padding="14,8"
                                    Margin="0,0,8,0" />
-                        <ui:Button Content="Quick Add Popular Presets"
+                        <ui:Button Content="{res:Loc UniversalSaves_EmptyAddPresets}"
                                    Appearance="Secondary"
                                    Icon="{ui:SymbolIcon Sparkle24}"
                                    Click="AddPreset_Click"
@@ -217,23 +217,23 @@
                         <Border Style="{StaticResource GameCardBorderStyle}">
                             <Border.ContextMenu>
                                 <ContextMenu Background="#1A2634" BorderBrush="#2F4259">
-                                    <MenuItem Header="Sync Now" Click="SyncNow_Click" Tag="{Binding}">
+                                    <MenuItem Header="{res:Loc UniversalSaves_MenuSyncNow}" Click="SyncNow_Click" Tag="{Binding}">
                                         <MenuItem.Icon>
                                             <ui:SymbolIcon Symbol="ArrowSync20" Foreground="#66C0F4" />
                                         </MenuItem.Icon>
                                     </MenuItem>
-                                    <MenuItem Header="View Save History &amp; Rollback" Click="SaveHistory_Click" Tag="{Binding}">
+                                    <MenuItem Header="{res:Loc UniversalSaves_MenuHistory}" Click="SaveHistory_Click" Tag="{Binding}">
                                         <MenuItem.Icon>
                                             <ui:SymbolIcon Symbol="History20" Foreground="#66C0F4" />
                                         </MenuItem.Icon>
                                     </MenuItem>
-                                    <MenuItem Header="Open Save Folder in File Explorer" Click="OpenFolder_Click" Tag="{Binding}">
+                                    <MenuItem Header="{res:Loc UniversalSaves_MenuOpenFolder}" Click="OpenFolder_Click" Tag="{Binding}">
                                         <MenuItem.Icon>
                                             <ui:SymbolIcon Symbol="FolderOpen20" Foreground="#A4D007" />
                                         </MenuItem.Icon>
                                     </MenuItem>
                                     <Separator Background="#2F4259" />
-                                    <MenuItem Header="Remove Game from Universal Saves" Click="DeleteProfile_Click" Tag="{Binding}">
+                                    <MenuItem Header="{res:Loc UniversalSaves_MenuRemove}" Click="DeleteProfile_Click" Tag="{Binding}">
                                         <MenuItem.Icon>
                                             <ui:SymbolIcon Symbol="Delete20" Foreground="#FF6B6E" />
                                         </MenuItem.Icon>

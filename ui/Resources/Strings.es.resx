@@ -2557,4 +2557,58 @@ Esto puede causar pérdida de datos en algunos casos.
   <data name="LuaSync_ErrorLoading" xml:space="preserve">
     <value>Error al cargar scripts Lua: {0}</value>
   </data>
+  <data name="UniversalSaves_FilterAll" xml:space="preserve">
+    <value>Todos los Juegos</value>
+  </data>
+  <data name="UniversalSaves_FilterMonitoring" xml:space="preserve">
+    <value>Monitoreando 🟢</value>
+  </data>
+  <data name="UniversalSaves_FilterAntiCheat" xml:space="preserve">
+    <value>Seguro Anti-Cheat 🛡️</value>
+  </data>
+  <data name="Apps_FilterAll" xml:space="preserve">
+    <value>Todos los Juegos</value>
+  </data>
+  <data name="Apps_FilterSynced" xml:space="preserve">
+    <value>Sincronizados 🟢</value>
+  </data>
+  <data name="Apps_FilterOrphans" xml:space="preserve">
+    <value>Con Huérfanos ⚠️</value>
+  </data>
+  <data name="UniversalSaves_EmptyTitle" xml:space="preserve">
+    <value>Aún no hay Juegos Universales Configurados</value>
+  </data>
+  <data name="UniversalSaves_EmptyDesc" xml:space="preserve">
+    <value>CloudRedirect puede escanear su PC automáticamente para encontrar carpetas de partidas y monitorearlas sin configuración.</value>
+  </data>
+  <data name="UniversalSaves_EmptyAutoDetect" xml:space="preserve">
+    <value>⚡ Auto-Detectar y Escanear Partidas en este PC</value>
+  </data>
+  <data name="UniversalSaves_EmptyAddPresets" xml:space="preserve">
+    <value>Añadir Ajustes Preestablecidos Populares</value>
+  </data>
+  <data name="UniversalSaves_MenuSyncNow" xml:space="preserve">
+    <value>Sincronizar Ahora</value>
+  </data>
+  <data name="UniversalSaves_MenuHistory" xml:space="preserve">
+    <value>Ver Historial de Partidas y Restaurar</value>
+  </data>
+  <data name="UniversalSaves_MenuOpenFolder" xml:space="preserve">
+    <value>Abrir Carpeta de Partidas en el Explorador de Archivos</value>
+  </data>
+  <data name="UniversalSaves_MenuRemove" xml:space="preserve">
+    <value>Eliminar Juego de Guardados Universales</value>
+  </data>
+  <data name="Zoom_ZoomOut_Tooltip" xml:space="preserve">
+    <value>Alejar Zoom (Ctrl + Rueda Abajo)</value>
+  </data>
+  <data name="Zoom_ZoomIn_Tooltip" xml:space="preserve">
+    <value>Acercar Zoom (Ctrl + Rueda Arriba)</value>
+  </data>
+  <data name="Zoom_AutoFit_Tooltip" xml:space="preserve">
+    <value>Ajuste Automático a la Ventana sin Desplazamiento</value>
+  </data>
+  <data name="Zoom_Percent_Tooltip" xml:space="preserve">
+    <value>Haga clic para alternar Ajuste Automático o Restablecer al 100%</value>
+  </data>
 </root>

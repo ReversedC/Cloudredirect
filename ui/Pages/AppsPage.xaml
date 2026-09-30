@@ -123,11 +123,11 @@
                                 Margin="0,0,12,6" />
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,6">
                         <RadioButton x:Name="FilterAllAppsRadio" Style="{StaticResource SteamFilterChipStyle}"
-                                     Content="All Games" IsChecked="True" Click="FilterChip_Click" Tag="all" />
+                                     Content="{res:Loc Apps_FilterAll}" IsChecked="True" Click="FilterChip_Click" Tag="all" />
                         <RadioButton x:Name="FilterSyncedAppsRadio" Style="{StaticResource SteamFilterChipStyle}"
-                                     Content="Synced 🟢" Click="FilterChip_Click" Tag="synced" />
+                                     Content="{res:Loc Apps_FilterSynced}" Click="FilterChip_Click" Tag="synced" />
                         <RadioButton x:Name="FilterOrphansAppsRadio" Style="{StaticResource SteamFilterChipStyle}"
-                                     Content="With Orphans ⚠️" Click="FilterChip_Click" Tag="orphans" />
+                                     Content="{res:Loc Apps_FilterOrphans}" Click="FilterChip_Click" Tag="orphans" />
                     </StackPanel>
                     <ui:Button x:Name="RestoreSavesButton"
                                Content="{res:Loc Apps_RestoreSaves}"

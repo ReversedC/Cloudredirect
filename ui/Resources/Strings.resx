@@ -2610,4 +2610,58 @@ Would you like to restart Steam now to clear the Steam UI 'Unable to sync' error
   <data name="LuaSync_ErrorLoading" xml:space="preserve">
     <value>Failed to load Lua scripts: {0}</value>
   </data>
+  <data name="UniversalSaves_FilterAll" xml:space="preserve">
+    <value>All Games</value>
+  </data>
+  <data name="UniversalSaves_FilterMonitoring" xml:space="preserve">
+    <value>Monitoring 🟢</value>
+  </data>
+  <data name="UniversalSaves_FilterAntiCheat" xml:space="preserve">
+    <value>Anti-Cheat Safe 🛡️</value>
+  </data>
+  <data name="Apps_FilterAll" xml:space="preserve">
+    <value>All Games</value>
+  </data>
+  <data name="Apps_FilterSynced" xml:space="preserve">
+    <value>Synced 🟢</value>
+  </data>
+  <data name="Apps_FilterOrphans" xml:space="preserve">
+    <value>With Orphans ⚠️</value>
+  </data>
+  <data name="UniversalSaves_EmptyTitle" xml:space="preserve">
+    <value>No Universal Games Configured Yet</value>
+  </data>
+  <data name="UniversalSaves_EmptyDesc" xml:space="preserve">
+    <value>CloudRedirect can automatically scan your PC to find game save folders and monitor games as you play with zero configuration.</value>
+  </data>
+  <data name="UniversalSaves_EmptyAutoDetect" xml:space="preserve">
+    <value>⚡ Auto-Detect &amp; Scan Game Saves on this PC</value>
+  </data>
+  <data name="UniversalSaves_EmptyAddPresets" xml:space="preserve">
+    <value>Quick Add Popular Presets</value>
+  </data>
+  <data name="UniversalSaves_MenuSyncNow" xml:space="preserve">
+    <value>Sync Now</value>
+  </data>
+  <data name="UniversalSaves_MenuHistory" xml:space="preserve">
+    <value>View Save History &amp; Rollback</value>
+  </data>
+  <data name="UniversalSaves_MenuOpenFolder" xml:space="preserve">
+    <value>Open Save Folder in File Explorer</value>
+  </data>
+  <data name="UniversalSaves_MenuRemove" xml:space="preserve">
+    <value>Remove Game from Universal Saves</value>
+  </data>
+  <data name="Zoom_ZoomOut_Tooltip" xml:space="preserve">
+    <value>Zoom Out (Ctrl + Scroll Down)</value>
+  </data>
+  <data name="Zoom_ZoomIn_Tooltip" xml:space="preserve">
+    <value>Zoom In (Ctrl + Scroll Up)</value>
+  </data>
+  <data name="Zoom_AutoFit_Tooltip" xml:space="preserve">
+    <value>Auto-Fit to Window without Scrolling</value>
+  </data>
+  <data name="Zoom_Percent_Tooltip" xml:space="preserve">
+    <value>Click to toggle Auto-Fit (No Scrolling) or Reset to 100%</value>
+  </data>
 </root>

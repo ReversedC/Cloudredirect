@@ -2562,4 +2562,58 @@ Deseja reiniciar a Steam agora para limpar o erro "Não foi possível sincroniza
   <data name="LuaSync_ErrorLoading" xml:space="preserve">
     <value>Falha ao carregar scripts Lua: {0}</value>
   </data>
+  <data name="UniversalSaves_FilterAll" xml:space="preserve">
+    <value>Todos os Jogos</value>
+  </data>
+  <data name="UniversalSaves_FilterMonitoring" xml:space="preserve">
+    <value>Monitorando 🟢</value>
+  </data>
+  <data name="UniversalSaves_FilterAntiCheat" xml:space="preserve">
+    <value>Anti-Cheat Seguro 🛡️</value>
+  </data>
+  <data name="Apps_FilterAll" xml:space="preserve">
+    <value>Todos os Jogos</value>
+  </data>
+  <data name="Apps_FilterSynced" xml:space="preserve">
+    <value>Sincronizados 🟢</value>
+  </data>
+  <data name="Apps_FilterOrphans" xml:space="preserve">
+    <value>Com Órfãos ⚠️</value>
+  </data>
+  <data name="UniversalSaves_EmptyTitle" xml:space="preserve">
+    <value>Nenhum Jogo Universal Configurado Ainda</value>
+  </data>
+  <data name="UniversalSaves_EmptyDesc" xml:space="preserve">
+    <value>O CloudRedirect pode escanear seu PC automaticamente para encontrar pastas de saves e monitorar seus jogos sem configuração.</value>
+  </data>
+  <data name="UniversalSaves_EmptyAutoDetect" xml:space="preserve">
+    <value>⚡ Detectar e Escanear Saves Automaticamente neste PC</value>
+  </data>
+  <data name="UniversalSaves_EmptyAddPresets" xml:space="preserve">
+    <value>Adicionar Predefinições Populares</value>
+  </data>
+  <data name="UniversalSaves_MenuSyncNow" xml:space="preserve">
+    <value>Sincronizar Agora</value>
+  </data>
+  <data name="UniversalSaves_MenuHistory" xml:space="preserve">
+    <value>Ver Histórico de Saves e Restaurar</value>
+  </data>
+  <data name="UniversalSaves_MenuOpenFolder" xml:space="preserve">
+    <value>Abrir Pasta de Saves no Explorador de Arquivos</value>
+  </data>
+  <data name="UniversalSaves_MenuRemove" xml:space="preserve">
+    <value>Remover Jogo dos Saves Universais</value>
+  </data>
+  <data name="Zoom_ZoomOut_Tooltip" xml:space="preserve">
+    <value>Diminuir Zoom (Ctrl + Rolar para Baixo)</value>
+  </data>
+  <data name="Zoom_ZoomIn_Tooltip" xml:space="preserve">
+    <value>Aumentar Zoom (Ctrl + Rolar para Cima)</value>
+  </data>
+  <data name="Zoom_AutoFit_Tooltip" xml:space="preserve">
+    <value>Ajuste Automático à Janela sem Rolagem</value>
+  </data>
+  <data name="Zoom_Percent_Tooltip" xml:space="preserve">
+    <value>Clique para alternar Ajuste Automático ou Redefinir para 100%</value>
+  </data>
 </root>

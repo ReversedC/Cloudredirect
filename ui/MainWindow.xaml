@@ -25,43 +25,44 @@
                 <ui:TitleBar.Icon>
                     <ui:ImageIcon Source="pack://application:,,,/steam_logo3.ico" />
                 </ui:TitleBar.Icon>
+                <ui:TitleBar.TrailingContent>
+                    <!-- Responsive Auto-Fit & Zoom Controls Pill -->
+                    <Border VerticalAlignment="Center" Margin="0,0,8,0"
+                            Background="#16222F" BorderBrush="#253A4E" BorderThickness="1"
+                            CornerRadius="13" Padding="4,2">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button x:Name="ZoomOutBtn"
+                                    ToolTip="{res:Loc Zoom_ZoomOut_Tooltip}"
+                                    Width="22" Height="22" Padding="0" Margin="0"
+                                    Background="Transparent" BorderThickness="0"
+                                    Foreground="#8F98A0" Cursor="Hand" Click="ZoomOut_Click">
+                                <ui:SymbolIcon Symbol="SubtractCircle20" FontSize="14" />
+                            </Button>
+                            <TextBlock x:Name="ZoomPercentText"
+                                       Text="Auto Fit"
+                                       ToolTip="{res:Loc Zoom_Percent_Tooltip}"
+                                       FontSize="11" FontWeight="SemiBold"
+                                       Foreground="#66C0F4"
+                                       VerticalAlignment="Center" Margin="5,0,5,0"
+                                       Cursor="Hand" MouseDown="ZoomPercent_MouseDown" />
+                            <Button x:Name="ZoomInBtn"
+                                    ToolTip="{res:Loc Zoom_ZoomIn_Tooltip}"
+                                    Width="22" Height="22" Padding="0" Margin="0"
+                                    Background="Transparent" BorderThickness="0"
+                                    Foreground="#8F98A0" Cursor="Hand" Click="ZoomIn_Click">
+                                <ui:SymbolIcon Symbol="AddCircle20" FontSize="14" />
+                            </Button>
+                            <Button x:Name="AutoFitBtn"
+                                    ToolTip="{res:Loc Zoom_AutoFit_Tooltip}"
+                                    Width="22" Height="22" Padding="0" Margin="2,0,0,0"
+                                    Background="#1C354A" BorderThickness="0"
+                                    Foreground="#A4D007" Cursor="Hand" Click="AutoFit_Click">
+                                <ui:SymbolIcon Symbol="FullScreenMaximize20" FontSize="13" />
+                            </Button>
+                        </StackPanel>
+                    </Border>
+                </ui:TitleBar.TrailingContent>
             </ui:TitleBar>
-
-            <!-- Responsive Auto-Fit & Zoom Controls Pill -->
-            <Border HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,140,0"
-                    Background="#16222F" BorderBrush="#253A4E" BorderThickness="1"
-                    CornerRadius="13" Padding="4,2">
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button x:Name="ZoomOutBtn"
-                            ToolTip="Zoom Out (Ctrl + Scroll Down)"
-                            Width="22" Height="22" Padding="0" Margin="0"
-                            Background="Transparent" BorderThickness="0"
-                            Foreground="#8F98A0" Cursor="Hand" Click="ZoomOut_Click">
-                        <ui:SymbolIcon Symbol="SubtractCircle20" FontSize="14" />
-                    </Button>
-                    <TextBlock x:Name="ZoomPercentText"
-                               Text="Auto Fit"
-                               ToolTip="Click to toggle Auto-Fit (No Scrolling) or Reset to 100%"
-                               FontSize="11" FontWeight="SemiBold"
-                               Foreground="#66C0F4"
-                               VerticalAlignment="Center" Margin="5,0,5,0"
-                               Cursor="Hand" MouseDown="ZoomPercent_MouseDown" />
-                    <Button x:Name="ZoomInBtn"
-                            ToolTip="Zoom In (Ctrl + Scroll Up)"
-                            Width="22" Height="22" Padding="0" Margin="0"
-                            Background="Transparent" BorderThickness="0"
-                            Foreground="#8F98A0" Cursor="Hand" Click="ZoomIn_Click">
-                        <ui:SymbolIcon Symbol="AddCircle20" FontSize="14" />
-                    </Button>
-                    <Button x:Name="AutoFitBtn"
-                            ToolTip="Auto-Fit to Window without Scrolling"
-                            Width="22" Height="22" Padding="0" Margin="2,0,0,0"
-                            Background="#1C354A" BorderThickness="0"
-                            Foreground="#A4D007" Cursor="Hand" Click="AutoFit_Click">
-                        <ui:SymbolIcon Symbol="FullScreenMaximize20" FontSize="13" />
-                    </Button>
-                </StackPanel>
-            </Border>
         </Grid>
 
         <Border x:Name="UpdateBanner"

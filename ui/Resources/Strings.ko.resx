@@ -2607,4 +2607,58 @@ Steam의 '동기화할 수 없음' 오류를 지우기 위해 지금 Steam을 �
   <data name="LuaSync_ErrorLoading" xml:space="preserve">
     <value>Lua 스크립트를 불러오지 못했습니다: {0}</value>
   </data>
+  <data name="UniversalSaves_FilterAll" xml:space="preserve">
+    <value>모든 게임</value>
+  </data>
+  <data name="UniversalSaves_FilterMonitoring" xml:space="preserve">
+    <value>모니터링 중 🟢</value>
+  </data>
+  <data name="UniversalSaves_FilterAntiCheat" xml:space="preserve">
+    <value>안티치트 안전 🛡️</value>
+  </data>
+  <data name="Apps_FilterAll" xml:space="preserve">
+    <value>모든 게임</value>
+  </data>
+  <data name="Apps_FilterSynced" xml:space="preserve">
+    <value>동기화됨 🟢</value>
+  </data>
+  <data name="Apps_FilterOrphans" xml:space="preserve">
+    <value>고아 파일 있음 ⚠️</value>
+  </data>
+  <data name="UniversalSaves_EmptyTitle" xml:space="preserve">
+    <value>구성된 범용 게임이 아직 없습니다</value>
+  </data>
+  <data name="UniversalSaves_EmptyDesc" xml:space="preserve">
+    <value>CloudRedirect는 PC를 자동 검사하여 게임 세이브 폴더를 찾고 추가 설정 없이 플레이 시 모니터링할 수 있습니다.</value>
+  </data>
+  <data name="UniversalSaves_EmptyAutoDetect" xml:space="preserve">
+    <value>⚡ 이 PC에서 세이브 자동 감지 및 검사</value>
+  </data>
+  <data name="UniversalSaves_EmptyAddPresets" xml:space="preserve">
+    <value>인기 프리셋 빠른 추가</value>
+  </data>
+  <data name="UniversalSaves_MenuSyncNow" xml:space="preserve">
+    <value>지금 동기화</value>
+  </data>
+  <data name="UniversalSaves_MenuHistory" xml:space="preserve">
+    <value>세이브 기록 보기 및 롤백</value>
+  </data>
+  <data name="UniversalSaves_MenuOpenFolder" xml:space="preserve">
+    <value>파일 탐색기에서 세이브 폴더 열기</value>
+  </data>
+  <data name="UniversalSaves_MenuRemove" xml:space="preserve">
+    <value>범용 세이브에서 게임 제거</value>
+  </data>
+  <data name="Zoom_ZoomOut_Tooltip" xml:space="preserve">
+    <value>축소 (Ctrl + 마우스 휠 아래)</value>
+  </data>
+  <data name="Zoom_ZoomIn_Tooltip" xml:space="preserve">
+    <value>확대 (Ctrl + 마우스 휠 위)</value>
+  </data>
+  <data name="Zoom_AutoFit_Tooltip" xml:space="preserve">
+    <value>스크롤 없이 창에 자동 맞춤</value>
+  </data>
+  <data name="Zoom_Percent_Tooltip" xml:space="preserve">
+    <value>클릭하여 자동 맞춤 전환 또는 100%로 초기화</value>
+  </data>
 </root>

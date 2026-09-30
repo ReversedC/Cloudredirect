@@ -2583,6 +2583,60 @@
   <data name="LuaSync_ErrorLoading" xml:space="preserve">
     <value>加载 Lua 脚本失败: {0}</value>
   </data>
+  <data name="UniversalSaves_FilterAll" xml:space="preserve">
+    <value>所有游戏</value>
+  </data>
+  <data name="UniversalSaves_FilterMonitoring" xml:space="preserve">
+    <value>监控中 🟢</value>
+  </data>
+  <data name="UniversalSaves_FilterAntiCheat" xml:space="preserve">
+    <value>反作弊安全 🛡️</value>
+  </data>
+  <data name="Apps_FilterAll" xml:space="preserve">
+    <value>所有游戏</value>
+  </data>
+  <data name="Apps_FilterSynced" xml:space="preserve">
+    <value>已同步 🟢</value>
+  </data>
+  <data name="Apps_FilterOrphans" xml:space="preserve">
+    <value>含孤立存档 ⚠️</value>
+  </data>
+  <data name="UniversalSaves_EmptyTitle" xml:space="preserve">
+    <value>尚未配置通用游戏</value>
+  </data>
+  <data name="UniversalSaves_EmptyDesc" xml:space="preserve">
+    <value>CloudRedirect 可自动扫描您的电脑查找游戏存档文件夹，无需额外配置即可在游玩时进行自动监控。</value>
+  </data>
+  <data name="UniversalSaves_EmptyAutoDetect" xml:space="preserve">
+    <value>⚡ 自动检测并扫描此电脑上的游戏存档</value>
+  </data>
+  <data name="UniversalSaves_EmptyAddPresets" xml:space="preserve">
+    <value>快速添加热门预设</value>
+  </data>
+  <data name="UniversalSaves_MenuSyncNow" xml:space="preserve">
+    <value>立即同步</value>
+  </data>
+  <data name="UniversalSaves_MenuHistory" xml:space="preserve">
+    <value>查看存档历史与回滚</value>
+  </data>
+  <data name="UniversalSaves_MenuOpenFolder" xml:space="preserve">
+    <value>在文件资源管理器中打开存档文件夹</value>
+  </data>
+  <data name="UniversalSaves_MenuRemove" xml:space="preserve">
+    <value>从通用存档中移除游戏</value>
+  </data>
+  <data name="Zoom_ZoomOut_Tooltip" xml:space="preserve">
+    <value>缩小 (Ctrl + 向下滚动)</value>
+  </data>
+  <data name="Zoom_ZoomIn_Tooltip" xml:space="preserve">
+    <value>放大 (Ctrl + 向上滚动)</value>
+  </data>
+  <data name="Zoom_AutoFit_Tooltip" xml:space="preserve">
+    <value>自动适应窗口 (无需滚动)</value>
+  </data>
+  <data name="Zoom_Percent_Tooltip" xml:space="preserve">
+    <value>点击切换自动适应或重置为 100%</value>
+  </data>
 </root>
 
 

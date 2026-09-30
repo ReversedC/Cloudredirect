@@ -471,6 +471,7 @@ public partial class MainWindow : FluentWindow
             UpdateNowButton.Content = S.Get("AppUpdate_UpdateNow");
             UpdateReleaseNotesButton.Content = S.Get("AppUpdate_ReleaseNotes");
             BackToDashboardBtn.Content = S.Get("Nav_BackToDashboard");
+            Services.UiZoomManager.Instance.RefreshDisplay();
 
             RefreshCurrentPage();
         });
