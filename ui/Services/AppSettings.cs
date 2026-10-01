@@ -90,12 +90,6 @@ public static class AppSettings
         set => WriteBool("enable_millennium_plugin", value);
     }
 
-    public static bool EnableGameSpecChecker
-    {
-        get => ReadBool("enable_game_spec_checker", true);
-        set => WriteBool("enable_game_spec_checker", value);
-    }
-
     public static bool AutoSyncOnGameExit
     {
         get => ReadBool("auto_sync_on_game_exit", true);

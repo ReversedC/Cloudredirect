@@ -80,7 +80,6 @@ public partial class SettingsPage : Page
             PopulateHotkeyPresets();
             AutoProtectNonCloudToggle.IsChecked = AppSettings.AutoProtectNonCloudGames;
             MillenniumPluginToggle.IsChecked = AppSettings.EnableMillenniumPlugin;
-            GameSpecCheckerToggle.IsChecked = AppSettings.EnableGameSpecChecker;
             bool millInstalled = MillenniumPluginService.IsMillenniumInstalled();
             MillenniumStatusText.Text = millInstalled ? S.Get("Settings_MillenniumInstalled") : S.Get("Settings_MillenniumNotFound");
             MillenniumStatusText.Foreground = new System.Windows.Media.SolidColorBrush(
@@ -186,14 +185,6 @@ public partial class SettingsPage : Page
         if (prevMillennium != newMillennium)
         {
             Task.Run(() => MillenniumPluginService.SyncWithSettings());
-        }
-
-        bool prevSpec = AppSettings.EnableGameSpecChecker;
-        bool newSpec = GameSpecCheckerToggle.IsChecked == true;
-        AppSettings.EnableGameSpecChecker = newSpec;
-        if (prevSpec != newSpec)
-        {
-            Task.Run(() => MillenniumPluginService.UpdatePluginStatus());
         }
         AppSettings.AutoSyncOnGameExit = AutoSyncExitToggle.IsChecked == true;
         AppSettings.AutoMidGameCheckpoint = AutoCheckpointToggle.IsChecked == true;
