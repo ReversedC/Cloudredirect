@@ -84,7 +84,10 @@ var PluginEntryPointMain = function () {
 
         function ensureStyles(doc) {
             if (!doc || !doc.head) return;
-            if (doc.getElementById('cr-millennium-styles')) return;
+            const existing = doc.getElementById('cr-millennium-styles');
+            if (existing) {
+                existing.remove();
+            }
             const style = doc.createElement('style');
             style.id = 'cr-millennium-styles';
             style.textContent = `
@@ -100,53 +103,53 @@ var PluginEntryPointMain = function () {
                 }
 
                 /* SuperNav Top Header Tab (STORE / LIBRARY / COMMUNITY / USER / CLOUDREDIRECT) */
+                #cloudredirect-supernav-item,
                 .cr-supernav-menu {
                     cursor: pointer !important;
                     user-select: none !important;
-                    display: inline-flex !important;
-                    align-items: center !important;
-                    height: 100% !important;
-                    margin: 0 !important;
-                    padding: 0 !important;
                     position: relative !important;
-                    transition: all 0.2s ease !important;
-                    vertical-align: middle !important;
+                    font-size: 18px;
+                    font-family: "Motiva Sans", "Twemoji", "Noto Sans", Helvetica, sans-serif;
+                    font-weight: 500;
+                    text-transform: uppercase;
+                    padding: 0 10px;
+                    height: inherit;
                 }
+
                 .cr-supernav-btn {
-                    display: inline-flex !important;
-                    align-items: center !important;
-                    gap: 7px !important;
                     cursor: pointer !important;
-                    font-family: "Motiva Sans", "Twemoji", "Noto Sans", Helvetica, sans-serif !important;
-                    font-size: 18px !important;
-                    font-weight: 500 !important;
-                    text-transform: uppercase !important;
-                    color: #dcdedf !important;
-                    padding: 0 10px !important;
-                    height: 100% !important;
-                    box-sizing: border-box !important;
+                    white-space: nowrap !important;
+                    color: #dcdedf;
                     transition: color 0.15s ease-out, text-shadow 0.15s ease-out !important;
                 }
+
+                #cloudredirect-supernav-item:hover .cr-supernav-btn,
                 .cr-supernav-menu:hover .cr-supernav-btn {
                     color: #ffffff !important;
                     text-shadow: 0 0 10px rgba(255, 255, 255, 0.45) !important;
                 }
+
                 .cr-supernav-label {
                     font-family: inherit !important;
                     font-size: inherit !important;
                     font-weight: inherit !important;
                     line-height: inherit !important;
+                    letter-spacing: inherit !important;
                     text-transform: uppercase !important;
                 }
+
                 .cr-supernav-dot {
+                    display: inline-block !important;
                     width: 6px !important;
                     height: 6px !important;
                     background: #a4d007 !important;
                     border-radius: 50% !important;
                     box-shadow: 0 0 6px #a4d007 !important;
-                    display: inline-block !important;
-                    flex-shrink: 0 !important;
-                    margin-left: 2px !important;
+                    margin-left: 6px !important;
+                    vertical-align: middle !important;
+                    position: relative !important;
+                    top: -1px !important;
+                    line-height: normal !important;
                 }
 
                 /* Bottom Bar Button (Next to Add Game / Steam Unlock) */
@@ -259,6 +262,7 @@ var PluginEntryPointMain = function () {
                                 } else if (passedCommunity) {
                                     if (cText.length > 0 && !cText.includes('HTTP') && !cText.includes('🔍') && !cText.includes('SEARCH') && !cText.includes('✕')) {
                                         lastNavTab = child;
+                                        sampleTab = child;
                                     }
                                     break;
                                 }
@@ -286,7 +290,12 @@ var PluginEntryPointMain = function () {
         // Injects tab right into STORE / LIBRARY / COMMUNITY / USER / CLOUDREDIRECT row
         function injectSuperNavTab(doc) {
             if (!doc || !doc.body) return;
-            if (doc.getElementById('cloudredirect-supernav-item')) return;
+
+            const existing = doc.getElementById('cloudredirect-supernav-item');
+            if (existing) {
+                if (existing.parentNode) return;
+                existing.remove();
+            }
 
             const navInfo = findSuperNavInfo(doc);
             if (!navInfo || !navInfo.container || !navInfo.insertAfter) return;
@@ -299,7 +308,7 @@ var PluginEntryPointMain = function () {
             navItem.className = (sampleTab.className || '').replace(/\bactive\b/gi, '').trim() + ' cr-supernav-menu';
             navItem.setAttribute('role', 'button');
             navItem.setAttribute('tabindex', '0');
-            navItem.title = 'CloudRedirect v2.9.73 (Save Protection Active - Click to Open App)';
+            navItem.title = 'CloudRedirect v2.9.74 (Save Protection Active - Click to Open App)';
 
             // Find child button / inner element if present in sampleTab
             const sampleInner = sampleTab.querySelector('div, a, span') || sampleTab;
@@ -310,7 +319,7 @@ var PluginEntryPointMain = function () {
                 <span class="cr-supernav-dot" title="Save Protection Active"></span>
             `;
 
-            // Dynamically copy font-size, font-weight, font-family from sampleTab / sampleInner if present to perfectly match
+            // Inherit computed typography dynamically without forcing disruptive inline height/display
             try {
                 const sampleTarget = sampleInner || sampleTab;
                 const win = doc.defaultView || window;
@@ -318,16 +327,16 @@ var PluginEntryPointMain = function () {
                     const computed = win.getComputedStyle(sampleTarget);
                     if (computed) {
                         if (computed.fontSize) {
-                            innerBtn.style.setProperty('font-size', computed.fontSize, 'important');
+                            innerBtn.style.fontSize = computed.fontSize;
                         }
                         if (computed.fontWeight) {
-                            innerBtn.style.setProperty('font-weight', computed.fontWeight, 'important');
+                            innerBtn.style.fontWeight = computed.fontWeight;
                         }
                         if (computed.fontFamily) {
-                            innerBtn.style.setProperty('font-family', computed.fontFamily, 'important');
+                            innerBtn.style.fontFamily = computed.fontFamily;
                         }
-                        if (computed.letterSpacing) {
-                            innerBtn.style.setProperty('letter-spacing', computed.letterSpacing, 'important');
+                        if (computed.lineHeight && computed.lineHeight !== 'normal') {
+                            innerBtn.style.lineHeight = computed.lineHeight;
                         }
                     }
                 }
@@ -409,7 +418,7 @@ var PluginEntryPointMain = function () {
             const btn = doc.createElement('div');
             btn.id = 'cloudredirect-bottom-btn';
             btn.className = 'cr-bottom-bar-btn';
-            btn.title = 'CloudRedirect v2.9.73 (Save Protection Active - Click to Open App)';
+            btn.title = 'CloudRedirect v2.9.74 (Save Protection Active - Click to Open App)';
             btn.innerHTML = `
                 ${cloudSvg}
                 <span>CloudRedirect</span>
@@ -464,9 +473,15 @@ var PluginEntryPointMain = function () {
             if (legacyBtn) legacyBtn.remove();
             doc.querySelectorAll('.cr-nav-btn, [id*="cloudredirect-header"], .cr-dropdown-menu').forEach(el => el.remove());
 
-            // Remove any stuck cr-active class on supernav item
+            // If supernav item has old classes or wrong height/display, replace it
             const superItem = doc.getElementById('cloudredirect-supernav-item');
-            if (superItem) superItem.classList.remove('cr-active');
+            if (superItem) {
+                if (superItem.style.height || superItem.style.display || superItem.querySelector('.cr-supernav-btn')?.style.height) {
+                    superItem.remove();
+                } else if (superItem.classList.contains('cr-active')) {
+                    superItem.classList.remove('cr-active');
+                }
+            }
 
             ensureStyles(doc);
             injectSuperNavTab(doc);

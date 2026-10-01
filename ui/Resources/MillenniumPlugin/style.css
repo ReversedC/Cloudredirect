@@ -1,35 +1,27 @@
 /* CloudRedirect Native Millennium Plugin Styles */
 
 /* SuperNav Top Header Tab (STORE / LIBRARY / COMMUNITY / USER / CLOUDREDIRECT) */
+#cloudredirect-supernav-item,
 .cr-supernav-menu {
     cursor: pointer !important;
     user-select: none !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    height: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
     position: relative !important;
-    transition: all 0.2s ease !important;
-    vertical-align: middle !important;
+    font-size: 18px;
+    font-family: "Motiva Sans", "Twemoji", "Noto Sans", Helvetica, sans-serif;
+    font-weight: 500;
+    text-transform: uppercase;
+    padding: 0 10px;
+    height: inherit;
 }
 
 .cr-supernav-btn {
-    display: inline-flex !important;
-    align-items: center !important;
-    gap: 7px !important;
     cursor: pointer !important;
-    font-family: "Motiva Sans", "Twemoji", "Noto Sans", Helvetica, sans-serif !important;
-    font-size: 18px !important;
-    font-weight: 500 !important;
-    text-transform: uppercase !important;
-    color: #dcdedf !important;
-    padding: 0 10px !important;
-    height: 100% !important;
-    box-sizing: border-box !important;
+    white-space: nowrap !important;
+    color: #dcdedf;
     transition: color 0.15s ease-out, text-shadow 0.15s ease-out !important;
 }
 
+#cloudredirect-supernav-item:hover .cr-supernav-btn,
 .cr-supernav-menu:hover .cr-supernav-btn {
     color: #ffffff !important;
     text-shadow: 0 0 10px rgba(255, 255, 255, 0.45) !important;
@@ -40,18 +32,22 @@
     font-size: inherit !important;
     font-weight: inherit !important;
     line-height: inherit !important;
+    letter-spacing: inherit !important;
     text-transform: uppercase !important;
 }
 
 .cr-supernav-dot {
+    display: inline-block !important;
     width: 6px !important;
     height: 6px !important;
     background: #a4d007 !important;
     border-radius: 50% !important;
     box-shadow: 0 0 6px #a4d007 !important;
-    display: inline-block !important;
-    flex-shrink: 0 !important;
-    margin-left: 2px !important;
+    margin-left: 6px !important;
+    vertical-align: middle !important;
+    position: relative !important;
+    top: -1px !important;
+    line-height: normal !important;
 }
 
 /* Never show legacy titlebar header buttons in window controls */
