@@ -29,6 +29,9 @@ internal class StoreAppInfo
     [JsonPropertyName("headerUrl")]
     public string? HeaderUrl { get; set; }
 
+    [JsonPropertyName("isFree")]
+    public bool IsFree { get; set; }
+
     [JsonPropertyName("fetchedUtc")]
     public DateTime FetchedUtc { get; set; }
 }
@@ -184,6 +187,7 @@ internal sealed class SteamStoreClient : IDisposable
                 {
                     Name = info.Name,
                     HeaderUrl = new Uri(localPath).AbsoluteUri,
+                    IsFree = info.IsFree,
                     FetchedUtc = info.FetchedUtc
                 };
                 result[key] = rewritten;
@@ -202,6 +206,17 @@ internal sealed class SteamStoreClient : IDisposable
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Checks whether an AppID is a known free-to-play game or cached as free in the store database.
+    /// </summary>
+    public bool IsFreeGame(uint appId)
+    {
+        if (appId == 0) return false;
+        if (SteamDetector.IsKnownFreeApp(appId)) return true;
+        if (_mem.TryGetValue(appId, out var info) && info.IsFree) return true;
+        return false;
     }
 
     /// <summary>
@@ -356,6 +371,12 @@ internal sealed class SteamStoreClient : IDisposable
                     var header = headerEl.GetString();
                     if (!string.IsNullOrEmpty(header))
                         info.HeaderUrl = $"https://shared.steamstatic.com/store_item_assets/steam/apps/{appId}/{header}";
+                }
+
+                // Free-to-play flag from Store browse API
+                if (item.TryGetProperty("is_free", out var isFreeEl) && isFreeEl.ValueKind == JsonValueKind.True)
+                {
+                    info.IsFree = true;
                 }
 
                 result[appId] = info;

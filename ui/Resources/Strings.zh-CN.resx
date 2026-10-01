@@ -2368,8 +2368,17 @@
   <data name="Dashboard_ActiveGame_BadgeGenuineNoCloud" xml:space="preserve">
     <value>正版 STEAM 游戏 (无 STEAM 云)</value>
   </data>
+  <data name="Dashboard_ActiveGame_BadgeFreeGame" xml:space="preserve">
+    <value>免费 STEAM 游戏</value>
+  </data>
+  <data name="Dashboard_ActiveGame_BadgeFreeNoCloud" xml:space="preserve">
+    <value>免费 STEAM 游戏 (无 STEAM 云)</value>
+  </data>
   <data name="Dashboard_ActiveGame_SubGenuineNoCloud" xml:space="preserve">
-    <value>Steam AppID: {0} • 正版游戏无 Steam 云 • 由通用云存档自动保护</value>
+    <value>Steam AppID: {0} • 官方 Steam 游戏 (无 Steam 云) • CloudRedirect 未激活 (原生未修改)</value>
+  </data>
+  <data name="Dashboard_ActiveGame_PillCRInactive" xml:space="preserve">
+    <value>原生未修改 (CR未激活)</value>
   </data>
   <data name="Dashboard_ActiveGame_PillUniversal" xml:space="preserve">
     <value>通用云保护</value>

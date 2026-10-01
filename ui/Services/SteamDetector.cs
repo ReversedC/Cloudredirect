@@ -888,6 +888,22 @@ public static class SteamDetector
     }
 
     /// <summary>
+    /// Checks whether an AppID is a well-known free-to-play or public Valve application.
+    /// </summary>
+    public static bool IsKnownFreeApp(uint appId)
+    {
+        return appId is 480       // Spacewar
+                     or 730       // Counter-Strike 2
+                     or 570       // Dota 2
+                     or 440       // Team Fortress 2
+                     or 1172470   // Apex Legends
+                     or 238960    // Path of Exile
+                     or 230410    // Warframe
+                     or 218620    // PAYDAY 2 Community
+                     or 105600;   // Terraria Dedicated Server
+    }
+
+    /// <summary>
     /// Safely updates remotecache.vdf for an AppID, clearing the yellow "Unable to sync" state (syncstate 3 -> 1).
     /// </summary>
     public static bool FixRemoteCacheSyncState(uint appId, string? steamPath = null)

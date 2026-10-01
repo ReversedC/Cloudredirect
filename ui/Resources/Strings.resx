@@ -2395,8 +2395,17 @@ Would you like to restart Steam now to clear the Steam UI 'Unable to sync' error
   <data name="Dashboard_ActiveGame_BadgeGenuineNoCloud" xml:space="preserve">
     <value>GENUINE STEAM GAME (NO STEAM CLOUD)</value>
   </data>
+  <data name="Dashboard_ActiveGame_BadgeFreeGame" xml:space="preserve">
+    <value>FREE STEAM GAME</value>
+  </data>
+  <data name="Dashboard_ActiveGame_BadgeFreeNoCloud" xml:space="preserve">
+    <value>FREE STEAM GAME (NO STEAM CLOUD)</value>
+  </data>
   <data name="Dashboard_ActiveGame_SubGenuineNoCloud" xml:space="preserve">
-    <value>Steam AppID: {0} • Genuine Game Lacks Steam Cloud • Auto-Protected by Universal Saves</value>
+    <value>Steam AppID: {0} • Official Steam Game (No Steam Cloud) • CloudRedirect Inactive</value>
+  </data>
+  <data name="Dashboard_ActiveGame_PillCRInactive" xml:space="preserve">
+    <value>CR Inactive (Untouched)</value>
   </data>
   <data name="Dashboard_ActiveGame_PillUniversal" xml:space="preserve">
     <value>Universal Cloud Protection</value>

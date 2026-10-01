@@ -21,7 +21,8 @@ public record ActiveGameInfo(
     bool HasAntiCheat = false,
     bool IsCloudDenied = false,
     bool IsZeroLuaIntercepted = false,
-    UniversalGameProfile? UniversalProfile = null
+    UniversalGameProfile? UniversalProfile = null,
+    bool IsFreeGame = false
 );
 
 /// <summary>
@@ -86,11 +87,12 @@ public static class ActiveGameTrackerService
                 {
                     string name = $"Steam App {runningAppId}";
                     string? headerUrl = null;
+                    StoreAppInfo? storeInfo = null;
 
                     try
                     {
                         var appMap = await SteamStoreClient.Shared.GetAppInfoAsync(new[] { runningAppId });
-                        if (appMap.TryGetValue(runningAppId, out var storeInfo))
+                        if (appMap.TryGetValue(runningAppId, out storeInfo))
                         {
                             if (!string.IsNullOrEmpty(storeInfo.Name))
                                 name = storeInfo.Name;
@@ -110,9 +112,11 @@ public static class ActiveGameTrackerService
                     bool isRemoteUnlocked = SteamDetector.IsRemoteUnlockedApp(runningAppId);
                     bool hasAppIdTxt = SteamDetector.HasAppIdTxt(runningAppId);
 
+                    bool isFreeGame = (storeInfo?.IsFree == true) || SteamDetector.IsKnownFreeApp(runningAppId);
+
                     // Unlocked/Non-genuine without interception if cloud upload was rejected by Valve, in remote_unlock.json, in SUO catalog, or has steam_appid.txt
-                    bool isUnlockedNoLua = !isIntercepted && (hasCloudDenied || isSuoGame || isRemoteUnlocked || hasAppIdTxt);
-                    bool isGenuine = !isIntercepted && !isUnlockedNoLua;
+                    bool isUnlockedNoLua = !isIntercepted && (hasCloudDenied || isSuoGame || isRemoteUnlocked || hasAppIdTxt) && !isFreeGame;
+                    bool isGenuine = (!isIntercepted && !isUnlockedNoLua) || isFreeGame;
 
                     string? procName = null;
                     string? installDir = null;
@@ -145,26 +149,13 @@ public static class ActiveGameTrackerService
                     UniversalGameProfile? universalProfile = null;
 
                     // Evaluate:
-                    // 1. Genuine game without cloud saves -> auto-protect via Universal Cloud Saves
-                    if (isGenuine && !hasCloud && AppSettings.AutoProtectNonCloudGames)
+                    // 1. Genuine / Free game:
+                    // STRICT SAFETY DIRECTIVE: Legitimately owned or free-to-play games must NEVER
+                    // be touched, redirected, or auto-enrolled into CloudRedirect, even if the game
+                    // has no Steam Cloud support.
+                    if (isGenuine || isFreeGame)
                     {
-                        universalProfile = UniversalSaveWatcherService.FindProfile(runningAppId, procName, name);
-                        if (universalProfile == null)
-                        {
-                            var saveFolder = GameSaveAutoDetector.DetectSaveFolder(name, procName, runningAppId);
-                            if (saveFolder != null)
-                            {
-                                universalProfile = UniversalSaveWatcherService.AutoEnrollIfNeeded(
-                                    name, procName, runningAppId, saveFolder, hasAntiCheat, isGenuine: true);
-
-                                if (universalProfile != null && AppSettings.ShowSyncNotifications)
-                                {
-                                    TrayIconService.Instance.ShowNotification(
-                                        "CloudRedirect Auto-Protection",
-                                        $"{name} does not have Steam Cloud. Save folder is now automatically protected!");
-                                }
-                            }
-                        }
+                        // Genuine owned and free games are completely left to Steam.
                     }
                     // 2. Unlocked game without interception (Cloud Denied or Depot game) -> auto-protect immediately via Universal Saves & Zero-Lua!
                     else if (isUnlockedNoLua)
@@ -226,7 +217,8 @@ public static class ActiveGameTrackerService
                         HasAntiCheat: hasAntiCheat,
                         IsCloudDenied: hasCloudDenied || isUnlockedNoLua,
                         IsZeroLuaIntercepted: isZeroLua,
-                        UniversalProfile: universalProfile
+                        UniversalProfile: universalProfile,
+                        IsFreeGame: isFreeGame
                     );
 
                     OnActiveGameChanged?.Invoke(_currentGame);
@@ -275,7 +267,8 @@ public static class ActiveGameTrackerService
                                 HasSteamCloud: false,
                                 IsGenuineOwned: profile.IsGenuineSteamGame,
                                 HasAntiCheat: profile.HasAntiCheat,
-                                UniversalProfile: profile
+                                UniversalProfile: profile,
+                                IsFreeGame: profile.SteamAppId > 0 && SteamStoreClient.Shared.IsFreeGame(profile.SteamAppId)
                             );
                             _lastMonitoredUniversalProcess = targetProcName;
                             _lastActiveUniversalProfile = profile;
@@ -309,9 +302,10 @@ public static class ActiveGameTrackerService
                 {
                     try
                     {
-                        // SAFETY DIRECTIVE: Genuine Steam games that have native Steam Cloud enabled
-                        // must NEVER be touched, redirected, or interfered with.
-                        if (exitedGame.IsGenuineOwned && exitedGame.HasSteamCloud)
+                        // STRICT SAFETY DIRECTIVE: Genuine Steam games (purchased or free-to-play)
+                        // must NEVER be touched, redirected, or backed up by CloudRedirect,
+                        // regardless of whether they have Steam Cloud support or not.
+                        if (exitedGame.IsGenuineOwned || exitedGame.IsFreeGame)
                         {
                             return;
                         }
@@ -409,8 +403,8 @@ public static class ActiveGameTrackerService
     {
         if (!AppSettings.AutoMidGameCheckpoint) return;
 
-        // Never interfere with genuine Steam games that have native Steam Cloud
-        if (game.IsGenuineOwned && game.HasSteamCloud) return;
+        // Never interfere with genuine Steam games (owned or free)
+        if (game.IsGenuineOwned || game.IsFreeGame) return;
 
         try
         {

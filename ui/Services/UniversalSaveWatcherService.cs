@@ -199,13 +199,14 @@ public static class UniversalSaveWatcherService
                 var json = File.ReadAllText(path);
                 _profiles = JsonSerializer.Deserialize<List<UniversalGameProfile>>(json) ?? [];
 
-                // Sanitize: remove any spurious system processes and fix duplicate statuses
+                // Sanitize: remove any spurious system processes, clean up auto-enrolled genuine games, and fix duplicate statuses
                 int countBefore = _profiles.Count;
                 bool modified = false;
                 _profiles.RemoveAll(p => GameSaveAutoDetector.IsSystemProcess(p.ProcessName) ||
                                          p.GameName.Contains("Antigravity", StringComparison.OrdinalIgnoreCase) ||
                                          p.ProcessName.Contains("antigravity", StringComparison.OrdinalIgnoreCase) ||
-                                         p.GameName.Equals("Windows Input Experience", StringComparison.OrdinalIgnoreCase));
+                                         p.GameName.Equals("Windows Input Experience", StringComparison.OrdinalIgnoreCase) ||
+                                         (p.IsAutoEnrolled && p.IsGenuineSteamGame));
                 if (_profiles.Count != countBefore) modified = true;
 
                 foreach (var p in _profiles)
@@ -298,6 +299,12 @@ public static class UniversalSaveWatcherService
         if (existing != null)
             return existing;
 
+        if (isGenuine && appId > 0 && !SteamDetector.IsAppUnlocked(appId))
+        {
+            // Do NOT auto-enroll genuine owned or free games!
+            return null;
+        }
+
         if (isGenuine && appId > 0 && SteamDetector.IsAppUnlocked(appId))
         {
             isGenuine = false;
@@ -363,6 +370,17 @@ public static class UniversalSaveWatcherService
     {
         try
         {
+            if (profile.IsGenuineSteamGame)
+            {
+                // Never auto-sync genuine games on game exit or checkpoints
+                if (triggerReason.Contains("Exit", StringComparison.OrdinalIgnoreCase) ||
+                    triggerReason.Contains("Auto", StringComparison.OrdinalIgnoreCase) ||
+                    triggerReason.Contains("Checkpoint", StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+            }
+
             var saveDir = profile.ExpandedSavePath;
             if (!Directory.Exists(saveDir))
             {

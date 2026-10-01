@@ -2392,8 +2392,17 @@ Steam의 '동기화할 수 없음' 오류를 지우기 위해 지금 Steam을 �
   <data name="Dashboard_ActiveGame_BadgeGenuineNoCloud" xml:space="preserve">
     <value>정품 STEAM 게임 (STEAM 클라우드 없음)</value>
   </data>
+  <data name="Dashboard_ActiveGame_BadgeFreeGame" xml:space="preserve">
+    <value>무료 STEAM 게임</value>
+  </data>
+  <data name="Dashboard_ActiveGame_BadgeFreeNoCloud" xml:space="preserve">
+    <value>무료 STEAM 게임 (STEAM 클라우드 없음)</value>
+  </data>
   <data name="Dashboard_ActiveGame_SubGenuineNoCloud" xml:space="preserve">
-    <value>Steam AppID: {0} • Steam 클라우드 미지원 정품 게임 • 범용 클라우드 세이브로 자동 보호됨</value>
+    <value>Steam AppID: {0} • 공식 Steam 게임 (Steam 클라우드 없음) • CloudRedirect 비활성 (수정 없음)</value>
+  </data>
+  <data name="Dashboard_ActiveGame_PillCRInactive" xml:space="preserve">
+    <value>수정 없음 (CR 비활성)</value>
   </data>
   <data name="Dashboard_ActiveGame_PillUniversal" xml:space="preserve">
     <value>범용 클라우드 보호</value>

@@ -96,9 +96,10 @@ public static class SteamGameScannerService
                         bool isRemoteUnlocked = SteamDetector.IsRemoteUnlockedApp(appId, steamPath);
                         bool hasAppIdTxt = File.Exists(Path.Combine(fullInstallDir, "steam_appid.txt"));
 
-                        bool isUnlockedNoLua = !isIntercepted && (hasCloudDenied || isSuoGame || isRemoteUnlocked || hasAppIdTxt);
-                        bool isGenuineWithCloud = !isIntercepted && !isUnlockedNoLua && hasCloud;
-                        bool isGenuineNoCloud = !isIntercepted && !isUnlockedNoLua && !hasCloud;
+                        bool isFreeGame = SteamStoreClient.Shared.IsFreeGame(appId);
+                        bool isUnlockedNoLua = !isIntercepted && (hasCloudDenied || isSuoGame || isRemoteUnlocked || hasAppIdTxt) && !isFreeGame;
+                        bool isGenuineWithCloud = (!isIntercepted && !isUnlockedNoLua && hasCloud) || (isFreeGame && hasCloud);
+                        bool isGenuineNoCloud = (!isIntercepted && !isUnlockedNoLua && !hasCloud) || (isFreeGame && !hasCloud);
 
                         // Auto-enroll non-genuine games into Zero-Lua interception and fix syncstate
                         if (isUnlockedNoLua)
@@ -117,8 +118,9 @@ public static class SteamGameScannerService
                         string? detectedSave = null;
                         bool enrolled = false;
 
-                        // If genuine without cloud, or unlocked without Lua, or intercepted without cloud: auto-detect and protect
-                        if (isGenuineNoCloud || isUnlockedNoLua || (isIntercepted && !hasCloud))
+                        // Only auto-enroll non-genuine / intercepted games without cloud.
+                        // Genuine owned and free games without cloud are strictly untouched and NOT backed up by CR!
+                        if (isUnlockedNoLua || (isIntercepted && !hasCloud))
                         {
                             detectedSave = GameSaveAutoDetector.DetectSaveFolder(name, null, appId);
                             if (!string.IsNullOrEmpty(detectedSave) && Directory.Exists(detectedSave))
@@ -129,7 +131,7 @@ public static class SteamGameScannerService
                                     if (existing == null)
                                     {
                                         UniversalSaveWatcherService.AutoEnrollIfNeeded(
-                                            name, null, appId, detectedSave, isGenuine: !isLua);
+                                            name, null, appId, detectedSave, isGenuine: false);
                                         enrolled = true;
                                         newlyEnrolled++;
                                     }

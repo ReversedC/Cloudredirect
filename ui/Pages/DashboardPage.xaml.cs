@@ -288,7 +288,7 @@ public partial class DashboardPage : Page
 
                 ActiveGameFixSyncButton.Visibility = Visibility.Collapsed;
 
-                if (game.IsCloudDenied || (!game.IsGenuineOwned && !game.IsLuaGame && !game.IsZeroLuaIntercepted))
+                if (game.IsCloudDenied || (!game.IsGenuineOwned && !game.IsFreeGame && !game.IsLuaGame && !game.IsZeroLuaIntercepted))
                 {
                     // Blocked / Unlocked game without interception!
                     ActiveGameCard.Background = amberBg;
@@ -339,11 +339,13 @@ public partial class DashboardPage : Page
                     ActiveGameStatusBorder.BorderBrush = greenPillBorder;
                     ActiveGameStatusPill.Foreground = greenBrush;
 
-                    if (game.IsGenuineOwned)
+                    if (game.IsGenuineOwned || game.IsFreeGame)
                     {
-                        ActiveGameBadgeText.Text = S.Get("Dashboard_ActiveGame_BadgeGenuineNoCloud");
+                        ActiveGameBadgeText.Text = game.IsFreeGame
+                            ? S.Get("Dashboard_ActiveGame_BadgeFreeNoCloud")
+                            : S.Get("Dashboard_ActiveGame_BadgeGenuineNoCloud");
                         ActiveGameSubtitle.Text = string.Format(S.Get("Dashboard_ActiveGame_SubGenuineNoCloud"), game.AppId);
-                        ActiveGameStatusPill.Text = S.Get("Dashboard_ActiveGame_PillUniversal");
+                        ActiveGameStatusPill.Text = S.Get("Dashboard_ActiveGame_PillCRInactive");
                     }
                     else
                     {
@@ -369,7 +371,7 @@ public partial class DashboardPage : Page
                     ActiveGameSubtitle.Text = string.Format(S.Get("Dashboard_ActiveGame_SubLua"), game.AppId);
                     ActiveGameStatusPill.Text = S.Get("Dashboard_ActiveGame_PillHooked");
                 }
-                else if (game.IsGenuineOwned && game.HasSteamCloud)
+                else if (game.IsGenuineOwned || game.IsFreeGame)
                 {
                     ActiveGameCard.Background = greenBg;
                     ActiveGameCard.BorderBrush = greenBorder;
@@ -382,9 +384,22 @@ public partial class DashboardPage : Page
                     ActiveGameStatusBorder.BorderBrush = greenPillBorder;
                     ActiveGameStatusPill.Foreground = greenBrush;
 
-                    ActiveGameBadgeText.Text = S.Get("Dashboard_ActiveGame_BadgeGenuine");
-                    ActiveGameSubtitle.Text = string.Format(S.Get("Dashboard_ActiveGame_SubGenuineSteam"), game.AppId);
-                    ActiveGameStatusPill.Text = S.Get("Dashboard_ActiveGame_PillOriginalCloud");
+                    if (game.HasSteamCloud)
+                    {
+                        ActiveGameBadgeText.Text = game.IsFreeGame
+                            ? S.Get("Dashboard_ActiveGame_BadgeFreeGame")
+                            : S.Get("Dashboard_ActiveGame_BadgeGenuine");
+                        ActiveGameSubtitle.Text = string.Format(S.Get("Dashboard_ActiveGame_SubGenuineSteam"), game.AppId);
+                        ActiveGameStatusPill.Text = S.Get("Dashboard_ActiveGame_PillOriginalCloud");
+                    }
+                    else
+                    {
+                        ActiveGameBadgeText.Text = game.IsFreeGame
+                            ? S.Get("Dashboard_ActiveGame_BadgeFreeNoCloud")
+                            : S.Get("Dashboard_ActiveGame_BadgeGenuineNoCloud");
+                        ActiveGameSubtitle.Text = string.Format(S.Get("Dashboard_ActiveGame_SubGenuineNoCloud"), game.AppId);
+                        ActiveGameStatusPill.Text = S.Get("Dashboard_ActiveGame_PillCRInactive");
+                    }
                 }
                 else
                 {

@@ -255,14 +255,14 @@
                                 </StackPanel>
                             </ui:CardControl>
 
-                            <!-- Auto-Protect Games Without Cloud Saves -->
+                            <!-- Auto-Protect Intercepted Games Without Cloud Saves -->
                             <ui:CardControl Margin="0,8,0,0">
                                 <ui:CardControl.Header>
                                     <StackPanel>
-                                        <TextBlock Text="Auto-Protect Games Without Cloud Saves"
+                                        <TextBlock Text="Auto-Protect Intercepted Games Without Cloud Saves"
                                                    FontWeight="SemiBold"
                                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                        <TextBlock Text="Automatically protect genuine Steam games lacking cloud saves and anti-cheat games with Universal Cloud Saves."
+                                        <TextBlock Text="Automatically protect non-genuine and intercepted Steam games lacking cloud saves with Universal Cloud Saves."
                                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                    TextWrapping="Wrap" />
                                     </StackPanel>

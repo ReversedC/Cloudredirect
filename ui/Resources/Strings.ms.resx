@@ -2263,8 +2263,17 @@ Adakah anda mahu memulakan semula (restart) Steam sekarang untuk membersihkan ra
   <data name="Dashboard_ActiveGame_BadgeGenuineNoCloud" xml:space="preserve">
     <value>PERMAINAN STEAM TULEN (TIADA STEAM CLOUD)</value>
   </data>
+  <data name="Dashboard_ActiveGame_BadgeFreeGame" xml:space="preserve">
+    <value>PERMAINAN STEAM PERCUMA</value>
+  </data>
+  <data name="Dashboard_ActiveGame_BadgeFreeNoCloud" xml:space="preserve">
+    <value>PERMAINAN STEAM PERCUMA (TIADA STEAM CLOUD)</value>
+  </data>
   <data name="Dashboard_ActiveGame_SubGenuineNoCloud" xml:space="preserve">
-    <value>Steam AppID: {0} • Permainan Tulen Tiada Steam Cloud • Dilindungi Automatik oleh Universal Saves</value>
+    <value>Steam AppID: {0} • Permainan Rasmi Steam (Tiada Steam Cloud) • CloudRedirect Tidak Aktif</value>
+  </data>
+  <data name="Dashboard_ActiveGame_PillCRInactive" xml:space="preserve">
+    <value>Tidak Disentuh (CR Tidak Aktif)</value>
   </data>
   <data name="Dashboard_ActiveGame_PillUniversal" xml:space="preserve">
     <value>Perlindungan Awan Universal</value>

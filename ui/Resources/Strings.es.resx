@@ -2342,8 +2342,17 @@ Esto puede causar pérdida de datos en algunos casos.
   <data name="Dashboard_ActiveGame_BadgeGenuineNoCloud" xml:space="preserve">
     <value>JUEGO STEAM ORIGINAL (SIN STEAM CLOUD)</value>
   </data>
+  <data name="Dashboard_ActiveGame_BadgeFreeGame" xml:space="preserve">
+    <value>JUEGO STEAM GRATUITO</value>
+  </data>
+  <data name="Dashboard_ActiveGame_BadgeFreeNoCloud" xml:space="preserve">
+    <value>JUEGO STEAM GRATUITO (SIN STEAM CLOUD)</value>
+  </data>
   <data name="Dashboard_ActiveGame_SubGenuineNoCloud" xml:space="preserve">
-    <value>Steam AppID: {0} • Juego original sin Steam Cloud • Autoprotegido por Universal Saves</value>
+    <value>Steam AppID: {0} • Juego oficial de Steam (Sin Steam Cloud) • CloudRedirect Inactivo</value>
+  </data>
+  <data name="Dashboard_ActiveGame_PillCRInactive" xml:space="preserve">
+    <value>Sin Modificar (CR Inactivo)</value>
   </data>
   <data name="Dashboard_ActiveGame_PillUniversal" xml:space="preserve">
     <value>Protección Cloud Universal</value>

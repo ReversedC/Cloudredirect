@@ -2347,8 +2347,17 @@ Deseja reiniciar a Steam agora para limpar o erro "Não foi possível sincroniza
   <data name="Dashboard_ActiveGame_BadgeGenuineNoCloud" xml:space="preserve">
     <value>JOGO STEAM ORIGINAL (SEM STEAM CLOUD)</value>
   </data>
+  <data name="Dashboard_ActiveGame_BadgeFreeGame" xml:space="preserve">
+    <value>JOGO STEAM GRATUITO</value>
+  </data>
+  <data name="Dashboard_ActiveGame_BadgeFreeNoCloud" xml:space="preserve">
+    <value>JOGO STEAM GRATUITO (SEM STEAM CLOUD)</value>
+  </data>
   <data name="Dashboard_ActiveGame_SubGenuineNoCloud" xml:space="preserve">
-    <value>Steam AppID: {0} • Jogo original sem Steam Cloud • Protegido automaticamente pelo Universal Saves</value>
+    <value>Steam AppID: {0} • Jogo oficial Steam (Sem Steam Cloud) • CloudRedirect Inativo</value>
+  </data>
+  <data name="Dashboard_ActiveGame_PillCRInactive" xml:space="preserve">
+    <value>Intocado (CR Inativo)</value>
   </data>
   <data name="Dashboard_ActiveGame_PillUniversal" xml:space="preserve">
     <value>Proteção em Nuvem Universal</value>
