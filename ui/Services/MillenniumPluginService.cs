@@ -435,16 +435,15 @@ return {
     align-items: center !important;
     gap: 7px !important;
     cursor: pointer !important;
-    font-family: ""Motiva Sans"", -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, sans-serif !important;
-    font-size: 14px !important;
+    font-family: ""Motiva Sans"", ""Twemoji"", ""Noto Sans"", Helvetica, sans-serif !important;
+    font-size: 18px !important;
     font-weight: 500 !important;
-    letter-spacing: 0.04em !important;
     text-transform: uppercase !important;
     color: #dcdedf !important;
     padding: 0 10px !important;
     height: 100% !important;
     box-sizing: border-box !important;
-    transition: color 0.15s ease, text-shadow 0.15s ease !important;
+    transition: color 0.15s ease-out, text-shadow 0.15s ease-out !important;
 }
 
 .cr-supernav-menu:hover .cr-supernav-btn {
@@ -453,8 +452,11 @@ return {
 }
 
 .cr-supernav-label {
-    letter-spacing: 0.04em !important;
-    font-weight: 600 !important;
+    font-family: inherit !important;
+    font-size: inherit !important;
+    font-weight: inherit !important;
+    line-height: inherit !important;
+    text-transform: uppercase !important;
 }
 
 .cr-supernav-dot {
@@ -677,24 +679,26 @@ var PluginEntryPointMain = function () {
                     align-items: center !important;
                     gap: 7px !important;
                     cursor: pointer !important;
-                    font-family: ""Motiva Sans"", -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, sans-serif !important;
-                    font-size: 14px !important;
+                    font-family: ""Motiva Sans"", ""Twemoji"", ""Noto Sans"", Helvetica, sans-serif !important;
+                    font-size: 18px !important;
                     font-weight: 500 !important;
-                    letter-spacing: 0.04em !important;
                     text-transform: uppercase !important;
                     color: #dcdedf !important;
                     padding: 0 10px !important;
                     height: 100% !important;
                     box-sizing: border-box !important;
-                    transition: color 0.15s ease, text-shadow 0.15s ease !important;
+                    transition: color 0.15s ease-out, text-shadow 0.15s ease-out !important;
                 }
                 .cr-supernav-menu:hover .cr-supernav-btn {
                     color: #ffffff !important;
                     text-shadow: 0 0 10px rgba(255, 255, 255, 0.45) !important;
                 }
                 .cr-supernav-label {
-                    letter-spacing: 0.04em !important;
-                    font-weight: 600 !important;
+                    font-family: inherit !important;
+                    font-size: inherit !important;
+                    font-weight: inherit !important;
+                    line-height: inherit !important;
+                    text-transform: uppercase !important;
                 }
                 .cr-supernav-dot {
                     width: 6px !important;
@@ -857,7 +861,7 @@ var PluginEntryPointMain = function () {
             navItem.className = (sampleTab.className || '').replace(/\bactive\b/gi, '').trim() + ' cr-supernav-menu';
             navItem.setAttribute('role', 'button');
             navItem.setAttribute('tabindex', '0');
-            navItem.title = 'CloudRedirect v2.9.72 (Save Protection Active - Click to Open App)';
+            navItem.title = 'CloudRedirect v2.9.73 (Save Protection Active - Click to Open App)';
 
             // Find child button / inner element if present in sampleTab
             const sampleInner = sampleTab.querySelector('div, a, span') || sampleTab;
@@ -867,6 +871,29 @@ var PluginEntryPointMain = function () {
                 <span class=""cr-supernav-label"">CLOUDREDIRECT</span>
                 <span class=""cr-supernav-dot"" title=""Save Protection Active""></span>
             `;
+
+            // Dynamically copy font-size, font-weight, font-family from sampleTab / sampleInner if present to perfectly match
+            try {
+                const sampleTarget = sampleInner || sampleTab;
+                const win = doc.defaultView || window;
+                if (win && sampleTarget) {
+                    const computed = win.getComputedStyle(sampleTarget);
+                    if (computed) {
+                        if (computed.fontSize) {
+                            innerBtn.style.setProperty('font-size', computed.fontSize, 'important');
+                        }
+                        if (computed.fontWeight) {
+                            innerBtn.style.setProperty('font-weight', computed.fontWeight, 'important');
+                        }
+                        if (computed.fontFamily) {
+                            innerBtn.style.setProperty('font-family', computed.fontFamily, 'important');
+                        }
+                        if (computed.letterSpacing) {
+                            innerBtn.style.setProperty('letter-spacing', computed.letterSpacing, 'important');
+                        }
+                    }
+                }
+            } catch (e) { }
 
             navItem.appendChild(innerBtn);
 
@@ -944,7 +971,7 @@ var PluginEntryPointMain = function () {
             const btn = doc.createElement('div');
             btn.id = 'cloudredirect-bottom-btn';
             btn.className = 'cr-bottom-bar-btn';
-            btn.title = 'CloudRedirect v2.9.72 (Save Protection Active - Click to Open App)';
+            btn.title = 'CloudRedirect v2.9.73 (Save Protection Active - Click to Open App)';
             btn.innerHTML = `
                 ${cloudSvg}
                 <span>CloudRedirect</span>
