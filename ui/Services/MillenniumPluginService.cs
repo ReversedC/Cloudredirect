@@ -107,7 +107,9 @@ public static class MillenniumPluginService
                 activeGameCount = activeGameCount,
                 provider = provider,
                 lastUpdated = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
-                appPath = AppUpdater.GetAppExecutablePath() ?? Environment.ProcessPath
+                appPath = AppUpdater.GetAppExecutablePath() ?? Environment.ProcessPath,
+                enableGameSpecChecker = AppSettings.EnableGameSpecChecker,
+                pcSpecs = HardwareSpecService.GetPcSpecs()
             };
 
             var json = JsonSerializer.Serialize(info, new JsonSerializerOptions { WriteIndented = true });
@@ -136,6 +138,8 @@ public static class MillenniumPluginService
             {
                 RemovePlugin();
             }
+
+            UpdatePluginStatus(true);
         }
         catch (Exception ex)
         {
@@ -554,6 +558,166 @@ return {
     color: #a4d007;
     font-weight: bold;
 }
+
+/* ==========================================================================
+   GAME SPEC CHECKER STYLES (Store Search Rows, Game Lists, Game Details)
+   ========================================================================== */
+
+/* Search Result Row Indicator (Next to Win/Mac/Linux icons) */
+.cr-spec-indicator {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    vertical-align: middle !important;
+    margin-left: 6px !important;
+    cursor: pointer !important;
+    position: relative !important;
+    line-height: normal !important;
+    user-select: none !important;
+    padding: 2px 5px !important;
+    border-radius: 10px !important;
+    background: rgba(0, 0, 0, 0.45) !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease !important;
+    z-index: 5 !important;
+}
+
+.cr-spec-indicator:hover {
+    transform: scale(1.18) !important;
+    background: rgba(14, 22, 33, 0.95) !important;
+    border-color: rgba(102, 192, 244, 0.6) !important;
+}
+
+.cr-spec-dot {
+    width: 8px !important;
+    height: 8px !important;
+    border-radius: 50% !important;
+    display: inline-block !important;
+    flex-shrink: 0 !important;
+    transition: all 0.2s ease !important;
+}
+
+.cr-spec-dot.cr-green {
+    background-color: #00ff88 !important;
+    box-shadow: 0 0 6px #00ff88, 0 0 12px rgba(0, 255, 136, 0.5) !important;
+}
+
+.cr-spec-dot.cr-yellow {
+    background-color: #ffd700 !important;
+    box-shadow: 0 0 6px #ffd700, 0 0 12px rgba(255, 215, 0, 0.5) !important;
+}
+
+.cr-spec-dot.cr-red {
+    background-color: #ff3344 !important;
+    box-shadow: 0 0 6px #ff3344, 0 0 12px rgba(255, 51, 68, 0.5) !important;
+}
+
+.cr-spec-dot.cr-loading {
+    background-color: #66c0f4 !important;
+    opacity: 0.7 !important;
+    animation: cr-pulse 1.2s infinite ease-in-out !important;
+}
+
+@keyframes cr-pulse {
+    0%, 100% { opacity: 0.3; transform: scale(0.85); }
+    50% { opacity: 1; transform: scale(1.15); }
+}
+
+/* Tooltip Popup for Spec Breakdown */
+.cr-spec-tooltip {
+    position: fixed;
+    z-index: 1000000;
+    width: 310px;
+    background: #141c26;
+    border: 1px solid #2d4560;
+    border-radius: 6px;
+    padding: 12px 14px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(102, 192, 244, 0.25);
+    font-family: ""Motiva Sans"", -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, sans-serif;
+    font-size: 11px;
+    color: #c6d4df;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.cr-spec-tooltip.cr-visible {
+    opacity: 1;
+}
+
+.cr-spec-tooltip-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 12px;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.cr-spec-tooltip-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 5px 0;
+    font-size: 11px;
+}
+
+.cr-spec-tooltip-label {
+    color: #8f98a0;
+    font-weight: 500;
+}
+
+.cr-spec-tooltip-val {
+    font-weight: 600;
+    color: #ffffff;
+    max-width: 185px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: right;
+}
+
+.cr-spec-tooltip-verdict {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    font-weight: 600;
+    font-size: 11px;
+    line-height: 1.35;
+}
+
+.cr-spec-tooltip-verdict.cr-green { color: #00ff88; }
+.cr-spec-tooltip-verdict.cr-yellow { color: #ffd700; }
+.cr-spec-tooltip-verdict.cr-red { color: #ff5566; }
+
+/* Large Header Badge (in Library Game Details Page) */
+.cr-game-spec-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: rgba(20, 32, 44, 0.85);
+    border: 1px solid #2d4c6b;
+    border-radius: 14px;
+    padding: 4px 12px;
+    font-family: ""Motiva Sans"", -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: #c6d4df;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+    margin-left: 10px;
+    vertical-align: middle;
+}
+
+.cr-game-spec-badge:hover {
+    background: #1e3347;
+    border-color: #66c0f4;
+    box-shadow: 0 0 12px rgba(102, 192, 244, 0.4);
+}
+
 ";
 
     private const string FrontendJsContent = @"const MILLENNIUM_IS_CLIENT_MODULE = true;
@@ -627,6 +791,47 @@ var PluginEntryPointMain = function () {
         'use strict';
 
         const cloudSvg = `<svg class=""cr-cloud-icon-svg"" viewBox=""0 0 24 24""><path d=""M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z""/></svg>`;
+
+        // User PC specs (defaults to profiled hardware: Ryzen 5 5600GT, 16GB RAM, Radeon Graphics)
+        let g_userSpecs = {
+            cpu: ""AMD Ryzen 5 5600GT with Radeon Graphics"",
+            cpuCores: 6,
+            ramGb: 16.0,
+            gpu: ""AMD Radeon(TM) Graphics"",
+            vramGb: 2.0,
+            isIntegratedGpu: true,
+            os: ""Windows 64-bit""
+        };
+
+        // Game Spec Checker toggle: default is ON (true)
+        let g_enableSpecChecker = true;
+        try {
+            const cachedToggle = localStorage.getItem('cr_enable_game_spec_checker');
+            if (cachedToggle !== null) {
+                g_enableSpecChecker = (cachedToggle === 'true');
+            }
+        } catch (e) { }
+
+        // Fetch status from CloudRedirect backend
+        async function refreshStatus() {
+            try {
+                const res = await __call_server_method__(""get_status"", {});
+                if (res && res.data) {
+                    const data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
+                    if (data.pcSpecs) {
+                        g_userSpecs = Object.assign(g_userSpecs, data.pcSpecs);
+                    }
+                    if (typeof data.enableGameSpecChecker === 'boolean') {
+                        if (g_enableSpecChecker !== data.enableGameSpecChecker) {
+                            g_enableSpecChecker = data.enableGameSpecChecker;
+                            try { localStorage.setItem('cr_enable_game_spec_checker', String(g_enableSpecChecker)); } catch (e) { }
+                            // Re-evaluate or remove badges on all active documents
+                            runInjections();
+                        }
+                    }
+                }
+            } catch (e) { }
+        }
 
         function launchApp(doc) {
             __call_server_method__(""launch_cloudredirect"", {});
@@ -755,7 +960,7 @@ var PluginEntryPointMain = function () {
                     flex-shrink: 0;
                 }
 
-                /* Game Detail Page Badge */
+                /* Game Detail Page Cloud Badge */
                 .cr-game-badge {
                     display: inline-flex;
                     align-items: center;
@@ -784,6 +989,163 @@ var PluginEntryPointMain = function () {
                     color: #a4d007;
                     font-weight: bold;
                 }
+
+                /* ==========================================================================
+                   GAME SPEC CHECKER STYLES (Store Search Rows, Game Lists, Game Details)
+                   ========================================================================== */
+                .cr-spec-indicator {
+                    display: inline-flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    vertical-align: middle !important;
+                    margin-left: 6px !important;
+                    cursor: pointer !important;
+                    position: relative !important;
+                    line-height: normal !important;
+                    user-select: none !important;
+                    padding: 2px 5px !important;
+                    border-radius: 10px !important;
+                    background: rgba(0, 0, 0, 0.45) !important;
+                    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+                    transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease !important;
+                    z-index: 5 !important;
+                }
+
+                .cr-spec-indicator:hover {
+                    transform: scale(1.18) !important;
+                    background: rgba(14, 22, 33, 0.95) !important;
+                    border-color: rgba(102, 192, 244, 0.6) !important;
+                }
+
+                .cr-spec-dot {
+                    width: 8px !important;
+                    height: 8px !important;
+                    border-radius: 50% !important;
+                    display: inline-block !important;
+                    flex-shrink: 0 !important;
+                    transition: all 0.2s ease !important;
+                }
+
+                .cr-spec-dot.cr-green {
+                    background-color: #00ff88 !important;
+                    box-shadow: 0 0 6px #00ff88, 0 0 12px rgba(0, 255, 136, 0.5) !important;
+                }
+
+                .cr-spec-dot.cr-yellow {
+                    background-color: #ffd700 !important;
+                    box-shadow: 0 0 6px #ffd700, 0 0 12px rgba(255, 215, 0, 0.5) !important;
+                }
+
+                .cr-spec-dot.cr-red {
+                    background-color: #ff3344 !important;
+                    box-shadow: 0 0 6px #ff3344, 0 0 12px rgba(255, 51, 68, 0.5) !important;
+                }
+
+                .cr-spec-dot.cr-loading {
+                    background-color: #66c0f4 !important;
+                    opacity: 0.7 !important;
+                    animation: cr-pulse 1.2s infinite ease-in-out !important;
+                }
+
+                @keyframes cr-pulse {
+                    0%, 100% { opacity: 0.3; transform: scale(0.85); }
+                    50% { opacity: 1; transform: scale(1.15); }
+                }
+
+                /* Tooltip Popup for Spec Breakdown */
+                .cr-spec-tooltip {
+                    position: fixed !important;
+                    z-index: 1000000 !important;
+                    width: 320px !important;
+                    background: #141c26 !important;
+                    border: 1px solid #2d4560 !important;
+                    border-radius: 6px !important;
+                    padding: 12px 14px !important;
+                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(102, 192, 244, 0.25) !important;
+                    font-family: ""Motiva Sans"", -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, sans-serif !important;
+                    font-size: 11px !important;
+                    color: #c6d4df !important;
+                    pointer-events: none !important;
+                    opacity: 0 !important;
+                    transition: opacity 0.15s ease !important;
+                }
+
+                .cr-spec-tooltip.cr-visible {
+                    opacity: 1 !important;
+                }
+
+                .cr-spec-tooltip-header {
+                    display: flex !important;
+                    align-items: center !important;
+                    gap: 8px !important;
+                    font-weight: 700 !important;
+                    font-size: 12px !important;
+                    padding-bottom: 8px !important;
+                    margin-bottom: 8px !important;
+                    border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+                }
+
+                .cr-spec-tooltip-row {
+                    display: flex !important;
+                    justify-content: space-between !important;
+                    align-items: center !important;
+                    margin: 5px 0 !important;
+                    font-size: 11px !important;
+                }
+
+                .cr-spec-tooltip-label {
+                    color: #8f98a0 !important;
+                    font-weight: 500 !important;
+                }
+
+                .cr-spec-tooltip-val {
+                    font-weight: 600 !important;
+                    color: #ffffff !important;
+                    max-width: 195px !important;
+                    overflow: hidden !important;
+                    text-overflow: ellipsis !important;
+                    white-space: nowrap !important;
+                    text-align: right !important;
+                }
+
+                .cr-spec-tooltip-verdict {
+                    margin-top: 10px !important;
+                    padding-top: 8px !important;
+                    border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+                    font-weight: 600 !important;
+                    font-size: 11px !important;
+                    line-height: 1.35 !important;
+                }
+
+                .cr-spec-tooltip-verdict.cr-green { color: #00ff88 !important; }
+                .cr-spec-tooltip-verdict.cr-yellow { color: #ffd700 !important; }
+                .cr-spec-tooltip-verdict.cr-red { color: #ff5566 !important; }
+
+                /* Large Header Badge (in Library Game Details Page) */
+                .cr-game-spec-badge {
+                    display: inline-flex !important;
+                    align-items: center !important;
+                    gap: 7px !important;
+                    background: rgba(20, 32, 44, 0.85) !important;
+                    border: 1px solid #2d4c6b !important;
+                    border-radius: 14px !important;
+                    padding: 4px 12px !important;
+                    font-family: ""Motiva Sans"", -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, sans-serif !important;
+                    font-size: 11px !important;
+                    font-weight: 600 !important;
+                    color: #c6d4df !important;
+                    cursor: pointer !important;
+                    transition: all 0.2s ease !important;
+                    user-select: none !important;
+                    margin-left: 10px !important;
+                    vertical-align: middle !important;
+                }
+
+                .cr-game-spec-badge:hover {
+                    background: #1e3347 !important;
+                    border-color: #66c0f4 !important;
+                    box-shadow: 0 0 12px rgba(102, 192, 244, 0.4) !important;
+                }
             `;
             doc.head.appendChild(style);
         }
@@ -806,33 +1168,31 @@ var PluginEntryPointMain = function () {
                             const children = Array.from(parent.children);
                             let sampleTab = null;
                             let lastNavTab = null;
-                            let passedCommunity = false;
 
-                            for (const child of children) {
+                            for (let i = children.length - 1; i >= 0; i--) {
+                                const child = children[i];
                                 const cText = (child.textContent || '').trim().toUpperCase();
-                                if (cText.includes('COMMUNITY')) {
+                                if (cText && (cText.includes('STORE') || cText.includes('LIBRARY') || cText.includes('COMMUNITY') || child.classList.contains('supernav_container') || child.classList.contains('supernav_content') || child.getAttribute('data-supernav'))) {
                                     sampleTab = child;
-                                    lastNavTab = child;
-                                    passedCommunity = true;
-                                } else if (cText.includes('STORE') || cText.includes('LIBRARY')) {
-                                    if (!sampleTab) sampleTab = child;
-                                    if (!passedCommunity) lastNavTab = child;
-                                } else if (passedCommunity) {
-                                    if (cText.length > 0 && !cText.includes('HTTP') && !cText.includes('🔍') && !cText.includes('SEARCH') && !cText.includes('✕')) {
-                                        lastNavTab = child;
-                                        sampleTab = child;
-                                    }
                                     break;
                                 }
                             }
 
-                            if (!sampleTab) sampleTab = lastNavTab;
+                            for (let i = children.length - 1; i >= 0; i--) {
+                                const child = children[i];
+                                if (child.id === 'cloudredirect-supernav-item') continue;
+                                const cText = (child.textContent || '').trim().toUpperCase();
+                                if (cText && !cText.includes('CLOSE') && !cText.includes('MINIMIZE') && !cText.includes('MAXIMIZE')) {
+                                    lastNavTab = child;
+                                    break;
+                                }
+                            }
 
                             if (parent && lastNavTab) {
                                 return {
                                     container: parent,
-                                    sampleTab: sampleTab,
-                                    insertAfter: lastNavTab
+                                    insertAfter: lastNavTab,
+                                    sampleTab: sampleTab || lastNavTab
                                 };
                             }
                         }
@@ -841,68 +1201,51 @@ var PluginEntryPointMain = function () {
                     }
                 }
             }
-
             return null;
         }
 
-        // Injects tab right into STORE / LIBRARY / COMMUNITY / USER / CLOUDREDIRECT row
+        // Inject CloudRedirect SuperNav Tab
         function injectSuperNavTab(doc) {
             if (!doc || !doc.body) return;
+            if (doc.getElementById('cloudredirect-supernav-item')) return;
 
-            const existing = doc.getElementById('cloudredirect-supernav-item');
-            if (existing) {
-                if (existing.parentNode) return;
-                existing.remove();
-            }
+            const info = findSuperNavInfo(doc);
+            if (!info || !info.container || !info.insertAfter) return;
 
-            const navInfo = findSuperNavInfo(doc);
-            if (!navInfo || !navInfo.container || !navInfo.insertAfter) return;
+            const { container, insertAfter, sampleTab } = info;
 
-            const { container, sampleTab, insertAfter } = navInfo;
-
-            // Create the CloudRedirect SuperNav item
             const navItem = doc.createElement('div');
             navItem.id = 'cloudredirect-supernav-item';
-            navItem.className = (sampleTab.className || '').replace(/\bactive\b/gi, '').trim() + ' cr-supernav-menu';
+            navItem.tabIndex = 0;
             navItem.setAttribute('role', 'button');
-            navItem.setAttribute('tabindex', '0');
-            navItem.title = 'CloudRedirect v2.9.74 (Save Protection Active - Click to Open App)';
+            navItem.title = 'CloudRedirect v2.9.75 (Click to Open)';
 
-            // Find child button / inner element if present in sampleTab
-            const sampleInner = sampleTab.querySelector('div, a, span') || sampleTab;
-            const innerBtn = doc.createElement('div');
-            innerBtn.className = (sampleInner.className || '').replace(/\bactive\b/gi, '').trim() + ' cr-supernav-btn';
-            innerBtn.innerHTML = `
-                <span class=""cr-supernav-label"">CLOUDREDIRECT</span>
-                <span class=""cr-supernav-dot"" title=""Save Protection Active""></span>
+            if (sampleTab) {
+                navItem.className = sampleTab.className || '';
+                const btnChild = sampleTab.querySelector('a, div, span, button');
+                if (btnChild) {
+                    navItem.classList.add('cr-supernav-menu');
+                }
+            }
+            if (!navItem.className) {
+                navItem.className = 'supernav_container cr-supernav-menu';
+            }
+
+            let innerBtnClass = 'cr-supernav-btn menuitem';
+            if (sampleTab) {
+                const sampleBtn = sampleTab.querySelector('a, div, span, button');
+                if (sampleBtn && sampleBtn.className) {
+                    innerBtnClass = sampleBtn.className + ' cr-supernav-btn';
+                }
+            }
+
+            navItem.innerHTML = `
+                <a class=""${innerBtnClass}"">
+                    <span class=""cr-supernav-label"">CLOUDREDIRECT</span>
+                    <span class=""cr-supernav-dot""></span>
+                </a>
             `;
 
-            // Inherit computed typography dynamically without forcing disruptive inline height/display
-            try {
-                const sampleTarget = sampleInner || sampleTab;
-                const win = doc.defaultView || window;
-                if (win && sampleTarget) {
-                    const computed = win.getComputedStyle(sampleTarget);
-                    if (computed) {
-                        if (computed.fontSize) {
-                            innerBtn.style.fontSize = computed.fontSize;
-                        }
-                        if (computed.fontWeight) {
-                            innerBtn.style.fontWeight = computed.fontWeight;
-                        }
-                        if (computed.fontFamily) {
-                            innerBtn.style.fontFamily = computed.fontFamily;
-                        }
-                        if (computed.lineHeight && computed.lineHeight !== 'normal') {
-                            innerBtn.style.lineHeight = computed.lineHeight;
-                        }
-                    }
-                }
-            } catch (e) { }
-
-            navItem.appendChild(innerBtn);
-
-            // Directly launch CloudRedirect application when tab is clicked
             navItem.onclick = (e) => {
                 e.stopPropagation();
                 e.preventDefault();
@@ -915,7 +1258,6 @@ var PluginEntryPointMain = function () {
                 }
             };
 
-            // Insert directly into the row after the last tab (after MINTAMAAF5)
             if (insertAfter.nextSibling) {
                 container.insertBefore(navItem, insertAfter.nextSibling);
             } else {
@@ -931,7 +1273,6 @@ var PluginEntryPointMain = function () {
             let targetSibling = null;
             let parentContainer = null;
 
-            // Strategy 1: Find existing mod buttons like ""Steam Unlock""
             const allElements = doc.querySelectorAll('button, div, a');
             for (const el of allElements) {
                 const text = el.textContent || '';
@@ -942,7 +1283,6 @@ var PluginEntryPointMain = function () {
                 }
             }
 
-            // Strategy 2: Find ""+ Add a Game"" button
             if (!targetSibling) {
                 for (const el of allElements) {
                     const text = el.textContent || '';
@@ -954,7 +1294,6 @@ var PluginEntryPointMain = function () {
                 }
             }
 
-            // Strategy 3: Try standard selectors for Add a Game
             if (!targetSibling) {
                 const addGameCandidates = doc.querySelectorAll('button[class*=""addgamebutton_""], div[class*=""addgamebutton_""], [class*=""AddGameButton""]');
                 for (const el of addGameCandidates) {
@@ -966,7 +1305,6 @@ var PluginEntryPointMain = function () {
                 }
             }
 
-            // Strategy 4: Fallback to bottom bar container
             if (!parentContainer) {
                 parentContainer = doc.querySelector('div[class*=""bottombar_""], div[class*=""bottombarcontrols_""], footer, .bottom_bar');
             }
@@ -976,7 +1314,7 @@ var PluginEntryPointMain = function () {
             const btn = doc.createElement('div');
             btn.id = 'cloudredirect-bottom-btn';
             btn.className = 'cr-bottom-bar-btn';
-            btn.title = 'CloudRedirect v2.9.74 (Save Protection Active - Click to Open App)';
+            btn.title = 'CloudRedirect v2.9.75 (Save Protection Active - Click to Open App)';
             btn.innerHTML = `
                 ${cloudSvg}
                 <span>CloudRedirect</span>
@@ -998,7 +1336,7 @@ var PluginEntryPointMain = function () {
             }
         }
 
-        // 2. Inject Game Details Page Badge
+        // 2. Inject Game Details Page Cloud Badge
         function injectGameBadge(doc) {
             if (!doc || !doc.body) return;
             const gameActionBars = doc.querySelectorAll('div[class*=""playbar_""], div[class*=""appactionandstats_""], div[class*=""appdetailsheader_""]');
@@ -1020,6 +1358,363 @@ var PluginEntryPointMain = function () {
                 };
 
                 bar.appendChild(badge);
+            });
+        }
+
+        // ==========================================================================
+        // 3. GAME SYSTEM REQUIREMENTS COMPATIBILITY CHECKER
+        // ==========================================================================
+
+        function parseSpecs(html) {
+            if (!html) return {};
+            const items = [];
+            const re = /<strong>\s*([^:<]+?)\s*:\s*<\/strong>\s*([^<\n\r]+)/gi;
+            let match;
+            while ((match = re.exec(html)) !== null) {
+                items.push([match[1], match[2]]);
+            }
+            const data = {};
+            for (const [kRaw, vRaw] of items) {
+                const k = kRaw.toLowerCase().trim();
+                const v = vRaw.trim();
+                if (k.includes('memory') || k.includes('ram')) {
+                    data.ramText = v;
+                    const mGb = v.match(/(\d+(?:\.\d+)?)\s*GB/i);
+                    const mMb = v.match(/(\d+(?:\.\d+)?)\s*MB/i);
+                    if (mGb) data.ramGb = parseFloat(mGb[1]);
+                    else if (mMb) data.ramGb = Math.round((parseFloat(mMb[1]) / 1024) * 100) / 100;
+                } else if (k.includes('graphics') || k.includes('video')) {
+                    data.gpuText = v;
+                    const mVram = v.match(/(\d+(?:\.\d+)?)\s*GB/i);
+                    if (mVram) data.vramGb = parseFloat(mVram[1]);
+                } else if (k.includes('processor') || k.includes('cpu')) {
+                    data.cpuText = v;
+                } else if (k.includes('storage') || k.includes('disk') || k.includes('space')) {
+                    data.storageText = v;
+                } else if (k.includes('os')) {
+                    data.osText = v;
+                }
+            }
+            return data;
+        }
+
+        function evaluateSpecs(minHtml, recHtml, user) {
+            if (!minHtml && !recHtml) {
+                return {
+                    rating: 'GREEN',
+                    dotClass: 'cr-green',
+                    title: '🟢 Perfect (Max Graphics)',
+                    verdict: 'Lightweight game. Smoothly runs at maximum graphics settings (60+ FPS).',
+                    cpuPass: true,
+                    gpuPass: true,
+                    ramPass: true,
+                    min: {},
+                    rec: {}
+                };
+            }
+
+            const min = parseSpecs(minHtml);
+            const rec = parseSpecs(recHtml);
+
+            const minRam = min.ramGb || 2.0;
+            const recRam = rec.ramGb || minRam;
+
+            const minGpu = (min.gpuText || '').toLowerCase();
+            const recGpu = (rec.gpuText || '').toLowerCase();
+
+            const heavyKeywords = ['rtx 30', 'rtx 40', 'rtx 2080', 'rx 6800', 'rx 6700', 'gtx 1080', 'gtx 1070', 'gtx 1060 6gb', 'rx 580 8gb', 'rtx 2060'];
+            const midKeywords = ['gtx 1050', 'gtx 960', 'gtx 750', 'gtx 1650', 'rx 560', 'rx 570', 'rx 460', 'radeon vega', 'intel arc', 'gtx 1060 3gb', 'gtx 1060'];
+
+            const isMinHeavy = heavyKeywords.some(k => minGpu.includes(k)) || (min.vramGb && min.vramGb >= 6);
+            const isMinMid = midKeywords.some(k => minGpu.includes(k)) || (min.vramGb && min.vramGb >= 3);
+
+            const isRecHeavy = heavyKeywords.some(k => recGpu.includes(k)) || (rec.vramGb && rec.vramGb >= 6);
+            const isRecMid = midKeywords.some(k => recGpu.includes(k)) || (rec.vramGb && rec.vramGb >= 3);
+
+            let rating = 'GREEN';
+            let dotClass = 'cr-green';
+            let title = '🟢 Perfect! Can run at Maximum graphic settings';
+            let verdict = 'Passes all requirements! Smoothly runs at maximum graphics settings (60+ FPS).';
+            let cpuPass = true;
+            let gpuPass = true;
+            let ramPass = true;
+
+            if (user.ramGb < minRam) {
+                rating = 'RED';
+                dotClass = 'cr-red';
+                title = '🔴 Not supported / Lagging';
+                verdict = `System RAM (${user.ramGb}GB) is below minimum required (${minRam}GB). Expect lagging or crashes.`;
+                ramPass = false;
+            } else if (user.isIntegratedGpu) {
+                if (isMinHeavy) {
+                    rating = 'RED';
+                    dotClass = 'cr-red';
+                    title = '🔴 Not supported / Lagging';
+                    verdict = 'Requires dedicated 6GB+ gaming graphics card. Integrated GPU will experience heavy lag.';
+                    gpuPass = false;
+                } else if (isMinMid || isRecHeavy) {
+                    rating = 'YELLOW';
+                    dotClass = 'cr-yellow';
+                    title = '🟡 Passes minimum requirement (Low/Medium)';
+                    verdict = 'Passes minimum requirements! Playable at Low to Medium graphic settings (30–60 FPS).';
+                    gpuPass = 'warn';
+                } else if (minRam <= 8.0 && !isMinHeavy && !isMinMid) {
+                    rating = 'GREEN';
+                    dotClass = 'cr-green';
+                    title = '🟢 Perfect! Can run at Maximum graphic settings';
+                    verdict = 'Lightweight requirements! Perfect performance at High/Maximum graphic settings (60+ FPS).';
+                } else {
+                    rating = 'YELLOW';
+                    dotClass = 'cr-yellow';
+                    title = '🟡 Passes minimum requirement (Low/Medium)';
+                    verdict = 'Passes minimum requirements! Recommended for Low/Medium graphic settings.';
+                    gpuPass = 'warn';
+                }
+            }
+
+            return {
+                rating,
+                dotClass,
+                title,
+                verdict,
+                cpuPass,
+                gpuPass,
+                ramPass,
+                min,
+                rec
+            };
+        }
+
+        const g_specCache = new Map();
+        const g_fetchQueue = [];
+        let g_isFetchingQueue = false;
+
+        async function getGameSpecsAsync(appId) {
+            if (!appId) return null;
+            const cacheKey = 'cr_spec_cache_' + appId;
+            if (g_specCache.has(appId)) {
+                return g_specCache.get(appId);
+            }
+
+            try {
+                const stored = localStorage.getItem(cacheKey);
+                if (stored) {
+                    const parsed = JSON.parse(stored);
+                    g_specCache.set(appId, parsed);
+                    return parsed;
+                }
+            } catch (e) { }
+
+            return new Promise((resolve) => {
+                g_fetchQueue.push({ appId, resolve });
+                processFetchQueue();
+            });
+        }
+
+        async function processFetchQueue() {
+            if (g_isFetchingQueue || g_fetchQueue.length === 0) return;
+            g_isFetchingQueue = true;
+
+            while (g_fetchQueue.length > 0) {
+                const item = g_fetchQueue.shift();
+                const { appId, resolve } = item;
+                try {
+                    const res = await fetch(`https://store.steampowered.com/api/appdetails?appids=${appId}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        const appData = data && data[appId] && data[appId].data;
+                        const pcReq = appData && appData.pc_requirements;
+                        const min = (pcReq && pcReq.minimum) || '';
+                        const rec = (pcReq && pcReq.recommended) || '';
+                        const gameName = (appData && appData.name) || `App ${appId}`;
+                        const evalResult = evaluateSpecs(min, rec, g_userSpecs);
+                        evalResult.gameName = gameName;
+                        evalResult.appId = appId;
+
+                        g_specCache.set(appId, evalResult);
+                        try {
+                            localStorage.setItem('cr_spec_cache_' + appId, JSON.stringify(evalResult));
+                        } catch (e) { }
+
+                        resolve(evalResult);
+                    } else {
+                        resolve(null);
+                    }
+                } catch (e) {
+                    resolve(null);
+                }
+                // Polite delay between Store API calls
+                await new Promise(r => setTimeout(r, 60));
+            }
+
+            g_isFetchingQueue = false;
+        }
+
+        function getOrCreateTooltip(doc) {
+            let tooltip = doc.getElementById('cr-spec-tooltip');
+            if (!tooltip) {
+                tooltip = doc.createElement('div');
+                tooltip.id = 'cr-spec-tooltip';
+                tooltip.className = 'cr-spec-tooltip';
+                doc.body.appendChild(tooltip);
+            }
+            return tooltip;
+        }
+
+        function showSpecTooltip(targetEl, spec, doc) {
+            if (!spec || !doc) return;
+            const tooltip = getOrCreateTooltip(doc);
+            const rect = targetEl.getBoundingClientRect();
+
+            const minRam = spec.min && spec.min.ramGb ? `${spec.min.ramGb} GB` : '2 GB';
+            const userRam = `${g_userSpecs.ramGb} GB`;
+
+            const ramStatus = spec.ramPass ? '✓ Pass' : '✗ Low RAM';
+            const gpuStatus = spec.gpuPass === true ? '✓ Max' : (spec.gpuPass === 'warn' ? '⚡ Playable' : '✗ Low GPU');
+            const cpuStatus = spec.cpuPass ? '✓ Max' : '✗ Low CPU';
+
+            tooltip.innerHTML = `
+                <div class=""cr-spec-tooltip-header"">
+                    <span class=""cr-spec-dot ${spec.dotClass}""></span>
+                    <span style=""color:#ffffff;"">${spec.gameName || 'Game Compatibility'}</span>
+                </div>
+                <div class=""cr-spec-tooltip-row"">
+                    <span class=""cr-spec-tooltip-label"">Rating:</span>
+                    <span class=""cr-spec-tooltip-val ${spec.dotClass}"">${spec.title}</span>
+                </div>
+                <div class=""cr-spec-tooltip-row"">
+                    <span class=""cr-spec-tooltip-label"">Your CPU:</span>
+                    <span class=""cr-spec-tooltip-val"" title=""${g_userSpecs.cpu}"">${g_userSpecs.cpu.split('with')[0].trim()} (${cpuStatus})</span>
+                </div>
+                <div class=""cr-spec-tooltip-row"">
+                    <span class=""cr-spec-tooltip-label"">Your RAM:</span>
+                    <span class=""cr-spec-tooltip-val"">${userRam} (Min: ${minRam}) (${ramStatus})</span>
+                </div>
+                <div class=""cr-spec-tooltip-row"">
+                    <span class=""cr-spec-tooltip-label"">Your GPU:</span>
+                    <span class=""cr-spec-tooltip-val"" title=""${g_userSpecs.gpu}"">${g_userSpecs.gpu} (${gpuStatus})</span>
+                </div>
+                <div class=""cr-spec-tooltip-verdict ${spec.dotClass}"">
+                    ${spec.verdict}
+                </div>
+                <div style=""margin-top:8px; font-size:10px; color:#5c6b79; display:flex; justify-content:space-between;"">
+                    <span>CloudRedirect Spec Match</span>
+                    <span style=""color:#66c0f4;"">Enabled</span>
+                </div>
+            `;
+
+            const tipWidth = 320;
+            let left = rect.left + (rect.width / 2) - (tipWidth / 2);
+            if (left < 10) left = 10;
+            if (left + tipWidth > window.innerWidth - 10) left = window.innerWidth - tipWidth - 10;
+
+            let top = rect.top - 185;
+            if (top < 10) {
+                top = rect.bottom + 8;
+            }
+
+            tooltip.style.left = `${left}px`;
+            tooltip.style.top = `${top}px`;
+            tooltip.classList.add('cr-visible');
+        }
+
+        function hideSpecTooltip(doc) {
+            if (!doc) return;
+            const tooltip = doc.getElementById('cr-spec-tooltip');
+            if (tooltip) {
+                tooltip.classList.remove('cr-visible');
+            }
+        }
+
+        // Injects spec dot into Steam Store search result rows (.search_result_row .search_platforms)
+        function injectStoreSearchSpecIndicators(doc) {
+            if (!g_enableSpecChecker) {
+                doc.querySelectorAll('.cr-spec-indicator, .cr-game-spec-badge').forEach(el => el.remove());
+                return;
+            }
+
+            const rows = doc.querySelectorAll('a.search_result_row');
+            rows.forEach(row => {
+                const platforms = row.querySelector('.search_platforms');
+                if (!platforms) return;
+                if (platforms.querySelector('.cr-spec-indicator')) return;
+
+                const appId = row.getAttribute('data-ds-appid') || row.getAttribute('data-ds-packageid');
+                if (!appId || !/^\d+$/.test(appId)) return;
+
+                const indicator = doc.createElement('div');
+                indicator.className = 'cr-spec-indicator';
+                indicator.setAttribute('data-cr-appid', appId);
+                indicator.title = 'CloudRedirect: Checking PC spec compatibility...';
+                indicator.innerHTML = '<span class=""cr-spec-dot cr-loading""></span>';
+
+                indicator.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    launchApp(doc);
+                };
+
+                indicator.onmouseleave = () => {
+                    hideSpecTooltip(doc);
+                };
+
+                platforms.appendChild(indicator);
+
+                getGameSpecsAsync(appId).then(spec => {
+                    if (!spec) {
+                        indicator.innerHTML = '<span class=""cr-spec-dot cr-green"" title=""Standard requirements""></span>';
+                        return;
+                    }
+                    indicator.innerHTML = `<span class=""cr-spec-dot ${spec.dotClass}""></span>`;
+                    indicator.title = `${spec.title}\n${spec.verdict}\n(Click to open CloudRedirect)`;
+
+                    indicator.onmouseenter = () => {
+                        showSpecTooltip(indicator, spec, doc);
+                    };
+                }).catch(() => {
+                    indicator.innerHTML = '<span class=""cr-spec-dot cr-green""></span>';
+                });
+            });
+        }
+
+        // Injects spec badge into Game Detail Pages
+        function injectLibraryGameSpecBadge(doc) {
+            if (!g_enableSpecChecker) return;
+
+            const saveBadges = doc.querySelectorAll('.cr-game-badge');
+            saveBadges.forEach(saveBadge => {
+                const parent = saveBadge.parentNode;
+                if (!parent || parent.querySelector('.cr-game-spec-badge')) return;
+
+                let appId = null;
+                const href = window.location.href;
+                const match = href.match(/app\/(\d+)/i) || (doc.location && doc.location.href.match(/app\/(\d+)/i));
+                if (match) appId = match[1];
+
+                if (!appId) {
+                    const dsEl = doc.querySelector('[data-appid], [data-ds-appid]');
+                    if (dsEl) appId = dsEl.getAttribute('data-appid') || dsEl.getAttribute('data-ds-appid');
+                }
+
+                if (!appId) return;
+
+                const specBadge = doc.createElement('div');
+                specBadge.className = 'cr-game-spec-badge';
+                specBadge.innerHTML = '<span class=""cr-spec-dot cr-loading""></span><span>Checking Specs...</span>';
+                parent.insertBefore(specBadge, saveBadge.nextSibling);
+
+                specBadge.onclick = (e) => {
+                    e.stopPropagation();
+                    launchApp(doc);
+                };
+
+                specBadge.onmouseleave = () => hideSpecTooltip(doc);
+
+                getGameSpecsAsync(appId).then(spec => {
+                    if (!spec) return;
+                    specBadge.innerHTML = `<span class=""cr-spec-dot ${spec.dotClass}""></span><span>${spec.rating === 'GREEN' ? 'Max Settings' : (spec.rating === 'YELLOW' ? 'Playable (Low/Med)' : 'Below Min Specs')}</span>`;
+                    specBadge.onmouseenter = () => showSpecTooltip(specBadge, spec, doc);
+                });
             });
         }
 
@@ -1045,6 +1740,8 @@ var PluginEntryPointMain = function () {
             injectSuperNavTab(doc);
             injectBottomBarButton(doc);
             injectGameBadge(doc);
+            injectStoreSearchSpecIndicators(doc);
+            injectLibraryGameSpecBadge(doc);
         }
 
         function runInjections() {
@@ -1059,6 +1756,7 @@ var PluginEntryPointMain = function () {
         }
 
         function setupObserver() {
+            refreshStatus();
             runInjections();
 
             const observedDocs = new WeakSet();
@@ -1076,7 +1774,7 @@ var PluginEntryPointMain = function () {
                 } catch (e) { }
             }
 
-            // Periodically check all windows (including after page transitions)
+            // Periodically check all windows & refresh status
             setInterval(() => {
                 const docs = getAllSteamDocuments();
                 for (const d of docs) {
@@ -1084,6 +1782,10 @@ var PluginEntryPointMain = function () {
                 }
                 runInjections();
             }, 800);
+
+            setInterval(() => {
+                refreshStatus();
+            }, 3000);
 
             try {
                 if (typeof Millennium !== 'undefined' && typeof Millennium.AddWindowCreateHook === 'function') {
@@ -1116,7 +1818,7 @@ var PluginEntryPointMain = function () {
                     div.style.color = '#c6d4df';
                     div.innerHTML = `
                         <h2 style=""color: #66c0f4; margin-bottom: 8px;"">CloudRedirect Steam Integration</h2>
-                        <p style=""margin-bottom: 16px; color: #8f98a0;"">Universal cloud save redirection and automated cloud backup for Steam games.</p>
+                        <p style=""margin-bottom: 16px; color: #8f98a0;"">Universal cloud save redirection, automated backup, and PC system specs compatibility check for Steam games.</p>
                         <button class=""cr-btn-primary"" style=""max-width: 240px;"" onclick=""window.open('cloudredirect://open')"">Open CloudRedirect App</button>
                     `;
                     return div;
@@ -1129,7 +1831,7 @@ var PluginEntryPointMain = function () {
                             if (superTab) superTab.remove();
                             const topBtn = d.getElementById('cloudredirect-header-btn');
                             if (topBtn) topBtn.remove();
-                            d.querySelectorAll('.cr-nav-btn, [id*=""cloudredirect-header""], .cr-dropdown-menu').forEach(el => el.remove());
+                            d.querySelectorAll('.cr-nav-btn, [id*=""cloudredirect-header""], .cr-dropdown-menu, .cr-spec-indicator, .cr-game-spec-badge, #cr-spec-tooltip').forEach(el => el.remove());
                             const btmBtn = d.getElementById('cloudredirect-bottom-btn');
                             if (btmBtn) btmBtn.remove();
                             const style = d.getElementById('cr-millennium-styles');
@@ -1180,6 +1882,7 @@ async function ExecutePluginModule() {
     }
 }
 ExecutePluginModule();
+
 ";
 
     #endregion

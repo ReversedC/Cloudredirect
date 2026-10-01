@@ -295,6 +295,29 @@
                                                  Unchecked="AppSettingsToggle_Changed" />
                             </ui:CardControl>
 
+                            <!-- Game Hardware Requirement Spec Checker in Steam -->
+                            <ui:CardControl Margin="0,8,0,0">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="Game System Requirements Check (Steam)"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                            <Border Background="#162B3D" BorderBrush="#00D2FF" BorderThickness="1"
+                                                    CornerRadius="3" Padding="6,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                <TextBlock Text="Store &amp; Library" FontSize="11" FontWeight="Bold" Foreground="#00D2FF" />
+                                            </Border>
+                                        </StackPanel>
+                                        <TextBlock Text="Automatically check game minimum and recommended specs against your PC hardware and display compatibility indicators (🟢 Max / 🟡 Playable / 🔴 Below Min) directly in Steam game lists, search rows, and details."
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch x:Name="GameSpecCheckerToggle"
+                                                 Checked="AppSettingsToggle_Changed"
+                                                 Unchecked="AppSettingsToggle_Changed" />
+                            </ui:CardControl>
+
                             <!-- Auto-Fit Window (No Scrolling) -->
                             <ui:CardControl Margin="0,8,0,0">
                                 <ui:CardControl.Header>
