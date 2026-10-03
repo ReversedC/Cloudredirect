@@ -2676,6 +2676,18 @@
   <data name="Zoom_Percent_Tooltip" xml:space="preserve">
     <value>点击切换自动适应或重置为 100%</value>
   </data>
+  <data name="Settings_UpdateBranch" xml:space="preserve">
+    <value>更新分支</value>
+  </data>
+  <data name="Settings_UpdateBranch_Hint" xml:space="preserve">
+    <value>在 Main（稳定版）和 Beta 分支之间切换。切换分支将重启 CloudRedirect 并检查更新。</value>
+  </data>
+  <data name="Settings_UpdateBranch_RestartTitle" xml:space="preserve">
+    <value>切换更新分支</value>
+  </data>
+  <data name="Settings_UpdateBranch_RestartContent" xml:space="preserve">
+    <value>切换到 {0} 分支需要重启 CloudRedirect 以检查并应用更新。是否立即重启？</value>
+  </data>
 </root>
 
 

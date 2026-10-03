@@ -2703,4 +2703,16 @@ Would you like to restart Steam now to clear the Steam UI 'Unable to sync' error
   <data name="Zoom_Percent_Tooltip" xml:space="preserve">
     <value>Click to toggle Auto-Fit (No Scrolling) or Reset to 100%</value>
   </data>
+  <data name="Settings_UpdateBranch" xml:space="preserve">
+    <value>Release Channel</value>
+  </data>
+  <data name="Settings_UpdateBranch_Hint" xml:space="preserve">
+    <value>Toggle between Main (stable) and Beta channels. Switching channels will restart CloudRedirect and check for updates.</value>
+  </data>
+  <data name="Settings_UpdateBranch_RestartTitle" xml:space="preserve">
+    <value>Switch Update Channel</value>
+  </data>
+  <data name="Settings_UpdateBranch_RestartContent" xml:space="preserve">
+    <value>Switching to the {0} channel requires restarting CloudRedirect to check for and apply updates. Would you like to restart now?</value>
+  </data>
 </root>

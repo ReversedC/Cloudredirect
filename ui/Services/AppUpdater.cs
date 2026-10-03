@@ -24,13 +24,70 @@ internal static class AppUpdater
     private static readonly string[] PrereleaseTagSuffixes =
         { "-test", "-pre", "-rc", "-beta", "-alpha" };
 
+    public static string GetCurrentVersionString()
+    {
+        var informational = Assembly.GetExecutingAssembly()
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        if (!string.IsNullOrEmpty(informational))
+        {
+            var plus = informational.IndexOf('+');
+            return plus >= 0 ? informational.Substring(0, plus) : informational;
+        }
+        var ver = Assembly.GetExecutingAssembly().GetName().Version;
+        return ver != null ? $"{ver.Major}.{ver.Minor}.{ver.Build}" : "1.0.0";
+    }
+
+    internal static bool IsBetaTag(string? tagName)
+    {
+        if (string.IsNullOrEmpty(tagName)) return false;
+        var tag = tagName.Trim();
+        if (tag.EndsWith("B", StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (tag.Contains("-beta", StringComparison.OrdinalIgnoreCase) ||
+            tag.Contains(".beta", StringComparison.OrdinalIgnoreCase))
+            return true;
+        return false;
+    }
+
     internal static bool IsPrereleaseTag(string? tagName)
     {
         if (string.IsNullOrEmpty(tagName)) return false;
+        if (IsBetaTag(tagName)) return true;
         foreach (var suffix in PrereleaseTagSuffixes)
         {
             if (tagName.Contains(suffix, StringComparison.OrdinalIgnoreCase))
                 return true;
+        }
+        return false;
+    }
+
+    internal static bool TryParseVersion(string versionStr, out Version baseVer, out bool isBeta)
+    {
+        baseVer = new Version(0, 0, 0);
+        isBeta = false;
+        if (string.IsNullOrWhiteSpace(versionStr)) return false;
+
+        var s = versionStr.Trim().TrimStart('v');
+        if (s.EndsWith("B", StringComparison.OrdinalIgnoreCase))
+        {
+            isBeta = true;
+            s = s.Substring(0, s.Length - 1).Trim();
+        }
+        else if (s.Contains("-beta", StringComparison.OrdinalIgnoreCase))
+        {
+            isBeta = true;
+            s = s.Replace("-beta", "", StringComparison.OrdinalIgnoreCase).Trim();
+        }
+        else if (s.Contains("-rc", StringComparison.OrdinalIgnoreCase))
+        {
+            isBeta = true;
+            s = s.Replace("-rc", "", StringComparison.OrdinalIgnoreCase).Trim();
+        }
+
+        if (Version.TryParse(s, out var v))
+        {
+            baseVer = v;
+            return true;
         }
         return false;
     }
@@ -58,8 +115,7 @@ internal static class AppUpdater
     }
 
     /// <summary>
-    /// Checks GitHub releases for a newer version. Returns null on any failure
-    /// (network, parse, etc.) -- callers treat null as "no update / check failed".
+    /// Checks GitHub releases for a newer version based on the active branch (Main vs Beta).
     /// </summary>
     internal static async Task<CheckResult?> CheckAsync()
     {
@@ -71,37 +127,72 @@ internal static class AppUpdater
 
             if (releases.GetArrayLength() == 0) return null;
 
-            var localVersion = Assembly.GetExecutingAssembly().GetName().Version;
-            App.LogStartup($"AppUpdater.CheckAsync: localVersion={localVersion}");
-            if (localVersion == null) return null;
+            var localVerStr = GetCurrentVersionString();
+            TryParseVersion(localVerStr, out var localBaseVer, out bool localIsBeta);
+            App.LogStartup($"AppUpdater.CheckAsync: localVerStr={localVerStr}, localBaseVer={localBaseVer}, localIsBeta={localIsBeta}");
 
-            // First non-prerelease, non-draft release with a parseable version tag.
+            var targetBranch = AppSettings.UpdateBranch; // "main" or "beta"
+            bool wantBeta = string.Equals(targetBranch, "beta", StringComparison.OrdinalIgnoreCase);
+
             JsonElement root = default;
             string tagName = "";
-            Version? remoteVersion = null;
+            Version? remoteBaseVersion = null;
+            bool remoteIsBeta = false;
             bool foundCandidate = false;
+
+            // 1. Search for best release candidate for the chosen branch
             foreach (var rel in releases.EnumerateArray())
             {
-                if (rel.TryGetProperty("prerelease", out var prProp) &&
-                    prProp.ValueKind == JsonValueKind.True)
+                if (rel.TryGetProperty("draft", out var draftProp) && draftProp.ValueKind == JsonValueKind.True)
                     continue;
-                if (rel.TryGetProperty("draft", out var draftProp) &&
-                    draftProp.ValueKind == JsonValueKind.True)
-                    continue;
-                var candidateTag = rel.GetProperty("tag_name").GetString() ?? "";
-                if (IsPrereleaseTag(candidateTag)) continue;
 
-                var candidateVerStr = candidateTag.TrimStart('v');
-                if (!Version.TryParse(candidateVerStr, out var candidateVer)) continue;
+                var candidateTag = rel.GetProperty("tag_name").GetString() ?? "";
+                bool isPrereleaseRel = rel.TryGetProperty("prerelease", out var prProp) && prProp.ValueKind == JsonValueKind.True;
+
+                if (!TryParseVersion(candidateTag, out var candBaseVer, out bool candIsBeta))
+                    continue;
+
+                candIsBeta = candIsBeta || isPrereleaseRel || IsBetaTag(candidateTag);
+
+                if (wantBeta)
+                {
+                    // Beta channel: look for beta releases (ending with B or marked prerelease)
+                    if (!candIsBeta) continue;
+                }
+                else
+                {
+                    // Main channel: only accept stable non-beta releases
+                    if (candIsBeta || IsPrereleaseTag(candidateTag)) continue;
+                }
 
                 root = rel;
                 tagName = candidateTag;
-                remoteVersion = candidateVer;
+                remoteBaseVersion = candBaseVer;
+                remoteIsBeta = candIsBeta;
                 foundCandidate = true;
                 break;
             }
 
-            if (!foundCandidate || remoteVersion == null) return null;
+            // Fallback for Beta channel: if no beta release exists yet, use the latest stable release
+            if (!foundCandidate && wantBeta)
+            {
+                foreach (var rel in releases.EnumerateArray())
+                {
+                    if (rel.TryGetProperty("draft", out var draftProp) && draftProp.ValueKind == JsonValueKind.True)
+                        continue;
+                    var candidateTag = rel.GetProperty("tag_name").GetString() ?? "";
+                    if (!TryParseVersion(candidateTag, out var candBaseVer, out bool candIsBeta))
+                        continue;
+                    root = rel;
+                    tagName = candidateTag;
+                    remoteBaseVersion = candBaseVer;
+                    remoteIsBeta = candIsBeta;
+                    foundCandidate = true;
+                    break;
+                }
+            }
+
+            if (!foundCandidate || remoteBaseVersion == null) return null;
 
             // Find the GUI exe asset and hash file (exact match to avoid grabbing the CLI exe)
             if (!root.TryGetProperty("assets", out var assets))
@@ -126,29 +217,59 @@ internal static class AppUpdater
 
             if (downloadUrl == null) return null;
 
-            // Compare local exe hash against published hash; skip if unchanged.
-            if (sha256Url != null)
+            // Compare local exe hash against published hash; skip if exact match
+            var localExePath = GetAppExecutablePath();
+            bool hashIdentical = false;
+            if (sha256Url != null && !string.IsNullOrEmpty(localExePath) && File.Exists(localExePath))
             {
                 try
                 {
                     var remoteHash = (await Http.GetStringAsync(sha256Url)).Trim();
                     if (remoteHash.Length == 64)
                     {
-                        var localExePath = GetAppExecutablePath();
-                        if (!string.IsNullOrEmpty(localExePath) && File.Exists(localExePath))
-                        {
-                            var localHash = ComputeFileSHA256(localExePath);
-                            if (string.Equals(localHash, remoteHash, StringComparison.OrdinalIgnoreCase))
-                                return new CheckResult { UpdateAvailable = false };
-                        }
+                        var localHash = ComputeFileSHA256(localExePath);
+                        if (string.Equals(localHash, remoteHash, StringComparison.OrdinalIgnoreCase))
+                            hashIdentical = true;
                     }
                 }
                 catch { /* hash check failed, fall through to version comparison */ }
             }
 
-            App.LogStartup($"AppUpdater.CheckAsync: remoteVersion={remoteVersion}, localVersion={localVersion}, remote<=local: {remoteVersion <= localVersion}");
-            // No hash file available, fall back to version comparison
-            if (remoteVersion <= localVersion)
+            if (hashIdentical)
+                return new CheckResult { UpdateAvailable = false };
+
+            bool updateAvailable;
+            if (wantBeta)
+            {
+                // If user is currently running a main build, switching to beta is an update
+                if (!localIsBeta)
+                {
+                    updateAvailable = true;
+                }
+                else
+                {
+                    // Both local and remote are beta
+                    updateAvailable = remoteBaseVersion > localBaseVer;
+                }
+            }
+            else
+            {
+                // On Main channel:
+                // If user is currently running a beta build, switching to main is an update
+                if (localIsBeta)
+                {
+                    updateAvailable = true;
+                }
+                else
+                {
+                    // Both local and remote are main
+                    updateAvailable = remoteBaseVersion > localBaseVer;
+                }
+            }
+
+            App.LogStartup($"AppUpdater.CheckAsync: remoteBaseVersion={remoteBaseVersion}, localBaseVer={localBaseVer}, wantBeta={wantBeta}, updateAvailable={updateAvailable}");
+
+            if (!updateAvailable)
                 return new CheckResult { UpdateAvailable = false };
 
             var body = root.TryGetProperty("body", out var bodyProp)
@@ -356,6 +477,42 @@ internal static class AppUpdater
         return Path.Combine(AppContext.BaseDirectory, "CloudRedirect.exe");
     }
 
+    /// <summary>
+    /// Restarts the application using the launcher executable.
+    /// </summary>
+    public static void RestartApp()
+    {
+        var targetLauncher = GetAppExecutablePath();
+        if (string.IsNullOrEmpty(targetLauncher) || !File.Exists(targetLauncher))
+        {
+            targetLauncher = Path.Combine(AppContext.BaseDirectory, "CloudRedirect.exe");
+        }
+
+        if (targetLauncher.EndsWith("CloudRedirect.Core.exe", StringComparison.OrdinalIgnoreCase))
+        {
+            targetLauncher = Path.Combine(Path.GetDirectoryName(targetLauncher) ?? AppContext.BaseDirectory, "CloudRedirect.exe");
+        }
+
+        try
+        {
+            if (File.Exists(targetLauncher))
+            {
+                Process.Start(new ProcessStartInfo(targetLauncher) { UseShellExecute = true });
+            }
+            else
+            {
+                var current = Environment.ProcessPath ?? Path.Combine(AppContext.BaseDirectory, "CloudRedirect.exe");
+                Process.Start(new ProcessStartInfo(current) { UseShellExecute = true });
+            }
+        }
+        catch (Exception ex)
+        {
+            App.LogStartup($"RestartApp failed: {ex.Message}");
+        }
+
+        Environment.Exit(0);
+    }
+
     public static string? ApplyStagedAndRelaunch(string stagedExePath)
     {
         App.LogStartup($"ApplyStagedAndRelaunch called with: {stagedExePath}");
@@ -463,7 +620,7 @@ internal static class AppUpdater
                 if (rel.TryGetProperty("draft", out var dr) && dr.ValueKind == JsonValueKind.True) continue;
                 var tag = rel.GetProperty("tag_name").GetString() ?? "";
                 if (IsPrereleaseTag(tag)) continue;
-                if (!Version.TryParse(tag.TrimStart('v'), out var rVer) || rVer <= localVersion) continue;
+                if (!TryParseVersion(tag, out var rVer, out _) || rVer <= localVersion) continue;
 
                 root = rel;
                 foundCandidate = true;

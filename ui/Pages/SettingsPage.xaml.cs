@@ -88,6 +88,10 @@ public partial class SettingsPage : Page
                 millInstalled ? System.Windows.Media.Color.FromRgb(0x25, 0x42, 0x5F) : System.Windows.Media.Color.FromRgb(0x36, 0x3E, 0x45));
             AutoFitZoomToggle.IsChecked = AppSettings.AutoFitZoom;
 
+            bool isBeta = string.Equals(AppSettings.UpdateBranch, "beta", StringComparison.OrdinalIgnoreCase);
+            BetaBranchToggle.IsChecked = isBeta;
+            UpdateBranchBadgeUI(isBeta);
+
             AutoSyncExitToggle.IsChecked = AppSettings.AutoSyncOnGameExit;
             AutoCheckpointToggle.IsChecked = AppSettings.AutoMidGameCheckpoint;
             AutoConflictHealingToggle.IsChecked = AppSettings.AutoConflictHealing;
@@ -199,6 +203,60 @@ public partial class SettingsPage : Page
         bool isEnabled = AutoFitZoomToggle.IsChecked == true;
         AppSettings.AutoFitZoom = isEnabled;
         UiZoomManager.Instance.SetAutoFit(isEnabled);
+    }
+
+    private void UpdateBranchBadgeUI(bool isBeta)
+    {
+        UpdateBranchBadgeText.Text = isBeta ? "Beta" : "Main";
+        UpdateBranchBadgeText.Foreground = isBeta
+            ? new SolidColorBrush(Color.FromRgb(0xE5, 0xA1, 0x30))
+            : new SolidColorBrush(Color.FromRgb(0x66, 0xC0, 0xF4));
+        UpdateBranchBadge.BorderBrush = isBeta
+            ? new SolidColorBrush(Color.FromRgb(0xD1, 0x89, 0x11))
+            : new SolidColorBrush(Color.FromRgb(0x25, 0x42, 0x5F));
+        UpdateBranchBadge.Background = isBeta
+            ? new SolidColorBrush(Color.FromRgb(0x2D, 0x1F, 0x08))
+            : new SolidColorBrush(Color.FromRgb(0x16, 0x23, 0x32));
+    }
+
+    private async void BetaBranchToggle_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_syncLoading) return;
+
+        var targetBranch = BetaBranchToggle.IsChecked == true ? "beta" : "main";
+        if (string.Equals(targetBranch, AppSettings.UpdateBranch, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        var targetName = targetBranch == "beta" ? "Beta" : "Main";
+
+        string title = S.Get("Settings_UpdateBranch_RestartTitle");
+        if (string.IsNullOrEmpty(title))
+            title = "Switch Update Channel";
+
+        string msg = S.Format("Settings_UpdateBranch_RestartContent", targetName);
+        if (string.IsNullOrEmpty(msg))
+            msg = $"Switching to the {targetName} channel requires restarting CloudRedirect to check for and apply updates. Would you like to restart now?";
+
+        bool confirm = await Dialog.ConfirmAsync(title, msg);
+        if (confirm)
+        {
+            AppSettings.UpdateBranch = targetBranch;
+            AppUpdater.RestartApp();
+        }
+        else
+        {
+            _syncLoading = true;
+            try
+            {
+                bool isBeta = string.Equals(AppSettings.UpdateBranch, "beta", StringComparison.OrdinalIgnoreCase);
+                BetaBranchToggle.IsChecked = isBeta;
+                UpdateBranchBadgeUI(isBeta);
+            }
+            finally
+            {
+                _syncLoading = false;
+            }
+        }
     }
 
 

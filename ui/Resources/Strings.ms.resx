@@ -2571,4 +2571,16 @@ Adakah anda mahu memulakan semula (restart) Steam sekarang untuk membersihkan ra
   <data name="Zoom_Percent_Tooltip" xml:space="preserve">
     <value>Klik untuk togol Muat Automatik atau Tetapkan Semula ke 100%</value>
   </data>
+  <data name="Settings_UpdateBranch" xml:space="preserve">
+    <value>Saluran Kemas Kini</value>
+  </data>
+  <data name="Settings_UpdateBranch_Hint" xml:space="preserve">
+    <value>Tukar antara saluran Main (stabil) dan Beta. Menukar saluran akan memulakan semula CloudRedirect dan menyemak kemas kini.</value>
+  </data>
+  <data name="Settings_UpdateBranch_RestartTitle" xml:space="preserve">
+    <value>Tukar Saluran Kemas Kini</value>
+  </data>
+  <data name="Settings_UpdateBranch_RestartContent" xml:space="preserve">
+    <value>Menukar ke saluran {0} memerlukan permulaan semula CloudRedirect untuk menyemak dan menggunakan kemas kini. Adakah anda mahu memulakan semula sekarang?</value>
+  </data>
 </root>

@@ -31,14 +31,10 @@ public partial class MainWindow : FluentWindow
         InitializeComponent();
         App.LogStartup("MainWindow InitializeComponent finished");
 
-        var ver = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
-        if (ver != null)
-        {
-            var verStr = $"v{ver.Major}.{ver.Minor}.{ver.Build}";
-            Title = $"CloudRedirect {verStr}";
-            if (AppVersionText != null)
-                AppVersionText.Text = verStr;
-        }
+        var verStr = $"v{Services.AppUpdater.GetCurrentVersionString()}";
+        Title = $"CloudRedirect {verStr}";
+        if (AppVersionText != null)
+            AppVersionText.Text = verStr;
 
         var workArea = SystemParameters.WorkArea;
         if (Height > workArea.Height - 30)
@@ -337,8 +333,7 @@ public partial class MainWindow : FluentWindow
 
     private async Task PromptUpdateNowOrLaterAsync(Services.AppUpdater.CheckResult result, string versionStr)
     {
-        var localVer = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
-        var currentVer = localVer != null ? $"v{localVer.Major}.{localVer.Minor}.{localVer.Build}" : "current";
+        var currentVer = $"v{Services.AppUpdater.GetCurrentVersionString()}";
 
         string title = S.Get("AppUpdate_PromptTitle");
         string message = S.Format("AppUpdate_PromptMessage", $"v{versionStr}", currentVer);

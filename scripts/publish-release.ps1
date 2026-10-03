@@ -23,12 +23,22 @@ if (-not $token) {
 $repoOwner = "mirzaarsyad74-cmyk"
 $repoName = "Cloudredirect"
 
-# 3. Read Version
+# 3. Read Version & Branch
 $versionPropsPath = Join-Path $PSScriptRoot "..\Version.props"
 [xml]$xml = Get-Content $versionPropsPath
 $version = $xml.Project.PropertyGroup.ReleaseVersion.Trim()
-$tagName = "v$version"
-Write-Host "Target Release Version: $version ($tagName)"
+$prerelease = ""
+if ($xml.Project.PropertyGroup.ReleasePrerelease) {
+    $prerelease = $xml.Project.PropertyGroup.ReleasePrerelease.Trim()
+}
+$fullVersion = "$version$prerelease"
+$tagName = "v$fullVersion"
+
+$currentBranch = (git branch --show-current).Trim()
+if (-not $currentBranch) { $currentBranch = "master" }
+$isPrerelease = ($currentBranch -eq "beta") -or ($prerelease -ne "")
+
+Write-Host "Target Release Version: $fullVersion ($tagName) [Branch: $currentBranch, Prerelease: $isPrerelease]"
 
 # 4. Check executable path
 $exePath = Join-Path $PSScriptRoot "..\ui\bin\publish\CloudRedirect.exe"
@@ -69,15 +79,24 @@ if (-not $release) {
     $createUrl = "https://api.github.com/repos/$repoOwner/$repoName/releases"
     $payload = @{
         tag_name         = $tagName
-        target_commitish = "master"
+        target_commitish = $currentBranch
         name             = "CloudRedirect $tagName"
         body             = "$ReleaseBody ($tagName)"
         draft            = $false
-        prerelease       = $false
+        prerelease       = $isPrerelease
     } | ConvertTo-Json
 
     $release = Invoke-RestMethod -Uri $createUrl -Headers $headers -Method Post -Body $payload -ContentType "application/json"
     Write-Host "Created release $tagName (ID: $($release.id))"
+} else {
+    $updateUrl = "https://api.github.com/repos/$repoOwner/$repoName/releases/$($release.id)"
+    $payload = @{
+        name             = "CloudRedirect $tagName"
+        body             = "$ReleaseBody ($tagName)"
+        prerelease       = $isPrerelease
+    } | ConvertTo-Json
+    $release = Invoke-RestMethod -Uri $updateUrl -Headers $headers -Method Patch -Body $payload -ContentType "application/json"
+    Write-Host "Updated release $tagName (ID: $($release.id), Prerelease: $isPrerelease)"
 }
 
 # 8. Upload Assets

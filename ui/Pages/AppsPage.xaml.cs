@@ -31,10 +31,9 @@ public partial class AppsPage : Page
     {
         InitializeComponent();
 
-        var ver = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
-        if (ver != null && AppVersionText != null)
+        if (AppVersionText != null)
         {
-            AppVersionText.Text = $"v{ver.Major}.{ver.Minor}.{ver.Build}";
+            AppVersionText.Text = $"v{Services.AppUpdater.GetCurrentVersionString()}";
         }
 
         Loaded += async (_, _) =>

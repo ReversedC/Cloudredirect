@@ -138,6 +138,12 @@ public static class AppSettings
         set => WriteString("global_hotkey", value);
     }
 
+    public static string UpdateBranch
+    {
+        get => ReadString("update_branch", "main");
+        set => WriteString("update_branch", value);
+    }
+
     private static bool ReadBool(string keyName, bool defaultValue)
     {
         try

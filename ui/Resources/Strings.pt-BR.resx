@@ -2655,4 +2655,16 @@ Deseja reiniciar a Steam agora para limpar o erro "Não foi possível sincroniza
   <data name="Zoom_Percent_Tooltip" xml:space="preserve">
     <value>Clique para alternar Ajuste Automático ou Redefinir para 100%</value>
   </data>
+  <data name="Settings_UpdateBranch" xml:space="preserve">
+    <value>Canal de atualização</value>
+  </data>
+  <data name="Settings_UpdateBranch_Hint" xml:space="preserve">
+    <value>Alterne entre os canais Main (estável) e Beta. A troca de canal reiniciará o CloudRedirect e buscará atualizações.</value>
+  </data>
+  <data name="Settings_UpdateBranch_RestartTitle" xml:space="preserve">
+    <value>Alternar canal de atualização</value>
+  </data>
+  <data name="Settings_UpdateBranch_RestartContent" xml:space="preserve">
+    <value>Mudar para o canal {0} requer reiniciar o CloudRedirect para verificar e aplicar atualizações. Deseja reiniciar agora?</value>
+  </data>
 </root>

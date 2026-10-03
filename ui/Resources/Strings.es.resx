@@ -2650,4 +2650,16 @@ Esto puede causar pérdida de datos en algunos casos.
   <data name="Zoom_Percent_Tooltip" xml:space="preserve">
     <value>Haga clic para alternar Ajuste Automático o Restablecer al 100%</value>
   </data>
+  <data name="Settings_UpdateBranch" xml:space="preserve">
+    <value>Canal de actualización</value>
+  </data>
+  <data name="Settings_UpdateBranch_Hint" xml:space="preserve">
+    <value>Alterna entre los canales Main (estable) y Beta. Cambiar de canal reiniciará CloudRedirect y buscará actualizaciones.</value>
+  </data>
+  <data name="Settings_UpdateBranch_RestartTitle" xml:space="preserve">
+    <value>Cambiar canal de actualización</value>
+  </data>
+  <data name="Settings_UpdateBranch_RestartContent" xml:space="preserve">
+    <value>Cambiar al canal {0} requiere reiniciar CloudRedirect para buscar y aplicar actualizaciones. ¿Deseas reiniciar ahora?</value>
+  </data>
 </root>

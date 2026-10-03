@@ -2700,4 +2700,16 @@ Steam의 '동기화할 수 없음' 오류를 지우기 위해 지금 Steam을 �
   <data name="Zoom_Percent_Tooltip" xml:space="preserve">
     <value>클릭하여 자동 맞춤 전환 또는 100%로 초기화</value>
   </data>
+  <data name="Settings_UpdateBranch" xml:space="preserve">
+    <value>업데이트 채널</value>
+  </data>
+  <data name="Settings_UpdateBranch_Hint" xml:space="preserve">
+    <value>Main(안정화)과 Beta 채널 간을 전환합니다. 채널을 전환하면 CloudRedirect가 다시 시작되고 업데이트를 확인합니다.</value>
+  </data>
+  <data name="Settings_UpdateBranch_RestartTitle" xml:space="preserve">
+    <value>업데이트 채널 전환</value>
+  </data>
+  <data name="Settings_UpdateBranch_RestartContent" xml:space="preserve">
+    <value>{0} 채널로 전환하려면 업데이트를 확인하고 적용하기 위해 CloudRedirect를 다시 시작해야 합니다. 지금 다시 시작하시겠습니까?</value>
+  </data>
 </root>
