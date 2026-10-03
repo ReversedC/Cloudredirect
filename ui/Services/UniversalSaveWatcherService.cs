@@ -20,6 +20,7 @@ public class UniversalGameProfile : System.ComponentModel.INotifyPropertyChanged
     public string GameName { get; set; } = "";
     public string ProcessName { get; set; } = "";
     public string SaveFolderPath { get; set; } = "";
+    public string SaveDirectory { get => SaveFolderPath; set => SaveFolderPath = value; }
     public bool Enabled { get; set; } = true;
     public DateTime? LastSyncTime { get; set; }
     public string Status
@@ -186,6 +187,9 @@ public static class UniversalSaveWatcherService
     {
         return Path.Combine(SteamDetector.GetConfigDir(), "universal_saves.json");
     }
+
+    public static List<UniversalGameProfile> Profiles => GetProfiles();
+    public static List<string> ConfiguredGames => GetProfiles().Select(p => p.GameName).ToList();
 
     public static List<UniversalGameProfile> GetProfiles()
     {

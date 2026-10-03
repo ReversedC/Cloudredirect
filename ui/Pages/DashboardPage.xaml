@@ -74,6 +74,16 @@
                                Margin="0,0,10,0"
                                Padding="12,6"
                                Cursor="Hand" />
+                    <ui:Button x:Name="BetaToolsTopBtn"
+                               Appearance="Secondary"
+                               Icon="{ui:SymbolIcon Flash24}"
+                               Content="Beta Tools"
+                               ToolTip="Open Beta Power Tools &amp; Features"
+                               Click="BetaTools_Click"
+                               Margin="0,0,10,0"
+                               Padding="12,6"
+                               Foreground="#FFD23F"
+                               Cursor="Hand" />
                     <ui:Button Appearance="Secondary"
                                Icon="{ui:SymbolIcon Settings24}"
                                Content="{res:Loc Nav_Settings}"
@@ -548,6 +558,15 @@
                                Margin="0,0,8,6"
                                Cursor="Hand"
                                Click="MigrationAction_Click" />
+
+                    <ui:Button x:Name="BetaToolsQuickActionBtn"
+                               Content="Beta Power Tools"
+                               Icon="{ui:SymbolIcon Flash24}"
+                               Padding="12,6"
+                               Margin="0,0,8,6"
+                               Cursor="Hand"
+                               Foreground="#FFD23F"
+                               Click="BetaTools_Click" />
 
                     <!-- Utility Buttons -->
                     <ui:Button Content="{res:Loc Dashboard_OpenLogFile}"

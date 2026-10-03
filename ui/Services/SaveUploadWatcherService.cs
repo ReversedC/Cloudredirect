@@ -93,6 +93,11 @@ public static class SaveUploadWatcherService
         }
     }
 
+    public static void TriggerImmediateSync()
+    {
+        _ = UniversalCloudSyncService.SyncAllProfilesAsync();
+    }
+
     private static void CheckLogUpdates()
     {
         if (string.IsNullOrEmpty(_logPath) || !File.Exists(_logPath)) return;

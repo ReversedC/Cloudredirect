@@ -217,6 +217,16 @@ public partial class SettingsPage : Page
         UpdateBranchBadge.Background = isBeta
             ? new SolidColorBrush(Color.FromRgb(0x2D, 0x1F, 0x08))
             : new SolidColorBrush(Color.FromRgb(0x16, 0x23, 0x32));
+
+        if (OpenBetaToolsFromSettingsBtn != null)
+        {
+            OpenBetaToolsFromSettingsBtn.Visibility = isBeta ? Visibility.Visible : Visibility.Collapsed;
+        }
+    }
+
+    private void OpenBetaToolsFromSettings_Click(object sender, RoutedEventArgs e)
+    {
+        (Application.Current.MainWindow as MainWindow)?.NavigateTo(typeof(BetaToolsPage));
     }
 
     private async void BetaBranchToggle_Changed(object sender, RoutedEventArgs e)

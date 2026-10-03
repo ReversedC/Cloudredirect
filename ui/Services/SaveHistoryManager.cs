@@ -13,9 +13,12 @@ public record SnapshotInfo(
     string Trigger,
     int FileCount,
     long TotalBytes,
-    string DirectoryPath
+    string DirectoryPath,
+    bool IsPinned = false
 )
 {
+    public string FolderName => Id;
+    public string TriggerReason => Trigger;
     public string FormattedTime => Timestamp.ToString("yyyy-MM-dd HH:mm:ss");
     public string FormattedSize
     {
@@ -221,6 +224,7 @@ public static class SaveHistoryManager
             string trigger = "Save Backup";
             int fileCount = 0;
             long totalBytes = 0;
+            bool isPinned = false;
 
             if (File.Exists(metaPath))
             {
@@ -239,9 +243,14 @@ public static class SaveHistoryManager
                         fileCount = fcProp.GetInt32();
                     if (doc.RootElement.TryGetProperty("totalBytes", out var tbProp))
                         totalBytes = tbProp.GetInt64();
+                    if (doc.RootElement.TryGetProperty("pinned", out var pinProp))
+                        isPinned = pinProp.GetBoolean();
                 }
                 catch { }
             }
+
+            if (!isPinned && File.Exists(Path.Combine(dir, ".pinned")))
+                isPinned = true;
 
             if (fileCount == 0)
             {
@@ -252,12 +261,50 @@ public static class SaveHistoryManager
                 totalBytes = files.Sum(f => new FileInfo(f).Length);
             }
 
-            return new SnapshotInfo(folderName, timestamp, trigger, fileCount, totalBytes, dir);
+            return new SnapshotInfo(folderName, timestamp, trigger, fileCount, totalBytes, dir, isPinned);
         }
         catch
         {
             return null;
         }
+    }
+
+    /// <summary>
+    /// Pins or unpins a snapshot. Pinned snapshots are immune to automatic purging/cleanup.
+    /// </summary>
+    public static bool PinSnapshot(string directoryPath, bool pinned)
+    {
+        try
+        {
+            if (!Directory.Exists(directoryPath)) return false;
+            var marker = Path.Combine(directoryPath, ".pinned");
+            if (pinned)
+            {
+                if (!File.Exists(marker)) File.WriteAllText(marker, "pinned");
+            }
+            else
+            {
+                if (File.Exists(marker)) File.Delete(marker);
+            }
+
+            var metaPath = Path.Combine(directoryPath, "snapshot.json");
+            if (File.Exists(metaPath))
+            {
+                try
+                {
+                    var text = File.ReadAllText(metaPath);
+                    var node = System.Text.Json.Nodes.JsonNode.Parse(text);
+                    if (node is System.Text.Json.Nodes.JsonObject obj)
+                    {
+                        obj["pinned"] = pinned;
+                        File.WriteAllText(metaPath, obj.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+                    }
+                }
+                catch { }
+            }
+            return true;
+        }
+        catch { return false; }
     }
 
     public static bool DeleteSnapshot(SnapshotInfo snapshot)
@@ -398,7 +445,26 @@ public static class SaveHistoryManager
     {
         try
         {
+            bool IsPinned(string d)
+            {
+                if (File.Exists(Path.Combine(d, ".pinned"))) return true;
+                var meta = Path.Combine(d, "snapshot.json");
+                if (File.Exists(meta))
+                {
+                    try
+                    {
+                        var json = File.ReadAllText(meta);
+                        using var doc = JsonDocument.Parse(json);
+                        if (doc.RootElement.TryGetProperty("pinned", out var p) && p.GetBoolean())
+                            return true;
+                    }
+                    catch { }
+                }
+                return false;
+            }
+
             var dirs = Directory.GetDirectories(gameSnapshotDir)
+                .Where(d => !IsPinned(d))
                 .OrderBy(Directory.GetCreationTime)
                 .ToList();
 

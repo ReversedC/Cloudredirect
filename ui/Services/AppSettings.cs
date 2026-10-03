@@ -120,6 +120,36 @@ public static class AppSettings
         set => WriteBool("auto_community_database", value);
     }
 
+    public static bool EnableGamePerformanceBooster
+    {
+        get => ReadBool("enable_game_performance_booster", true);
+        set => WriteBool("enable_game_performance_booster", value);
+    }
+
+    public static bool EnableMobileDashboard
+    {
+        get => ReadBool("enable_mobile_dashboard", true);
+        set => WriteBool("enable_mobile_dashboard", value);
+    }
+
+    public static int MobileDashboardPort
+    {
+        get => ReadInt("mobile_dashboard_port", 38400);
+        set => WriteInt("mobile_dashboard_port", value);
+    }
+
+    public static bool EnableSpacewarBroadcaster
+    {
+        get => ReadBool("enable_spacewar_broadcaster", true);
+        set => WriteBool("enable_spacewar_broadcaster", value);
+    }
+
+    public static bool EnableLanP2PSync
+    {
+        get => ReadBool("enable_lan_p2p_sync", true);
+        set => WriteBool("enable_lan_p2p_sync", value);
+    }
+
     public static double ZoomScale
     {
         get => ReadDouble("zoom_scale", 1.0);
@@ -193,6 +223,72 @@ public static class AppSettings
             {
                 writer.WriteStartObject();
                 writer.WriteBoolean(keyName, value);
+
+                if (existing.ValueKind == JsonValueKind.Object)
+                {
+                    foreach (var prop in existing.EnumerateObject())
+                    {
+                        if (prop.NameEquals(keyName)) continue;
+                        prop.WriteTo(writer);
+                    }
+                }
+
+                writer.WriteEndObject();
+            }
+
+            File.WriteAllBytes(path, ms.ToArray());
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to write setting {keyName}: {ex}");
+        }
+    }
+
+    private static int ReadInt(string keyName, int defaultValue)
+    {
+        try
+        {
+            var path = GetSettingsPath();
+            if (!File.Exists(path)) return defaultValue;
+
+            var json = File.ReadAllText(path);
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty(keyName, out var prop))
+            {
+                if (prop.ValueKind == JsonValueKind.Number && prop.TryGetInt32(out var val))
+                    return val;
+            }
+        }
+        catch { }
+        return defaultValue;
+    }
+
+    private static void WriteInt(string keyName, int value)
+    {
+        try
+        {
+            var path = GetSettingsPath();
+            var dir = Path.GetDirectoryName(path)!;
+            if (!Directory.Exists(dir))
+                Directory.CreateDirectory(dir);
+
+            JsonElement existing = default;
+            if (File.Exists(path))
+            {
+                try
+                {
+                    var oldJson = File.ReadAllText(path);
+                    using var doc = JsonDocument.Parse(oldJson);
+                    existing = doc.RootElement.Clone();
+                }
+                catch { }
+            }
+
+            using var ms = new MemoryStream();
+            using (var writer = new Utf8JsonWriter(ms, new JsonWriterOptions { Indented = true }))
+            {
+                writer.WriteStartObject();
+                writer.WriteNumber(keyName, value);
 
                 if (existing.ValueKind == JsonValueKind.Object)
                 {

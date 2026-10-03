@@ -677,6 +677,20 @@ public static class GameSaveAutoDetector
         return title.Trim(' ', '-', '·', ':');
     }
 
+    public static string? GetPresetGameName(string processName)
+    {
+        if (string.IsNullOrWhiteSpace(processName)) return null;
+        foreach (var key in KnownGameSaveRelativePaths.Keys)
+        {
+            if (processName.Equals(key, StringComparison.OrdinalIgnoreCase) ||
+                processName.Contains(key, StringComparison.OrdinalIgnoreCase))
+            {
+                return FormatGameNameFromToken(key);
+            }
+        }
+        return null;
+    }
+
     private static string FormatGameNameFromToken(string token)
     {
         return token switch

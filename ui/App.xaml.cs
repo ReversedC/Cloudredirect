@@ -165,14 +165,18 @@ public partial class App : System.Windows.Application
         {
             // Another instance might already be running.
             // Record any protocol arguments so the running instance can execute them.
+            string? commandPayload = null;
             var uriArg = e.Args.FirstOrDefault(a => a.StartsWith("cloudredirect://", StringComparison.OrdinalIgnoreCase));
-            if (!string.IsNullOrEmpty(uriArg))
+            if (!string.IsNullOrEmpty(uriArg)) commandPayload = uriArg;
+            else if (e.Args.Length > 0) commandPayload = string.Join(" ", e.Args);
+
+            if (!string.IsNullOrEmpty(commandPayload))
             {
                 try
                 {
                     var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CloudRedirect");
                     Directory.CreateDirectory(dir);
-                    File.WriteAllText(Path.Combine(dir, "ipc_command.txt"), uriArg);
+                    File.WriteAllText(Path.Combine(dir, "ipc_command.txt"), commandPayload);
                 }
                 catch { }
             }
@@ -241,6 +245,27 @@ public partial class App : System.Windows.Application
                                             if (Current.MainWindow is MainWindow mw)
                                             {
                                                 mw.NavigateTo(typeof(Pages.UniversalSavesPage));
+                                            }
+                                        }
+                                        else if (cmd.Contains("tools", StringComparison.OrdinalIgnoreCase) ||
+                                                 cmd.Contains("beta", StringComparison.OrdinalIgnoreCase) ||
+                                                 cmd.Contains("--export-save", StringComparison.OrdinalIgnoreCase) ||
+                                                 cmd.Contains("--resign-save", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            if (Current.MainWindow is MainWindow mw)
+                                            {
+                                                mw.NavigateTo(typeof(Pages.BetaToolsPage));
+                                            }
+                                        }
+                                        else if (cmd.Contains("--create-snapshot", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            var path = cmd.Replace("--create-snapshot", "", StringComparison.OrdinalIgnoreCase).Trim().Trim('"');
+                                            if (Directory.Exists(path))
+                                            {
+                                                var name = Path.GetFileName(path.TrimEnd('\\', '/'));
+                                                var snap = Services.SaveHistoryManager.CreateSnapshot(name, path, "Context Menu Instant Snapshot");
+                                                if (snap != null)
+                                                    Services.TrayIconService.Instance.ShowNotification("Save Snapshot Created", $"Backed up {name} ({snap.FormattedSize})");
                                             }
                                         }
                                     }

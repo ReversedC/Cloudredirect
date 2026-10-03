@@ -192,11 +192,21 @@
                                                    TextWrapping="Wrap" />
                                     </StackPanel>
                                 </ui:CardControl.Header>
-                                <ui:ToggleSwitch x:Name="BetaBranchToggle"
-                                                 OffContent="Main"
-                                                 OnContent="Beta"
-                                                 Checked="BetaBranchToggle_Changed"
-                                                 Unchecked="BetaBranchToggle_Changed" />
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <ui:Button x:Name="OpenBetaToolsFromSettingsBtn"
+                                               Content="Beta Tools ➔"
+                                               Appearance="Secondary"
+                                               Icon="{ui:SymbolIcon Flash24}"
+                                               Foreground="#FFD23F"
+                                               Margin="0,0,10,0"
+                                               Click="OpenBetaToolsFromSettings_Click"
+                                               Visibility="Collapsed" />
+                                    <ui:ToggleSwitch x:Name="BetaBranchToggle"
+                                                     OffContent="Main"
+                                                     OnContent="Beta"
+                                                     Checked="BetaBranchToggle_Changed"
+                                                     Unchecked="BetaBranchToggle_Changed" />
+                                </StackPanel>
                             </ui:CardControl>
 
                             <!-- Start with Windows -->

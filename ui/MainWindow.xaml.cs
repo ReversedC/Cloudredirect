@@ -110,6 +110,15 @@ public partial class MainWindow : FluentWindow
                 App.LogStartup("Loaded: SaveUploadWatcherService.Start");
                 Services.SaveUploadWatcherService.Start();
 
+                App.LogStartup("Loaded: Beta Services Initialization");
+                Services.GamePerformanceBoosterService.Initialize();
+                Services.SpacewarBroadcasterSpooferService.Initialize();
+                Services.LanP2PSyncService.Start();
+                if (Services.AppSettings.EnableMobileDashboard)
+                {
+                    Services.MobileDashboardServer.Start();
+                }
+
                 App.LogStartup("Loaded: GlobalHotkeyService.Instance.Initialize");
                 Services.GlobalHotkeyService.Instance.Initialize(this);
 
@@ -460,6 +469,7 @@ public partial class MainWindow : FluentWindow
                     nameof(Pages.UniversalSavesPage) => S.Get("Nav_UniversalSaves"),
                     nameof(Pages.LuaSyncPage) => S.Get("Nav_LuaSync"),
                     nameof(Pages.SuoRemotePage) => "SUO Remote",
+                    nameof(Pages.BetaToolsPage) => "Beta Power Tools",
                     _ => ""
                 };
             }
@@ -523,6 +533,9 @@ public partial class MainWindow : FluentWindow
                     nameof(Pages.MigrationPage) => S.Get("Nav_Migration"),
                     nameof(Pages.SettingsPage) => S.Get("Nav_Settings"),
                     nameof(Pages.UniversalSavesPage) => S.Get("Nav_UniversalSaves"),
+                    nameof(Pages.LuaSyncPage) => S.Get("Nav_LuaSync"),
+                    nameof(Pages.SuoRemotePage) => "SUO Remote",
+                    nameof(Pages.BetaToolsPage) => "Beta Power Tools",
                     _ => ""
                 };
             }

@@ -266,6 +266,24 @@ public sealed class TrayIconService : IDisposable
         }
     }
 
+    public void UpdateTrayTitle(string tooltip)
+    {
+        if (!_isCreated) return;
+        try
+        {
+            var nid = new NOTIFYICONDATA
+            {
+                cbSize = Marshal.SizeOf<NOTIFYICONDATA>(),
+                hWnd = _hwnd,
+                uID = 1001,
+                uFlags = NIF_TIP,
+                szTip = tooltip.Length > 127 ? tooltip.Substring(0, 124) + "..." : tooltip
+            };
+            Shell_NotifyIcon(NIM_MODIFY, ref nid);
+        }
+        catch { }
+    }
+
     public void ShowNotification(string title, string message)
     {
         if (!_isCreated || !AppSettings.ShowSyncNotifications) return;

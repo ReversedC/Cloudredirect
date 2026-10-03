@@ -23,7 +23,12 @@ public record ActiveGameInfo(
     bool IsZeroLuaIntercepted = false,
     UniversalGameProfile? UniversalProfile = null,
     bool IsFreeGame = false
-);
+)
+{
+    public string GameName => Name;
+    public bool IsRunning => true;
+    public string? SaveDirectory => UniversalProfile?.SaveDirectory;
+}
 
 /// <summary>
 /// Real-time Active Game Tracker.
@@ -41,6 +46,7 @@ public static class ActiveGameTrackerService
     private static UniversalGameProfile? _lastActiveUniversalProfile;
 
     public static ActiveGameInfo? CurrentGame => _currentGame;
+    public static ActiveGameInfo? CurrentActiveGame => _currentGame;
     public static event Action<ActiveGameInfo?>? OnActiveGameChanged;
 
     public static void Start()

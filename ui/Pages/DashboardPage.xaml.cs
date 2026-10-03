@@ -513,6 +513,14 @@ public partial class DashboardPage : Page
         }
     }
 
+    private void BetaTools_Click(object sender, RoutedEventArgs e)
+    {
+        if (Window.GetWindow(this) is MainWindow mw)
+        {
+            mw.NavigateTo(typeof(BetaToolsPage));
+        }
+    }
+
     private void UniversalSavesCard_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         if (Window.GetWindow(this) is MainWindow mw)
