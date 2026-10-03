@@ -97,6 +97,12 @@ public partial class BetaToolsPage : Page
         {
             _ = RefreshStorageAsync();
         }
+
+        // Dynamically recalculate AutoFit scale for the newly visible tab content
+        Dispatcher.InvokeAsync(() =>
+        {
+            UiZoomManager.Instance.RecalculateAutoFitImmediate();
+        }, System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
     // ==========================================

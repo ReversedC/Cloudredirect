@@ -261,10 +261,18 @@ public class UiZoomManager
             double scaleY = targetHeight / unscaledHeight;
             double scaleX = availableWidth / (unscaledWidth > 0 ? unscaledWidth : availableWidth);
 
-            double autoScale = Math.Min(scaleX, scaleY);
+            double idealScale = Math.Min(scaleX, scaleY);
 
-            // Clamp between 0.65 and 1.10
-            autoScale = Math.Clamp(autoScale, 0.65, 1.10);
+            // Minimum scale: keep at 0.90 for scrollable pages so text and controls stay clear and readable,
+            // never shrinking to microscopic 0.65.
+            double minScale = (scrollViewer != null) ? 0.90 : 0.80;
+            double autoScale = Math.Clamp(idealScale, minScale, 1.15);
+
+            if (scrollViewer != null)
+            {
+                bool overflow = (unscaledHeight * autoScale) > availableHeight + 8;
+                scrollViewer.VerticalScrollBarVisibility = overflow ? ScrollBarVisibility.Auto : ScrollBarVisibility.Disabled;
+            }
 
             // Only apply if there's a noticeable difference (> 0.015) to prevent layout loops
             if (Math.Abs(autoScale - CurrentScale) > 0.015)
