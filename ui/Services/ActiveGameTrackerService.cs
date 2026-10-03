@@ -35,7 +35,7 @@ public record ActiveGameInfo(
 /// </summary>
 public static class ActiveGameTrackerService
 {
-    private static Timer? _pollTimer;
+    private static System.Threading.Timer? _pollTimer;
     private static ActiveGameInfo? _currentGame;
     private static string? _lastMonitoredUniversalProcess;
     private static UniversalGameProfile? _lastActiveUniversalProfile;
@@ -120,6 +120,7 @@ public static class ActiveGameTrackerService
 
                     string? procName = null;
                     string? installDir = null;
+                    Process? matchedGameProcess = null;
                     try
                     {
                         var steamPath = SteamDetector.FindSteamPath();
@@ -136,6 +137,7 @@ public static class ActiveGameTrackerService
                                 if (!string.IsNullOrEmpty(installDir) && p.MainModule?.FileName.StartsWith(installDir, StringComparison.OrdinalIgnoreCase) == true)
                                 {
                                     procName = p.ProcessName;
+                                    matchedGameProcess = p;
                                     break;
                                 }
                             }
@@ -222,6 +224,9 @@ public static class ActiveGameTrackerService
                     );
 
                     OnActiveGameChanged?.Invoke(_currentGame);
+
+                    // Trigger Game Boost (Non-blocking async)
+                    _ = GameBoostService.ApplyBoostAsync(matchedGameProcess, name, headerUrl, procName, installDir);
                 }
 
                 // Periodic Mid-Game Checkpoint for active Steam game
@@ -275,6 +280,13 @@ public static class ActiveGameTrackerService
 
                             UniversalSaveWatcherService.UpdateProfileStatus(profile, "Game Running 🎮");
                             OnActiveGameChanged?.Invoke(_currentGame);
+
+                            var matchedProc = processes.FirstOrDefault(p =>
+                            {
+                                try { return p.ProcessName.Equals(targetProcName, StringComparison.OrdinalIgnoreCase); }
+                                catch { return false; }
+                            });
+                            _ = GameBoostService.ApplyBoostAsync(matchedProc, profile.GameName, null, targetProcName, null);
                         }
 
                         // Periodic Mid-Game Checkpoint (Disaster Insurance)
@@ -292,6 +304,7 @@ public static class ActiveGameTrackerService
                 _lastMidGameCheckpointTime = DateTime.MinValue;
                 _lastTrackedSaveDir = null;
                 OnActiveGameChanged?.Invoke(null);
+                GameBoostService.RevertBoost();
 
                 var gameName = exitedGame.Name;
                 var appId = exitedGame.AppId;

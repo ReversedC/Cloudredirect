@@ -1,0 +1,121 @@
+<Window x:Class="CloudRedirect.Windows.SteamToastNotificationWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="CloudRedirect Notification"
+        Width="420" Height="114"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        Topmost="True"
+        ResizeMode="NoResize">
+
+    <Border x:Name="RootToastBorder"
+            Margin="10"
+            Background="#121A24"
+            BorderBrush="#25425F"
+            BorderThickness="1"
+            CornerRadius="8"
+            ClipToBounds="True">
+        <Border.RenderTransform>
+            <TranslateTransform x:Name="ToastTranslate" Y="30" />
+        </Border.RenderTransform>
+        <Border.Effect>
+            <DropShadowEffect x:Name="ToastShadow" Color="#00D2FF" BlurRadius="14" Opacity="0.4" Direction="270" ShadowDepth="2" />
+        </Border.Effect>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="2" />
+            </Grid.RowDefinitions>
+
+            <!-- Top Header Bar -->
+            <Border Grid.Row="0" x:Name="HeaderBarBorder" Background="#182433" Padding="12,5" BorderBrush="#1F364E" BorderThickness="0,0,0,1">
+                <Grid>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border x:Name="CategoryBadgeBorder" Background="#1C3854" BorderBrush="#25425F" BorderThickness="1" CornerRadius="3" Padding="6,1" VerticalAlignment="Center">
+                            <TextBlock x:Name="CategoryBadgeText" Text="CLOUD SYNC" FontSize="9" FontWeight="Bold" Foreground="#66C0F4" />
+                        </Border>
+                        <TextBlock x:Name="HeaderSubText" Text="CloudRedirect" FontSize="11" Foreground="#8F98A0" Margin="8,0,0,0" VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <!-- Dismiss Close Button -->
+                    <Border HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Background="Transparent"
+                            Cursor="Hand"
+                            Padding="6,2"
+                            MouseLeftButtonDown="CloseButton_Click"
+                            ToolTip="Dismiss">
+                        <TextBlock Text="✕" FontSize="11" Foreground="#8F98A0" FontWeight="Bold" />
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- Middle Body -->
+            <Grid Grid.Row="1" Margin="12,8,12,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Mini Animated Icon Container -->
+                <Border Grid.Column="0"
+                        x:Name="IconContainer"
+                        Width="44" Height="44"
+                        Background="#172433"
+                        BorderBrush="#25425F"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Margin="0,0,12,0"
+                        VerticalAlignment="Center">
+                    <Grid>
+                        <!-- Animated Symbol -->
+                        <TextBlock x:Name="SymbolText"
+                                   Text="☁️"
+                                   FontSize="22"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   RenderTransformOrigin="0.5,0.5">
+                            <TextBlock.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform x:Name="SymbolScale" ScaleX="1" ScaleY="1" />
+                                    <RotateTransform x:Name="SymbolRotate" Angle="0" />
+                                    <TranslateTransform x:Name="SymbolTranslate" X="0" Y="0" />
+                                </TransformGroup>
+                            </TextBlock.RenderTransform>
+                        </TextBlock>
+                    </Grid>
+                </Border>
+
+                <!-- Toast Details -->
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock x:Name="TitleText"
+                               Text="Notification Title"
+                               FontSize="13" FontWeight="Bold"
+                               Foreground="#F3F3F3"
+                               TextTrimming="CharacterEllipsis"
+                               Margin="0,0,0,2" />
+                    <TextBlock x:Name="MessageText"
+                               Text="Detailed notification description..."
+                               FontSize="11"
+                               Foreground="#8F98A0"
+                               TextWrapping="Wrap"
+                               MaxHeight="36"
+                               TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </Grid>
+
+            <!-- Bottom Progress Countdown Line -->
+            <Rectangle Grid.Row="2"
+                       x:Name="ProgressCountdown"
+                       Height="2"
+                       HorizontalAlignment="Left"
+                       Fill="#00D2FF"
+                       Width="400" />
+        </Grid>
+    </Border>
+</Window>

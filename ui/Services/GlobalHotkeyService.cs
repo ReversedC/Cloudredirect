@@ -16,6 +16,7 @@ public sealed class GlobalHotkeyService : IDisposable
 
     private const int WM_HOTKEY = 0x0312;
     private const int HOTKEY_ID = 0xCD01;
+    private const int HOTKEY_GAMESPACE_ID = 0xCD02;
 
     // Modifiers
     private const uint MOD_ALT = 0x0001;
@@ -34,12 +35,15 @@ public sealed class GlobalHotkeyService : IDisposable
     private IntPtr _hwnd;
     private HwndSource? _hwndSource;
     private bool _isRegistered;
+    private bool _isGameSpaceRegistered;
     private string _currentShortcut = "Ctrl+Shift+C";
     private long _lastHotkeyTicks;
+    private long _lastGameSpaceHotkeyTicks;
     private bool _isHooked;
 
     public string CurrentShortcut => _currentShortcut;
     public bool IsRegistered => _isRegistered;
+    public bool IsGameSpaceRegistered => _isGameSpaceRegistered;
 
     public event Action<string, bool>? OnHotkeyRegistrationChanged;
 
@@ -67,6 +71,8 @@ public sealed class GlobalHotkeyService : IDisposable
                 AppSettings.GlobalHotkey = actual;
             }
         }
+
+        RegisterGameSpaceHotkey();
     }
 
     public bool RegisterWithFallback(string requestedShortcut, out string actualShortcut)
@@ -146,23 +152,88 @@ public sealed class GlobalHotkeyService : IDisposable
         }
     }
 
+    public bool RegisterGameSpaceHotkey()
+    {
+        if (_hwnd == IntPtr.Zero) return false;
+        UnregisterGameSpaceHotkey();
+
+        if (!AppSettings.GameSpaceEnabled) return false;
+
+        string shortcut = AppSettings.GameSpaceHotkey;
+        if (string.IsNullOrWhiteSpace(shortcut)) shortcut = "Ctrl+Space";
+
+        if (!ParseShortcut(shortcut, out uint modifiers, out uint vk))
+        {
+            App.LogStartup($"GlobalHotkeyService: Failed to parse GameSpace shortcut '{shortcut}'");
+            return false;
+        }
+
+        bool success = RegisterHotKey(_hwnd, HOTKEY_GAMESPACE_ID, modifiers | MOD_NOREPEAT, vk);
+        if (!success)
+        {
+            success = RegisterHotKey(_hwnd, HOTKEY_GAMESPACE_ID, modifiers, vk);
+        }
+
+        var err = success ? 0 : Marshal.GetLastWin32Error();
+        App.LogStartup($"GlobalHotkeyService: GameSpace hotkey '{shortcut}' registered={success}, err={err}");
+        _isGameSpaceRegistered = success;
+        return success;
+    }
+
+    public void UnregisterGameSpaceHotkey()
+    {
+        if (_hwnd != IntPtr.Zero)
+        {
+            UnregisterHotKey(_hwnd, HOTKEY_GAMESPACE_ID);
+            _isGameSpaceRegistered = false;
+        }
+    }
+
     private void ComponentDispatcher_ThreadFilterMessage(ref MSG msg, ref bool handled)
     {
-        if (msg.message == WM_HOTKEY && (int)msg.wParam == HOTKEY_ID)
+        if (msg.message == WM_HOTKEY)
         {
-            HandleHotkeyPressed();
-            handled = true;
+            int id = (int)msg.wParam;
+            if (id == HOTKEY_ID)
+            {
+                HandleHotkeyPressed();
+                handled = true;
+            }
+            else if (id == HOTKEY_GAMESPACE_ID)
+            {
+                HandleGameSpaceHotkeyPressed();
+                handled = true;
+            }
         }
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
-        if (msg == WM_HOTKEY && wParam.ToInt32() == HOTKEY_ID)
+        if (msg == WM_HOTKEY)
         {
-            HandleHotkeyPressed();
-            handled = true;
+            int id = wParam.ToInt32();
+            if (id == HOTKEY_ID)
+            {
+                HandleHotkeyPressed();
+                handled = true;
+            }
+            else if (id == HOTKEY_GAMESPACE_ID)
+            {
+                HandleGameSpaceHotkeyPressed();
+                handled = true;
+            }
         }
         return IntPtr.Zero;
+    }
+
+    private void HandleGameSpaceHotkeyPressed()
+    {
+        var nowTicks = Environment.TickCount64;
+        if (nowTicks - _lastGameSpaceHotkeyTicks < 350) return; // 350ms debounce
+        _lastGameSpaceHotkeyTicks = nowTicks;
+
+        App.LogStartup("GlobalHotkeyService.HandleGameSpaceHotkeyPressed triggered.");
+        GameSpaceService.Instance.Toggle();
     }
 
     public void HandleHotkeyPressed()
@@ -267,6 +338,7 @@ public sealed class GlobalHotkeyService : IDisposable
     public void Dispose()
     {
         Unregister();
+        UnregisterGameSpaceHotkey();
         if (_isHooked)
         {
             try

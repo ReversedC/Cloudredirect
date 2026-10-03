@@ -20,7 +20,16 @@ public partial class SettingsPage : Page
 
     public SettingsPage()
     {
-        InitializeComponent();
+        _syncLoading = true;
+        try
+        {
+            InitializeComponent();
+        }
+        finally
+        {
+            _syncLoading = false;
+        }
+
         Loaded += async (_, _) =>
         {
             try { await LoadSettingsAsync(); }
@@ -78,6 +87,8 @@ public partial class SettingsPage : Page
             ShowNotificationsToggle.IsChecked = AppSettings.ShowSyncNotifications;
             GlobalHotkeyToggle.IsChecked = AppSettings.GlobalHotkeyEnabled;
             PopulateHotkeyPresets();
+            GameBoostToggle.IsChecked = AppSettings.GameBoostEnabled;
+            GameSpaceToggle.IsChecked = AppSettings.GameSpaceEnabled;
             AutoProtectNonCloudToggle.IsChecked = AppSettings.AutoProtectNonCloudGames;
             MillenniumPluginToggle.IsChecked = AppSettings.EnableMillenniumPlugin;
             bool millInstalled = MillenniumPluginService.IsMillenniumInstalled();
@@ -179,27 +190,65 @@ public partial class SettingsPage : Page
     private void AppSettingsToggle_Changed(object sender, RoutedEventArgs e)
     {
         if (_syncLoading) return;
-        AppSettings.StartWithWindows = StartWithWindowsToggle.IsChecked == true;
-        AppSettings.MinimizeToTrayOnClose = MinimizeToTrayToggle.IsChecked == true;
-        AppSettings.ShowSyncNotifications = ShowNotificationsToggle.IsChecked == true;
-        AppSettings.AutoProtectNonCloudGames = AutoProtectNonCloudToggle.IsChecked == true;
-        bool prevMillennium = AppSettings.EnableMillenniumPlugin;
-        bool newMillennium = MillenniumPluginToggle.IsChecked == true;
-        AppSettings.EnableMillenniumPlugin = newMillennium;
-        if (prevMillennium != newMillennium)
+
+        if (StartWithWindowsToggle != null)
+            AppSettings.StartWithWindows = StartWithWindowsToggle.IsChecked == true;
+        if (MinimizeToTrayToggle != null)
+            AppSettings.MinimizeToTrayOnClose = MinimizeToTrayToggle.IsChecked == true;
+        if (ShowNotificationsToggle != null)
+            AppSettings.ShowSyncNotifications = ShowNotificationsToggle.IsChecked == true;
+
+        if (GameBoostToggle != null)
         {
-            Task.Run(() => MillenniumPluginService.SyncWithSettings());
+            bool prevBoost = AppSettings.GameBoostEnabled;
+            bool newBoost = GameBoostToggle.IsChecked == true;
+            AppSettings.GameBoostEnabled = newBoost;
+            if (prevBoost && !newBoost && GameBoostService.IsBoostActive)
+            {
+                GameBoostService.RevertBoost();
+            }
         }
-        AppSettings.AutoSyncOnGameExit = AutoSyncExitToggle.IsChecked == true;
-        AppSettings.AutoMidGameCheckpoint = AutoCheckpointToggle.IsChecked == true;
-        AppSettings.AutoConflictHealing = AutoConflictHealingToggle.IsChecked == true;
-        AppSettings.AutoStorageCompression = AutoCompressionToggle.IsChecked == true;
-        AppSettings.AutoCommunityDatabase = AutoCommunityDbToggle.IsChecked == true;
+
+        if (GameSpaceToggle != null)
+        {
+            bool prevGameSpace = AppSettings.GameSpaceEnabled;
+            bool newGameSpace = GameSpaceToggle.IsChecked == true;
+            AppSettings.GameSpaceEnabled = newGameSpace;
+            if (prevGameSpace != newGameSpace)
+            {
+                GlobalHotkeyService.Instance.RegisterGameSpaceHotkey();
+            }
+        }
+
+        if (AutoProtectNonCloudToggle != null)
+            AppSettings.AutoProtectNonCloudGames = AutoProtectNonCloudToggle.IsChecked == true;
+
+        if (MillenniumPluginToggle != null)
+        {
+            bool prevMillennium = AppSettings.EnableMillenniumPlugin;
+            bool newMillennium = MillenniumPluginToggle.IsChecked == true;
+            AppSettings.EnableMillenniumPlugin = newMillennium;
+            if (prevMillennium != newMillennium)
+            {
+                Task.Run(() => MillenniumPluginService.SyncWithSettings());
+            }
+        }
+
+        if (AutoSyncExitToggle != null)
+            AppSettings.AutoSyncOnGameExit = AutoSyncExitToggle.IsChecked == true;
+        if (AutoCheckpointToggle != null)
+            AppSettings.AutoMidGameCheckpoint = AutoCheckpointToggle.IsChecked == true;
+        if (AutoConflictHealingToggle != null)
+            AppSettings.AutoConflictHealing = AutoConflictHealingToggle.IsChecked == true;
+        if (AutoCompressionToggle != null)
+            AppSettings.AutoStorageCompression = AutoCompressionToggle.IsChecked == true;
+        if (AutoCommunityDbToggle != null)
+            AppSettings.AutoCommunityDatabase = AutoCommunityDbToggle.IsChecked == true;
     }
 
     private void AutoFitZoomToggle_Changed(object sender, RoutedEventArgs e)
     {
-        if (_syncLoading) return;
+        if (_syncLoading || AutoFitZoomToggle == null) return;
         bool isEnabled = AutoFitZoomToggle.IsChecked == true;
         AppSettings.AutoFitZoom = isEnabled;
         UiZoomManager.Instance.SetAutoFit(isEnabled);
@@ -217,6 +266,37 @@ public partial class SettingsPage : Page
         UpdateBranchBadge.Background = isBeta
             ? new SolidColorBrush(Color.FromRgb(0x2D, 0x1F, 0x08))
             : new SolidColorBrush(Color.FromRgb(0x16, 0x23, 0x32));
+    }
+
+    private int _testNotificationCycle = 0;
+    private void NotificationTestButton_Click(object sender, RoutedEventArgs e)
+    {
+        switch (_testNotificationCycle % 4)
+        {
+            case 0:
+                SteamToastService.ShowAuto("CloudRedirect", "☁️ Factory Town 2: Paradise: Saves synchronized to cloud (0.8s)");
+                break;
+            case 1:
+                SteamToastService.ShowAuto("CloudRedirect", "↺ Factory Town 2: Paradise: Save snapshot restored successfully");
+                break;
+            case 2:
+                SteamToastService.ShowAuto("CloudRedirect Auto-Heal", "🩹 Factory Town 2: Paradise: Repaired 0-byte corrupted save file");
+                break;
+            case 3:
+                SteamToastService.ShowAuto("CloudRedirect", "⚠️ Factory Town 2: Paradise: Cloud sync encountered an issue upon exit.");
+                break;
+        }
+        _testNotificationCycle++;
+    }
+
+    private void GameBoostTestButton_Click(object sender, RoutedEventArgs e)
+    {
+        GameBoostToastService.Show("Cyberpunk 2077", "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/1091500/header.jpg", "⚡ 1,240 MB Standby RAM Optimized");
+    }
+
+    private void GameSpaceTestButton_Click(object sender, RoutedEventArgs e)
+    {
+        GameSpaceService.Instance.Toggle(isPreview: true);
     }
 
     private async void BetaBranchToggle_Changed(object sender, RoutedEventArgs e)

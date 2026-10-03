@@ -28,6 +28,8 @@ public class UiZoomManager
 
     public event Action<double, bool>? OnZoomChanged;
 
+    private bool _initialAutoFitApplied;
+
     public void Initialize(MainWindow window, FrameworkElement contentHost, Frame rootFrame, ScaleTransform scaleTransform)
     {
         _window = window;
@@ -61,6 +63,17 @@ public class UiZoomManager
 
         _rootFrame.Navigated += (_, _) =>
         {
+            if (_rootFrame.Content is Page page)
+            {
+                page.Loaded += (_, _) =>
+                {
+                    if (IsAutoFit)
+                    {
+                        RecalculateAutoFitImmediate();
+                    }
+                };
+            }
+
             _window.Dispatcher.InvokeAsync(() =>
             {
                 if (_rootFrame.Content is Pages.SuoRemotePage)
@@ -87,7 +100,9 @@ public class UiZoomManager
 
         if (IsAutoFit)
         {
+            _initialAutoFitApplied = false;
             _window.Dispatcher.InvokeAsync(RecalculateAutoFitImmediate, DispatcherPriority.Loaded);
+            OnZoomChanged?.Invoke(CurrentScale, true);
         }
         else
         {
@@ -107,7 +122,7 @@ public class UiZoomManager
         }
     }
 
-    private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+    private void Window_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
         if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
         {
@@ -204,6 +219,7 @@ public class UiZoomManager
         AppSettings.AutoFitZoom = enable;
         if (enable)
         {
+            _initialAutoFitApplied = false;
             RecalculateAutoFitImmediate();
         }
         else
@@ -243,15 +259,29 @@ public class UiZoomManager
             unscaledHeight = scrollViewer.ExtentHeight;
             unscaledWidth = scrollViewer.ExtentWidth;
 
-            // In AutoFit mode, let the scrollbars disappear once scaled
-            scrollViewer.HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled;
+            // If ExtentHeight isn't available yet because layout hasn't completed, measure the inner content
+            if (unscaledHeight <= 0 && scrollViewer.Content is FrameworkElement scrollContent)
+            {
+                scrollContent.Measure(new Size(availableWidth, double.PositiveInfinity));
+                unscaledHeight = scrollContent.DesiredSize.Height;
+                unscaledWidth = scrollContent.DesiredSize.Width;
+            }
         }
 
         if (unscaledHeight <= 0 && page.Content is FrameworkElement rootElem)
         {
-            rootElem.Measure(new Size(availableWidth, double.PositiveInfinity));
-            unscaledHeight = rootElem.DesiredSize.Height;
-            unscaledWidth = rootElem.DesiredSize.Width;
+            if (rootElem is ContentControl cc && cc.Content is FrameworkElement innerChild)
+            {
+                innerChild.Measure(new Size(availableWidth, double.PositiveInfinity));
+                unscaledHeight = innerChild.DesiredSize.Height;
+                unscaledWidth = innerChild.DesiredSize.Width;
+            }
+            else
+            {
+                rootElem.Measure(new Size(availableWidth, double.PositiveInfinity));
+                unscaledHeight = rootElem.DesiredSize.Height;
+                unscaledWidth = rootElem.DesiredSize.Width;
+            }
         }
 
         if (unscaledHeight > 0)
@@ -266,10 +296,29 @@ public class UiZoomManager
             // Clamp between 0.65 and 1.10
             autoScale = Math.Clamp(autoScale, 0.65, 1.10);
 
-            // Only apply if there's a noticeable difference (> 0.015) to prevent layout loops
-            if (Math.Abs(autoScale - CurrentScale) > 0.015)
+            // In AutoFit mode, manage scrollbars so interface looks clean and unclipped
+            if (scrollViewer != null)
             {
+                scrollViewer.HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled;
+                if (unscaledHeight * autoScale <= availableHeight + 2)
+                {
+                    scrollViewer.VerticalScrollBarVisibility = ScrollBarVisibility.Disabled;
+                }
+                else
+                {
+                    scrollViewer.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+                }
+            }
+
+            // Apply if there's a noticeable difference or if initial scale hasn't been applied yet
+            if (Math.Abs(autoScale - CurrentScale) > 0.015 || !_initialAutoFitApplied)
+            {
+                _initialAutoFitApplied = true;
                 ApplyScale(autoScale, true);
+            }
+            else if (IsAutoFit)
+            {
+                OnZoomChanged?.Invoke(CurrentScale, true);
             }
         }
     }

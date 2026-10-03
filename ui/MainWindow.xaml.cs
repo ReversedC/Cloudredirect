@@ -91,7 +91,6 @@ public partial class MainWindow : FluentWindow
                 });
 
                 App.LogStartup("Loaded: UiZoomManager.Instance.Initialize");
-                Services.UiZoomManager.Instance.Initialize(this, ContentAreaHost, RootFrame, GuiScaleTransform);
                 Services.UiZoomManager.Instance.OnZoomChanged += (scale, isAuto) =>
                 {
                     Dispatcher.Invoke(() =>
@@ -106,6 +105,7 @@ public partial class MainWindow : FluentWindow
                             isAuto ? System.Windows.Media.Color.FromRgb(0xA4, 0xD0, 0x07) : System.Windows.Media.Color.FromRgb(0x8F, 0x98, 0xA0));
                     });
                 };
+                Services.UiZoomManager.Instance.Initialize(this, ContentAreaHost, RootFrame, GuiScaleTransform);
 
                 App.LogStartup("Loaded: SaveUploadWatcherService.Start");
                 Services.SaveUploadWatcherService.Start();
@@ -138,7 +138,6 @@ public partial class MainWindow : FluentWindow
     }
 
     private bool _isExplicitExit;
-    private bool _isPromptingExit;
 
     public void ForceExit()
     {
@@ -148,7 +147,7 @@ public partial class MainWindow : FluentWindow
         Close();
     }
 
-    protected override async void OnClosing(System.ComponentModel.CancelEventArgs e)
+    protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
     {
         if (_isExplicitExit)
         {
@@ -157,68 +156,7 @@ public partial class MainWindow : FluentWindow
         }
 
         e.Cancel = true;
-
-        if (Services.AppSettings.MinimizeToTrayOnClose)
-        {
-            Services.TrayIconService.Instance.MinimizeToTray();
-            return;
-        }
-
-        if (_isPromptingExit) return;
-        _isPromptingExit = true;
-        try
-        {
-            await PromptExitOrMinimizeAsync();
-        }
-        finally
-        {
-            _isPromptingExit = false;
-        }
-    }
-
-    private async Task PromptExitOrMinimizeAsync()
-    {
-        var box = new Wpf.Ui.Controls.MessageBox
-        {
-            Title = "CloudRedirect",
-            Content = new System.Windows.Controls.StackPanel
-            {
-                Children =
-                {
-                    new System.Windows.Controls.TextBlock
-                    {
-                        Text = "Choose an option upon closing:",
-                        FontSize = 14,
-                        FontWeight = FontWeights.SemiBold,
-                        Foreground = (System.Windows.Media.Brush)Application.Current.FindResource("TextFillColorPrimaryBrush"),
-                        Margin = new Thickness(0, 0, 0, 8),
-                        TextWrapping = TextWrapping.Wrap
-                    },
-                    new System.Windows.Controls.TextBlock
-                    {
-                        Text = "• Minimize to Tray: CloudRedirect keeps running in the system tray to sync saves in the background.\n• Exit: Close and quit the application completely.",
-                        FontSize = 12,
-                        Foreground = (System.Windows.Media.Brush)Application.Current.FindResource("TextFillColorSecondaryBrush"),
-                        TextWrapping = TextWrapping.Wrap
-                    }
-                }
-            },
-            PrimaryButtonText = "Minimize to Tray",
-            PrimaryButtonAppearance = ControlAppearance.Primary,
-            SecondaryButtonText = "Exit",
-            SecondaryButtonAppearance = ControlAppearance.Danger,
-            CloseButtonText = "Cancel"
-        };
-
-        var result = await box.ShowDialogAsync();
-        if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
-        {
-            Services.TrayIconService.Instance.MinimizeToTray();
-        }
-        else if (result == Wpf.Ui.Controls.MessageBoxResult.Secondary)
-        {
-            ForceExit();
-        }
+        Services.TrayIconService.Instance.MinimizeToTray();
     }
 
     private static string? MigrateLegacyMode()
@@ -466,8 +404,9 @@ public partial class MainWindow : FluentWindow
         }
         catch (Exception ex)
         {
-            App.LogStartup($"NavigateTo({pageType.Name}) failed: {ex}");
-            _ = Services.Dialog.ShowErrorAsync("Navigation Error", $"Failed to open {pageType.Name}:\n{ex.Message}");
+            var realEx = ex is System.Reflection.TargetInvocationException tie && tie.InnerException != null ? tie.InnerException : ex;
+            App.LogStartup($"NavigateTo({pageType.Name}) failed: {realEx}");
+            _ = Services.Dialog.ShowErrorAsync("Navigation Error", $"Failed to open {pageType.Name}:\n{realEx.Message}");
         }
     }
 

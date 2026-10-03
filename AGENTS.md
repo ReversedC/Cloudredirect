@@ -5,7 +5,7 @@
 1. **Bump Version Number**: Increment `<ReleaseVersion>` in `Version.props` (e.g. `2.6.5` -> `2.6.6`) so that running instances of CloudRedirect can auto-detect the newer version and prompt/auto-install it.
 2. **Build and Publish the Windows Executable (`.exe`)**:
    ```powershell
-   dotnet publish ui/CloudRedirect.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:AssemblyName=CloudRedirect.Core -o ui/bin/publish
+   dotnet publish ui/CloudRedirect.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o ui/bin/publish
    & "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /target:winexe /platform:x64 /win32icon:ui\steam_logo3.ico /res:ui\bin\publish\CloudRedirect.Core.exe,MainAppPayload /out:ui\bin\publish\CloudRedirect.exe /r:System.dll,System.Windows.Forms.dll,System.Drawing.dll,System.Core.dll src\launcher\CloudRedirectLauncher.cs
    ```
    The published executable will be at `ui/bin/publish/CloudRedirect.exe` (~10.2 MB). It combines the main app with the built-in Steam-styled .NET 8 auto-downloader & progress bar into a single file.

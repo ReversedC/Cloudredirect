@@ -31,6 +31,7 @@ public partial class DashboardPage : Page
             Services.SaveUploadWatcherService.Start();
             Services.SaveUploadWatcherService.OnSaveActivity += HandleSaveActivity;
             Services.ActiveGameTrackerService.OnActiveGameChanged += HandleActiveGameChanged;
+            Services.GameBoostService.OnBoostStateChanged += HandleBoostStateChanged;
             HandleActiveGameChanged(Services.ActiveGameTrackerService.CurrentGame);
 
             try { await LoadStatusAsync(); }
@@ -52,6 +53,7 @@ public partial class DashboardPage : Page
         {
             Services.SaveUploadWatcherService.OnSaveActivity -= HandleSaveActivity;
             Services.ActiveGameTrackerService.OnActiveGameChanged -= HandleActiveGameChanged;
+            Services.GameBoostService.OnBoostStateChanged -= HandleBoostStateChanged;
             _autoRefreshTimer?.Stop();
             _autoRefreshTimer = null;
         };
@@ -227,6 +229,7 @@ public partial class DashboardPage : Page
             if (game != null)
             {
                 ActiveGameCard.Visibility = Visibility.Visible;
+                ActiveGameBoostBadge.Visibility = Services.GameBoostService.IsBoostActive ? Visibility.Visible : Visibility.Collapsed;
                 ActiveGameTitle.Text = game.Name;
                 ActiveGamePosterImage.Source = null;
                 ActiveGameFallbackIcon.Visibility = Visibility.Visible;
@@ -422,12 +425,21 @@ public partial class DashboardPage : Page
             else
             {
                 ActiveGameCard.Visibility = Visibility.Collapsed;
+                ActiveGameBoostBadge.Visibility = Visibility.Collapsed;
                 ActiveGamePosterImage.Source = null;
                 ActiveGameFallbackIcon.Visibility = Visibility.Visible;
             }
 
             // Trigger zoom recalculation when banner appears/disappears
             Services.UiZoomManager.Instance.TriggerAutoFitRecalculation();
+        });
+    }
+
+    private void HandleBoostStateChanged(bool isBoosted, string? gameName)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            ActiveGameBoostBadge.Visibility = (isBoosted && _currentActiveGame != null) ? Visibility.Visible : Visibility.Collapsed;
         });
     }
 

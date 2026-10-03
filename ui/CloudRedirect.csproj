@@ -5,6 +5,7 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
+    <AssemblyName>CloudRedirect.Core</AssemblyName>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
@@ -30,7 +31,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\src\TrayHelper\TrayHelper.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Resource Include="steam_logo3.ico" />
+    <None Update="steam_logo3.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <ItemGroup>

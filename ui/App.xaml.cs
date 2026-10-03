@@ -197,12 +197,7 @@ public partial class App : System.Windows.Application
             {
                 LogStartup("Shutting down secondary instance.");
                 try { AllowSetForegroundWindow(ASFW_ANY); } catch { }
-                // Do NOT set StartupUri = null (WPF throws ArgumentNullException).
-                // Instead, set ShutdownMode so Shutdown() works immediately without
-                // needing a MainWindow, and clear StartupUri via the XAML-declared
-                // value being overridden by creating no window.
-                ShutdownMode = ShutdownMode.OnExplicitShutdown;
-                Shutdown(0);
+                Environment.Exit(0);
                 return;
             }
 

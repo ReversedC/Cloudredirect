@@ -240,14 +240,22 @@
                                         <TextBlock Text="Save Sync Desktop Notifications"
                                                    FontWeight="SemiBold"
                                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                        <TextBlock Text="Show system tray notification balloons when save backups and cloud synchronization complete."
+                                        <TextBlock Text="Show custom Steam-styled animated notifications with mini symbols when backups, restores, or cloud sync events occur."
                                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                    TextWrapping="Wrap" />
                                     </StackPanel>
                                 </ui:CardControl.Header>
-                                <ui:ToggleSwitch x:Name="ShowNotificationsToggle"
-                                                 Checked="AppSettingsToggle_Changed"
-                                                 Unchecked="AppSettingsToggle_Changed" />
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <ui:Button x:Name="NotificationTestButton"
+                                               Content="Test Toast"
+                                               Appearance="Secondary"
+                                               Margin="0,0,10,0"
+                                               Click="NotificationTestButton_Click"
+                                               ToolTip="Preview animated Steam sync toast" />
+                                    <ui:ToggleSwitch x:Name="ShowNotificationsToggle"
+                                                     Checked="AppSettingsToggle_Changed"
+                                                     Unchecked="AppSettingsToggle_Changed" />
+                                </StackPanel>
                             </ui:CardControl>
 
                             <!-- Global Keyboard Shortcut (Summon / Toggle CloudRedirect) -->
@@ -277,6 +285,68 @@
                                     <ui:ToggleSwitch x:Name="GlobalHotkeyToggle"
                                                      Checked="GlobalHotkeyToggle_Changed"
                                                      Unchecked="GlobalHotkeyToggle_Changed" />
+                                </StackPanel>
+                            </ui:CardControl>
+
+                            <!-- Game Boost (Performance & Power Optimization) -->
+                            <ui:CardControl Margin="0,8,0,0">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <TextBlock Text="🚀 Game Boost"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                            <Border Background="#162B3D" BorderBrush="#00D2FF" BorderThickness="1"
+                                                    CornerRadius="4" Padding="6,2" Margin="8,0,0,0">
+                                                <TextBlock Text="HIGH PERFORMANCE" FontSize="11" FontWeight="Bold" Foreground="#00D2FF" />
+                                            </Border>
+                                        </StackPanel>
+                                        <TextBlock Text="Automatically optimize CPU and I/O priority, switch Windows to High Performance power plan, and trim background standby RAM when a game launches."
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <ui:Button x:Name="GameBoostTestButton"
+                                               Content="Test Overlay"
+                                               Appearance="Secondary"
+                                               Margin="0,0,10,0"
+                                               Click="GameBoostTestButton_Click"
+                                               ToolTip="Preview the animated Game Boost toast overlay" />
+                                    <ui:ToggleSwitch x:Name="GameBoostToggle"
+                                                     Checked="AppSettingsToggle_Changed"
+                                                     Unchecked="AppSettingsToggle_Changed" />
+                                </StackPanel>
+                            </ui:CardControl>
+
+                            <!-- Game Space In-Game Overlay (Android-Style Companion) -->
+                            <ui:CardControl Margin="0,8,0,0">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <TextBlock Text="🎮 Game Space"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                            <Border Background="#1C354A" BorderBrush="#25425F" BorderThickness="1"
+                                                    CornerRadius="4" Padding="6,2" Margin="8,0,0,0">
+                                                <TextBlock Text="IN-GAME OVERLAY • CTRL+SPACE" FontSize="11" FontWeight="Bold" Foreground="#66C0F4" />
+                                            </Border>
+                                        </StackPanel>
+                                        <TextBlock Text="In-game slide-out drawer with live telemetry, on-demand RAM purge, named save checkpoints, and scratchpad notes. (Auto-disabled on owned, free, or anti-cheat games)."
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <ui:Button x:Name="GameSpaceTestButton"
+                                               Content="Preview Game Space"
+                                               Appearance="Secondary"
+                                               Margin="0,0,10,0"
+                                               Click="GameSpaceTestButton_Click"
+                                               ToolTip="Toggle and preview the in-game Game Space overlay (Ctrl+Space)" />
+                                    <ui:ToggleSwitch x:Name="GameSpaceToggle"
+                                                     Checked="AppSettingsToggle_Changed"
+                                                     Unchecked="AppSettingsToggle_Changed" />
                                 </StackPanel>
                             </ui:CardControl>
 

@@ -28,7 +28,7 @@ internal static class BackupListBuilder
     /// sorted to the top, given a blue tint, and labeled with a "recent" badge.
     /// </param>
     internal static void Build(
-        Panel panel,
+        System.Windows.Controls.Panel panel,
         IReadOnlyList<BackupInfo> backups,
         Func<uint, StoreAppInfo?> lookupStore,
         Func<object, object> findResource,
@@ -329,7 +329,7 @@ internal static class BackupListBuilder
         }
     }
 
-    private static TextBlock MakeStatText(string text, Brush foreground)
+    private static TextBlock MakeStatText(string text, System.Windows.Media.Brush foreground)
     {
         return new TextBlock
         {

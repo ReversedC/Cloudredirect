@@ -120,6 +120,54 @@ public static class AppSettings
         set => WriteBool("auto_community_database", value);
     }
 
+    public static bool GameBoostEnabled
+    {
+        get => ReadBool("game_boost_enabled", false);
+        set => WriteBool("game_boost_enabled", value);
+    }
+
+    public static bool GameBoostHighPriority
+    {
+        get => ReadBool("game_boost_high_priority", true);
+        set => WriteBool("game_boost_high_priority", value);
+    }
+
+    public static bool GameBoostPowerPlan
+    {
+        get => ReadBool("game_boost_power_plan", true);
+        set => WriteBool("game_boost_power_plan", value);
+    }
+
+    public static bool GameBoostRamTrim
+    {
+        get => ReadBool("game_boost_ram_trim", true);
+        set => WriteBool("game_boost_ram_trim", value);
+    }
+
+    public static bool GameBoostThrottleBackground
+    {
+        get => ReadBool("game_boost_throttle_bg", false);
+        set => WriteBool("game_boost_throttle_bg", value);
+    }
+
+    public static bool GameBoostShowToast
+    {
+        get => ReadBool("game_boost_show_toast", true);
+        set => WriteBool("game_boost_show_toast", value);
+    }
+
+    public static bool GameSpaceEnabled
+    {
+        get => ReadBool("game_space_enabled", true);
+        set => WriteBool("game_space_enabled", value);
+    }
+
+    public static string GameSpaceHotkey
+    {
+        get => ReadString("game_space_hotkey", "Ctrl+Space");
+        set => WriteString("game_space_hotkey", value);
+    }
+
     public static double ZoomScale
     {
         get => ReadDouble("zoom_scale", 1.0);

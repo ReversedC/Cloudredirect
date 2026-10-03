@@ -4,6 +4,8 @@ dist/
 ui/bin/
 ui/obj/
 ui/publish/
+src/TrayHelper/bin/
+src/TrayHelper/obj/
 build.ps1
 ui/Resources/cloud_redirect_cli.exe
 ui/Resources/cloud_redirect.dll
@@ -18,3 +20,5 @@ scratch/
 android/build/
 android/debug.keystore
 *.apk
+CloudRedirect.exe
+CloudRedirectDebug.exe

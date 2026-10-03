@@ -19,7 +19,7 @@ public partial class InteractiveGuideDialog : FluentWindow
     {
         public string Id { get; set; } = "";
         public Wpf.Ui.Controls.SymbolRegular Symbol { get; set; } = Wpf.Ui.Controls.SymbolRegular.Apps24;
-        public Brush IconColor { get; set; } = new SolidColorBrush(Color.FromRgb(0x66, 0xC0, 0xF4));
+        public System.Windows.Media.Brush IconColor { get; set; } = new SolidColorBrush(Color.FromRgb(0x66, 0xC0, 0xF4));
         public string Title { get; set; } = "";
         public string Subtitle { get; set; } = "";
         public string Badge { get; set; } = "FEATURE";
