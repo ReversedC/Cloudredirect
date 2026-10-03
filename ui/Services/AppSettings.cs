@@ -140,7 +140,11 @@ public static class AppSettings
 
     public static string UpdateBranch
     {
-        get => ReadString("update_branch", "main");
+        get
+        {
+            var def = AppUpdater.GetCurrentVersionString().EndsWith("B", StringComparison.OrdinalIgnoreCase) ? "beta" : "main";
+            return ReadString("update_branch", def);
+        }
         set => WriteString("update_branch", value);
     }
 
