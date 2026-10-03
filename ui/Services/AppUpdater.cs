@@ -131,8 +131,8 @@ internal static class AppUpdater
             TryParseVersion(localVerStr, out var localBaseVer, out bool localIsBeta);
             App.LogStartup($"AppUpdater.CheckAsync: localVerStr={localVerStr}, localBaseVer={localBaseVer}, localIsBeta={localIsBeta}");
 
-            var targetBranch = AppSettings.UpdateBranch; // "main" or "beta"
-            bool wantBeta = string.Equals(targetBranch, "beta", StringComparison.OrdinalIgnoreCase);
+            // Branch isolation: Beta executable strictly checks Beta channel; Main executable checks Main channel.
+            bool wantBeta = localIsBeta;
 
             JsonElement root = default;
             string tagName = "";
@@ -156,12 +156,12 @@ internal static class AppUpdater
 
                 if (wantBeta)
                 {
-                    // Beta channel: look for beta releases (ending with B or marked prerelease)
+                    // Beta channel: ONLY look for beta releases (ending with B or marked prerelease)
                     if (!candIsBeta) continue;
                 }
                 else
                 {
-                    // Main channel: only accept stable non-beta releases
+                    // Main channel: ONLY look for stable non-beta releases
                     if (candIsBeta || IsPrereleaseTag(candidateTag)) continue;
                 }
 
@@ -173,25 +173,7 @@ internal static class AppUpdater
                 break;
             }
 
-            // Fallback for Beta channel: if no beta release exists yet, use the latest stable release
-            if (!foundCandidate && wantBeta)
-            {
-                foreach (var rel in releases.EnumerateArray())
-                {
-                    if (rel.TryGetProperty("draft", out var draftProp) && draftProp.ValueKind == JsonValueKind.True)
-                        continue;
-                    var candidateTag = rel.GetProperty("tag_name").GetString() ?? "";
-                    if (!TryParseVersion(candidateTag, out var candBaseVer, out bool candIsBeta))
-                        continue;
-                    root = rel;
-                    tagName = candidateTag;
-                    remoteBaseVersion = candBaseVer;
-                    remoteIsBeta = candIsBeta;
-                    foundCandidate = true;
-                    break;
-                }
-            }
-
+            // Strictly no fallback across branches: Beta only updates from Beta, Main only updates from Main.
             if (!foundCandidate || remoteBaseVersion == null) return null;
 
             // Find the GUI exe asset and hash file (exact match to avoid grabbing the CLI exe)
@@ -261,36 +243,20 @@ internal static class AppUpdater
             if (hashIdentical)
                 return new CheckResult { UpdateAvailable = false };
 
+            // An update is available ONLY when the candidate is in the same branch AND strictly newer
             bool updateAvailable;
             if (wantBeta)
             {
-                // If user is currently running a main build, switching to beta is an update
-                if (!localIsBeta)
-                {
-                    updateAvailable = true;
-                }
-                else
-                {
-                    // Both local and remote are beta
-                    updateAvailable = remoteBaseVersion > localBaseVer;
-                }
+                // Beta channel: remote must be beta and newer than local base version
+                updateAvailable = remoteIsBeta && remoteBaseVersion > localBaseVer;
             }
             else
             {
-                // On Main channel:
-                // If user is currently running a beta build, switching to main is an update
-                if (localIsBeta)
-                {
-                    updateAvailable = true;
-                }
-                else
-                {
-                    // Both local and remote are main
-                    updateAvailable = remoteBaseVersion > localBaseVer;
-                }
+                // Main channel: remote must be stable (non-beta) and newer than local base version
+                updateAvailable = !remoteIsBeta && remoteBaseVersion > localBaseVer;
             }
 
-            App.LogStartup($"AppUpdater.CheckAsync: remoteBaseVersion={remoteBaseVersion}, localBaseVer={localBaseVer}, wantBeta={wantBeta}, updateAvailable={updateAvailable}");
+            App.LogStartup($"AppUpdater.CheckAsync: remoteBaseVersion={remoteBaseVersion}, localBaseVer={localBaseVer}, remoteIsBeta={remoteIsBeta}, wantBeta={wantBeta}, updateAvailable={updateAvailable}");
 
             if (!updateAvailable)
                 return new CheckResult { UpdateAvailable = false };
@@ -515,12 +481,20 @@ internal static class AppUpdater
     public static void RestartApp()
     {
         var targetLauncher = GetAppExecutablePath();
+        bool isBeta = AppSettings.UpdateBranch.Equals("beta", StringComparison.OrdinalIgnoreCase) ||
+                      GetCurrentVersionString().EndsWith("B", StringComparison.OrdinalIgnoreCase);
+        string defaultExeName = isBeta ? "CloudRedirectB.exe" : "CloudRedirect.exe";
+
         if (string.IsNullOrEmpty(targetLauncher) || !File.Exists(targetLauncher))
         {
-            targetLauncher = Path.Combine(AppContext.BaseDirectory, "CloudRedirect.exe");
+            targetLauncher = Path.Combine(AppContext.BaseDirectory, defaultExeName);
         }
 
-        if (targetLauncher.EndsWith("CloudRedirect.Core.exe", StringComparison.OrdinalIgnoreCase))
+        if (targetLauncher.EndsWith("CloudRedirectB.Core.exe", StringComparison.OrdinalIgnoreCase))
+        {
+            targetLauncher = Path.Combine(Path.GetDirectoryName(targetLauncher) ?? AppContext.BaseDirectory, "CloudRedirectB.exe");
+        }
+        else if (targetLauncher.EndsWith("CloudRedirect.Core.exe", StringComparison.OrdinalIgnoreCase))
         {
             targetLauncher = Path.Combine(Path.GetDirectoryName(targetLauncher) ?? AppContext.BaseDirectory, "CloudRedirect.exe");
         }
@@ -533,7 +507,7 @@ internal static class AppUpdater
             }
             else
             {
-                var current = Environment.ProcessPath ?? Path.Combine(AppContext.BaseDirectory, "CloudRedirect.exe");
+                var current = Environment.ProcessPath ?? Path.Combine(AppContext.BaseDirectory, defaultExeName);
                 Process.Start(new ProcessStartInfo(current) { UseShellExecute = true });
             }
         }
@@ -551,14 +525,22 @@ internal static class AppUpdater
         try
         {
             var targetLauncher = GetAppExecutablePath();
+            bool isBeta = AppSettings.UpdateBranch.Equals("beta", StringComparison.OrdinalIgnoreCase) ||
+                          GetCurrentVersionString().EndsWith("B", StringComparison.OrdinalIgnoreCase);
+            string defaultExeName = isBeta ? "CloudRedirectB.exe" : "CloudRedirect.exe";
+
             if (string.IsNullOrEmpty(targetLauncher))
             {
-                targetLauncher = Path.Combine(AppContext.BaseDirectory, "CloudRedirect.exe");
+                targetLauncher = Path.Combine(AppContext.BaseDirectory, defaultExeName);
             }
 
-            // Safety guard: The downloaded release asset is always the launcher (CloudRedirect.exe).
-            // Under NO circumstance should we overwrite CloudRedirect.Core.exe with the launcher bundle!
-            if (targetLauncher.EndsWith("CloudRedirect.Core.exe", StringComparison.OrdinalIgnoreCase))
+            // Safety guard: The downloaded release asset is always the launcher (CloudRedirect.exe or CloudRedirectB.exe).
+            // Under NO circumstance should we overwrite *.Core.exe with the launcher bundle!
+            if (targetLauncher.EndsWith("CloudRedirectB.Core.exe", StringComparison.OrdinalIgnoreCase))
+            {
+                targetLauncher = Path.Combine(Path.GetDirectoryName(targetLauncher) ?? AppContext.BaseDirectory, "CloudRedirectB.exe");
+            }
+            else if (targetLauncher.EndsWith("CloudRedirect.Core.exe", StringComparison.OrdinalIgnoreCase))
             {
                 targetLauncher = Path.Combine(Path.GetDirectoryName(targetLauncher) ?? AppContext.BaseDirectory, "CloudRedirect.exe");
             }

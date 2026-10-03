@@ -178,8 +178,10 @@ public static class AppSettings
     {
         get
         {
-            var def = AppUpdater.GetCurrentVersionString().EndsWith("B", StringComparison.OrdinalIgnoreCase) ? "beta" : "main";
-            return ReadString("update_branch", def);
+            // If the running executable is a Beta build, it is inherently on the beta branch
+            bool isBetaApp = AppUpdater.GetCurrentVersionString().EndsWith("B", StringComparison.OrdinalIgnoreCase);
+            if (isBetaApp) return "beta";
+            return ReadString("update_branch", "main");
         }
         set => WriteString("update_branch", value);
     }
