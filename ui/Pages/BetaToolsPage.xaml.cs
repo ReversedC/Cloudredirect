@@ -857,6 +857,7 @@ public partial class BetaToolsPage : Page
     {
         if (_loading) return;
         bool enable = ContextMenuToggle.IsChecked == true;
+        AppSettings.EnableShellContextMenu = enable;
         SteamContextMenuService.RegisterShellContextMenu(enable);
     }
 }

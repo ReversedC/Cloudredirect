@@ -198,20 +198,43 @@ internal static class AppUpdater
             if (!root.TryGetProperty("assets", out var assets))
                 return null;
 
+            string primaryExeName = remoteIsBeta ? "CloudRedirectB.exe" : "CloudRedirect.exe";
+            string primaryShaName = remoteIsBeta ? "CloudRedirectB.exe.sha256" : "CloudRedirect.exe.sha256";
+            string fallbackExeName = "CloudRedirect.exe";
+            string fallbackShaName = "CloudRedirect.exe.sha256";
+
             string? downloadUrl = null;
             string? assetName = null;
             string? sha256Url = null;
+
             foreach (var asset in assets.EnumerateArray())
             {
                 var name = asset.GetProperty("name").GetString() ?? "";
-                if (name.Equals("CloudRedirect.exe", StringComparison.OrdinalIgnoreCase))
+                if (name.Equals(primaryExeName, StringComparison.OrdinalIgnoreCase))
                 {
                     downloadUrl = asset.GetProperty("browser_download_url").GetString();
                     assetName = name;
                 }
-                else if (name.Equals("CloudRedirect.exe.sha256", StringComparison.OrdinalIgnoreCase))
+                else if (name.Equals(primaryShaName, StringComparison.OrdinalIgnoreCase))
                 {
                     sha256Url = asset.GetProperty("browser_download_url").GetString();
+                }
+            }
+
+            if (downloadUrl == null)
+            {
+                foreach (var asset in assets.EnumerateArray())
+                {
+                    var name = asset.GetProperty("name").GetString() ?? "";
+                    if (name.Equals(fallbackExeName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        downloadUrl = asset.GetProperty("browser_download_url").GetString();
+                        assetName = name;
+                    }
+                    else if (name.Equals(fallbackShaName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        sha256Url = asset.GetProperty("browser_download_url").GetString();
+                    }
                 }
             }
 
@@ -445,19 +468,28 @@ internal static class AppUpdater
 
     public static string? GetAppExecutablePath()
     {
+        bool isBeta = AppSettings.UpdateBranch.Equals("beta", StringComparison.OrdinalIgnoreCase) ||
+                      GetCurrentVersionString().EndsWith("B", StringComparison.OrdinalIgnoreCase);
+        string preferredExe = isBeta ? "CloudRedirectB.exe" : "CloudRedirect.exe";
+        string fallbackExe = isBeta ? "CloudRedirect.exe" : "CloudRedirectB.exe";
+
         var launcherPath = Environment.GetEnvironmentVariable("CLOUDREDIRECT_LAUNCHER_PATH");
-        if (!string.IsNullOrEmpty(launcherPath) && File.Exists(launcherPath) &&
-            launcherPath.EndsWith("CloudRedirect.exe", StringComparison.OrdinalIgnoreCase))
+        if (!string.IsNullOrEmpty(launcherPath) && File.Exists(launcherPath))
         {
             return launcherPath;
         }
 
-        // Check if CloudRedirect.exe is side-by-side with the current process
+        // Check if preferredExe is side-by-side with the current process
         var processDir = AppContext.BaseDirectory;
-        var sideBySideLauncher = Path.Combine(processDir, "CloudRedirect.exe");
-        if (File.Exists(sideBySideLauncher))
+        var sideBySidePreferred = Path.Combine(processDir, preferredExe);
+        if (File.Exists(sideBySidePreferred))
         {
-            return sideBySideLauncher;
+            return sideBySidePreferred;
+        }
+        var sideBySideFallback = Path.Combine(processDir, fallbackExe);
+        if (File.Exists(sideBySideFallback))
+        {
+            return sideBySideFallback;
         }
 
         // Check user's Downloads\Programs folder
@@ -465,7 +497,7 @@ internal static class AppUpdater
         {
             var downloadsLauncher = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                "Downloads", "Programs", "CloudRedirect.exe");
+                "Downloads", "Programs", preferredExe);
             if (File.Exists(downloadsLauncher))
             {
                 return downloadsLauncher;
@@ -473,8 +505,8 @@ internal static class AppUpdater
         }
         catch { }
 
-        // Fallback: Default to CloudRedirect.exe in the application base directory (never CloudRedirect.Core.exe)
-        return Path.Combine(AppContext.BaseDirectory, "CloudRedirect.exe");
+        // Fallback: Default to preferredExe in the application base directory
+        return Path.Combine(AppContext.BaseDirectory, preferredExe);
     }
 
     /// <summary>

@@ -41,10 +41,16 @@ $isPrerelease = ($currentBranch -eq "beta") -or ($prerelease -ne "")
 Write-Host "Target Release Version: $fullVersion ($tagName) [Branch: $currentBranch, Prerelease: $isPrerelease]"
 
 # 4. Check executable path
-$exePath = Join-Path $PSScriptRoot "..\ui\bin\publish\CloudRedirect.exe"
+$targetExeName = if ($isPrerelease) { "CloudRedirectB.exe" } else { "CloudRedirect.exe" }
+$exePath = Join-Path $PSScriptRoot "..\ui\bin\publish\$targetExeName"
 if (-not (Test-Path $exePath)) {
-    Write-Error "CloudRedirect.exe not found at $exePath. Please run dotnet publish first."
-    exit 1
+    $fallbackPath = Join-Path $PSScriptRoot "..\ui\bin\publish\CloudRedirect.exe"
+    if (Test-Path $fallbackPath) {
+        $exePath = $fallbackPath
+    } else {
+        Write-Error "$targetExeName not found at $exePath. Please run dotnet publish first."
+        exit 1
+    }
 }
 
 # 5. Compute SHA256
@@ -106,7 +112,9 @@ $releaseId = $release.id
 $existingAssetsUrl = "https://api.github.com/repos/$repoOwner/$repoName/releases/$releaseId/assets"
 $currentAssets = Invoke-RestMethod -Uri $existingAssetsUrl -Headers $headers -Method Get
 foreach ($asset in $currentAssets) {
-    if ($asset.name -eq "CloudRedirect.exe" -or $asset.name -eq "CloudRedirect.exe.sha256" -or $asset.name -eq "CloudRedirect-Setup.exe" -or $asset.name -eq "cloud_redirect.dll" -or $asset.name -eq "cloud_redirect.dll.sha256") {
+    if ($asset.name -eq "CloudRedirect.exe" -or $asset.name -eq "CloudRedirect.exe.sha256" -or
+        $asset.name -eq "CloudRedirectB.exe" -or $asset.name -eq "CloudRedirectB.exe.sha256" -or
+        $asset.name -eq "CloudRedirect-Setup.exe" -or $asset.name -eq "cloud_redirect.dll" -or $asset.name -eq "cloud_redirect.dll.sha256") {
         Write-Host "Deleting old asset: $($asset.name)..."
         Invoke-RestMethod -Uri $asset.url -Headers $headers -Method Delete
     }
@@ -135,8 +143,13 @@ function Upload-Asset($filePath, $assetName, $contentType) {
     Write-Host "Successfully uploaded $assetName!"
 }
 
-Upload-Asset $exePath "CloudRedirect.exe" "application/octet-stream"
-Upload-Asset $shaPath "CloudRedirect.exe.sha256" "text/plain"
+Upload-Asset $exePath $targetExeName "application/octet-stream"
+Upload-Asset $shaPath "$targetExeName.sha256" "text/plain"
+
+if ($isPrerelease -and $targetExeName -ne "CloudRedirect.exe") {
+    Upload-Asset $exePath "CloudRedirect.exe" "application/octet-stream"
+    Upload-Asset $shaPath "CloudRedirect.exe.sha256" "text/plain"
+}
 
 $dllPath = Join-Path $PSScriptRoot "..\build\Release\cloud_redirect.dll"
 if (-not (Test-Path $dllPath)) {

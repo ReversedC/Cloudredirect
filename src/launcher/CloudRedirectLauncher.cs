@@ -76,19 +76,21 @@ namespace CloudRedirectLauncher
         public static string GetTargetAppPath()
         {
             string currentExe = Application.ExecutablePath;
+            string currentExeName = Path.GetFileNameWithoutExtension(currentExe);
+            bool isBeta = currentExeName.EndsWith("B", StringComparison.OrdinalIgnoreCase);
+            string coreExeName = isBeta ? "CloudRedirectB.Core.exe" : "CloudRedirect.Core.exe";
 
-            // 1. Standard location: %LocalAppData%\CloudRedirect\app\CloudRedirect.Core.exe
-            //    This is the canonical install path and should always be preferred.
+            // 1. Standard location: %LocalAppData%\CloudRedirect\app\CloudRedirect[B].Core.exe
+            //    This is the canonical install path and prevents conflict between Main and Beta.
             string appDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CloudRedirect", "app");
-            string appTarget = Path.Combine(appDir, "CloudRedirect.Core.exe");
+            string appTarget = Path.Combine(appDir, coreExeName);
 
             // If the running executable IS the appTarget, avoid self-reference
             if (string.Equals(Path.GetFullPath(appTarget), Path.GetFullPath(currentExe), StringComparison.OrdinalIgnoreCase))
             {
-                return Path.Combine(appDir, "CloudRedirect.App.exe");
+                return Path.Combine(appDir, isBeta ? "CloudRedirectB.App.exe" : "CloudRedirect.App.exe");
             }
 
-            // Prefer %LocalAppData% path (even if it doesn't exist yet — EnsurePayloadExtracted will create it)
             return appTarget;
         }
 

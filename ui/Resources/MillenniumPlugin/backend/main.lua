@@ -40,6 +40,17 @@ function open_saves()
     return { success = true, result = res }
 end
 
+-- Executes specific CloudRedirect actions from Steam Context Menu
+function execute_action(params)
+    local action = (params and params.action) or "tools"
+    local appid = (params and params.appId) or ""
+    local name = (params and params.gameName) or ""
+    log_info("execute_action: " .. tostring(action) .. " appid=" .. tostring(appid) .. " name=" .. tostring(name))
+    local uri = string.format('cloudredirect://action?cmd=%s&appid=%s&name=%s', action, appid, name)
+    local res = os.execute('start "" "' .. uri .. '"')
+    return { success = true, result = res }
+end
+
 -- Get status from status file
 function get_status()
     local appdata = os.getenv("APPDATA")
@@ -79,5 +90,6 @@ return {
     launch_cloudredirect = launch_cloudredirect,
     trigger_backup = trigger_backup,
     open_saves = open_saves,
+    execute_action = execute_action,
     get_status = get_status
 }

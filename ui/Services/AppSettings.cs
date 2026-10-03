@@ -150,6 +150,12 @@ public static class AppSettings
         set => WriteBool("enable_lan_p2p_sync", value);
     }
 
+    public static bool EnableShellContextMenu
+    {
+        get => ReadBool("enable_shell_context_menu", true);
+        set => WriteBool("enable_shell_context_menu", value);
+    }
+
     public static double ZoomScale
     {
         get => ReadDouble("zoom_scale", 1.0);

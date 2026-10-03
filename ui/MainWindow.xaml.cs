@@ -118,6 +118,10 @@ public partial class MainWindow : FluentWindow
                 {
                     Services.MobileDashboardServer.Start();
                 }
+                if (Services.AppSettings.EnableShellContextMenu)
+                {
+                    Services.SteamContextMenuService.RegisterShellContextMenu(true);
+                }
 
                 App.LogStartup("Loaded: GlobalHotkeyService.Instance.Initialize");
                 Services.GlobalHotkeyService.Instance.Initialize(this);
@@ -130,6 +134,13 @@ public partial class MainWindow : FluentWindow
                 App.LogStartup("Loaded: NavigateTo DashboardPage");
                 NavigateTo(typeof(Pages.DashboardPage));
                 App.LogStartup("Loaded: DashboardPage navigation succeeded");
+
+                if (!string.IsNullOrEmpty(App.PendingStartupCommand))
+                {
+                    var cmd = App.PendingStartupCommand;
+                    App.PendingStartupCommand = null;
+                    App.ProcessCommand(cmd);
+                }
 
                 if (App.StartMinimized)
                 {

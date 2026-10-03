@@ -465,6 +465,350 @@ var PluginEntryPointMain = function () {
             });
         }
 
+        // 3. Steam Library Right-Click Context Menu Support
+        let lastRightClickApp = { appId: '', gameName: '', time: 0 };
+
+        function findAppInfoFromElement(el) {
+            if (!el) return null;
+            let curr = el;
+            let depth = 0;
+            while (curr && depth < 10) {
+                if (curr.getAttribute) {
+                    const appId = curr.getAttribute('data-appid') || 
+                                  curr.getAttribute('data-app-id') || 
+                                  curr.getAttribute('data-item-appid');
+                    if (appId) {
+                        const name = curr.getAttribute('data-gamename') || 
+                                     curr.getAttribute('data-appname') || 
+                                     curr.textContent?.trim()?.split('\n')[0];
+                        return { appId: String(appId), gameName: name || '' };
+                    }
+                    const href = curr.getAttribute('href') || '';
+                    const m = href.match(/(?:details|app)\/(\d+)/i);
+                    if (m) {
+                        return { appId: m[1], gameName: curr.textContent?.trim()?.split('\n')[0] || '' };
+                    }
+                }
+                const keys = Object.keys(curr);
+                const fiberKey = keys.find(k => k.startsWith('__reactFiber$') || k.startsWith('__reactInternalInstance$'));
+                if (fiberKey) {
+                    let f = curr[fiberKey];
+                    let fDepth = 0;
+                    while (f && fDepth < 20) {
+                        const p = f.memoizedProps;
+                        if (p) {
+                            if (p.overview && p.overview.appid) {
+                                return { appId: String(p.overview.appid), gameName: p.overview.display_name || p.overview.name || '' };
+                            }
+                            if (p.appid || p.appId || p.nAppId) {
+                                const id = String(p.appid || p.appId || p.nAppId);
+                                const name = p.name || p.strGameName || p.overview?.display_name || '';
+                                return { appId: id, gameName: name };
+                            }
+                            if (p.item && (p.item.appid || p.item.appId)) {
+                                return { appId: String(p.item.appid || p.item.appId), gameName: p.item.name || '' };
+                            }
+                        }
+                        f = f.return;
+                        fDepth++;
+                    }
+                }
+                curr = curr.parentElement;
+                depth++;
+            }
+            return null;
+        }
+
+        function triggerCloudRedirectAction(action, appId, gameName, doc) {
+            __call_server_method__("execute_action", { action: action, appId: appId || '', gameName: gameName || '' });
+            try {
+                const d = doc || document;
+                const link = d.createElement('a');
+                link.href = `cloudredirect://action?cmd=${encodeURIComponent(action)}&appid=${encodeURIComponent(appId || '')}&name=${encodeURIComponent(gameName || '')}`;
+                d.body.appendChild(link);
+                link.click();
+                link.remove();
+            } catch (e) { }
+        }
+
+        function trackContextMenu(doc) {
+            if (!doc || doc.__cr_ctx_tracked) return;
+            doc.__cr_ctx_tracked = true;
+
+            doc.addEventListener('contextmenu', (e) => {
+                try {
+                    const info = findAppInfoFromElement(e.target);
+                    if (info) {
+                        lastRightClickApp = {
+                            appId: info.appId || '',
+                            gameName: info.gameName || '',
+                            time: Date.now()
+                        };
+                    } else {
+                        const row = e.target.closest('[class*="gameListRow"], [class*="gamelistentry"], [class*="GameListEntry"], [class*="libraryhome"]');
+                        if (row) {
+                            const rInfo = findAppInfoFromElement(row);
+                            lastRightClickApp = {
+                                appId: rInfo?.appId || '',
+                                gameName: rInfo?.gameName || row.textContent?.trim()?.split('\n')[0] || '',
+                                time: Date.now()
+                            };
+                        }
+                    }
+
+                    setTimeout(() => checkAndInjectContextMenu(doc), 15);
+                    setTimeout(() => checkAndInjectContextMenu(doc), 50);
+                    setTimeout(() => checkAndInjectContextMenu(doc), 120);
+                    setTimeout(() => checkAndInjectContextMenu(doc), 300);
+                    setTimeout(() => checkAndInjectContextMenu(doc), 600);
+                } catch (err) {
+                    console.warn('[CloudRedirect] contextmenu handler error:', err);
+                }
+            }, true);
+        }
+
+        function checkAndInjectContextMenu(doc) {
+            if (!doc || !doc.body) return;
+
+            const candidates = Array.from(doc.querySelectorAll(`
+                [class*="contextmenu_contextMenu"],
+                [class*="contextmenu_contextMenuContents"],
+                [class*="contextmenu_ContextMenuPosition"],
+                [class*="menu_MenuPopup"],
+                div[role="menu"],
+                [class*="popup_menu"],
+                div[class*="ContextMenu"]
+            `));
+
+            const bodyChildren = Array.from(doc.body.children);
+            for (const ch of bodyChildren) {
+                if (!candidates.includes(ch) && (ch.className || '').toString().toLowerCase().includes('popup')) {
+                    candidates.push(ch);
+                }
+            }
+
+            for (const container of candidates) {
+                if (container.querySelector('#cloudredirect-steam-ctx-item')) {
+                    continue;
+                }
+
+                const allDescendants = Array.from(container.querySelectorAll('*'));
+                let propertiesItem = null;
+                let manageItem = null;
+                let sampleItem = null;
+
+                for (const el of allDescendants) {
+                    const txt = (el.textContent || '').trim();
+                    if (/^properties(\.\.\.)?$/i.test(txt) && !propertiesItem) {
+                        propertiesItem = el.closest('[role="menuitem"], [class*="contextMenuItem"], [class*="MenuItem"], div') || el;
+                    } else if (/^manage$/i.test(txt) && !manageItem) {
+                        manageItem = el.closest('[role="menuitem"], [class*="contextMenuItem"], [class*="MenuItem"], div') || el;
+                    }
+                    if (!sampleItem && el.className && typeof el.className === 'string' && el.className.includes('contextMenuItem')) {
+                        sampleItem = el;
+                    }
+                }
+
+                if (!propertiesItem && !manageItem) {
+                    continue;
+                }
+
+                const targetRef = propertiesItem || manageItem;
+                const refParent = targetRef.parentElement;
+                if (!refParent) continue;
+
+                let appId = lastRightClickApp.appId;
+                let gameName = lastRightClickApp.gameName;
+
+                if (!appId || !gameName) {
+                    const selectedRow = doc.querySelector('[class*="gameListRow"][class*="Selected"], [class*="isSelected"], [class*="Selected"]');
+                    if (selectedRow) {
+                        const info = findAppInfoFromElement(selectedRow);
+                        if (info) {
+                            if (!appId) appId = info.appId;
+                            if (!gameName) gameName = info.gameName;
+                        }
+                        if (!gameName) gameName = selectedRow.textContent?.trim()?.split('\n')[0];
+                    }
+                }
+
+                const crItem = doc.createElement('div');
+                crItem.id = 'cloudredirect-steam-ctx-item';
+                crItem.className = (targetRef.className || sampleItem?.className || '').trim() + ' cr-context-menu-item';
+                crItem.setAttribute('role', 'menuitem');
+                crItem.setAttribute('tabindex', '0');
+
+                crItem.innerHTML = `
+                    <div class="cr-ctx-row">
+                        <div class="cr-ctx-left">
+                            ${cloudSvg}
+                            <span class="cr-ctx-title">CloudRedirect</span>
+                            <span class="cr-ctx-dot" title="Save Protection Active"></span>
+                        </div>
+                        <div class="cr-ctx-arrow">›</div>
+                    </div>
+                `;
+
+                try {
+                    const win = doc.defaultView || window;
+                    const computed = win.getComputedStyle(targetRef);
+                    if (computed) {
+                        if (computed.fontFamily) crItem.style.fontFamily = computed.fontFamily;
+                        if (computed.fontSize) crItem.style.fontSize = computed.fontSize;
+                        if (computed.lineHeight) crItem.style.lineHeight = computed.lineHeight;
+                        if (computed.padding) crItem.style.padding = computed.padding;
+                        if (computed.cursor) crItem.style.cursor = computed.cursor;
+                    }
+                } catch (e) { }
+
+                let flyoutEl = null;
+                let hideTimeout = null;
+
+                function showFlyout() {
+                    if (hideTimeout) {
+                        clearTimeout(hideTimeout);
+                        hideTimeout = null;
+                    }
+                    if (flyoutEl && flyoutEl.parentNode) return;
+
+                    flyoutEl = doc.createElement('div');
+                    flyoutEl.id = 'cr-steam-ctx-flyout';
+                    flyoutEl.className = 'cr-ctx-flyout-menu';
+                    const safeName = (gameName || 'Selected Game').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    flyoutEl.innerHTML = `
+                        <div class="cr-flyout-header">
+                            <div class="cr-flyout-title">${safeName}</div>
+                            <div class="cr-flyout-status">Universal Save Protection</div>
+                        </div>
+                        <div class="cr-flyout-item" data-action="export-save">
+                            <span class="cr-item-icon">📦</span>
+                            <div class="cr-item-text">
+                                <div class="cr-item-title">1-Click Save Export (.zip)</div>
+                                <div class="cr-item-desc">Package saves into portable archive</div>
+                            </div>
+                        </div>
+                        <div class="cr-flyout-item" data-action="create-snapshot">
+                            <span class="cr-item-icon">📸</span>
+                            <div class="cr-item-text">
+                                <div class="cr-item-title">Create Save Snapshot</div>
+                                <div class="cr-item-desc">Timestamped rollback checkpoint</div>
+                            </div>
+                        </div>
+                        <div class="cr-flyout-item" data-action="character-slots">
+                            <span class="cr-item-icon">👤</span>
+                            <div class="cr-item-text">
+                                <div class="cr-item-title">Character Switcher (Slots)</div>
+                                <div class="cr-item-desc">Branch saves & character builds</div>
+                            </div>
+                        </div>
+                        <div class="cr-flyout-item" data-action="resign-save">
+                            <span class="cr-item-icon">🔑</span>
+                            <div class="cr-item-text">
+                                <div class="cr-item-title">SteamID64 Account Transfer</div>
+                                <div class="cr-item-desc">Re-sign save to another Steam account</div>
+                            </div>
+                        </div>
+                        <div class="cr-flyout-item" data-action="open-save-dir">
+                            <span class="cr-item-icon">📁</span>
+                            <div class="cr-item-text">
+                                <div class="cr-item-title">Open Save Folder in Explorer</div>
+                                <div class="cr-item-desc">Reveal actual files in Windows Explorer</div>
+                            </div>
+                        </div>
+                        <div class="cr-flyout-divider"></div>
+                        <div class="cr-flyout-item" data-action="tools">
+                            <span class="cr-item-icon">⚡</span>
+                            <div class="cr-item-text">
+                                <div class="cr-item-title">Open CloudRedirect Beta Hub</div>
+                                <div class="cr-item-desc">LAN Sync, Quota Visualizer & Booster</div>
+                            </div>
+                        </div>
+                    `;
+
+                    doc.body.appendChild(flyoutEl);
+
+                    const rect = crItem.getBoundingClientRect();
+                    const flyWidth = 290;
+                    const flyHeight = 360;
+                    const winW = doc.defaultView?.innerWidth || 1920;
+                    const winH = doc.defaultView?.innerHeight || 1080;
+
+                    let left = rect.right + 4;
+                    if (left + flyWidth > winW - 10) {
+                        left = rect.left - flyWidth - 4;
+                    }
+                    let top = rect.top - 4;
+                    if (top + flyHeight > winH - 10) {
+                        top = Math.max(10, winH - flyHeight - 10);
+                    }
+
+                    flyoutEl.style.left = `${Math.max(10, left)}px`;
+                    flyoutEl.style.top = `${Math.max(10, top)}px`;
+
+                    flyoutEl.onmouseenter = () => {
+                        if (hideTimeout) {
+                            clearTimeout(hideTimeout);
+                            hideTimeout = null;
+                        }
+                    };
+                    flyoutEl.onmouseleave = () => {
+                        hideFlyout();
+                    };
+
+                    flyoutEl.querySelectorAll('.cr-flyout-item').forEach(item => {
+                        item.onclick = (e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            const action = item.getAttribute('data-action') || 'tools';
+                            triggerCloudRedirectAction(action, appId, gameName, doc);
+                            removeFlyout();
+                            try {
+                                doc.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+                            } catch (e) { }
+                        };
+                    });
+                }
+
+                function hideFlyout() {
+                    if (hideTimeout) clearTimeout(hideTimeout);
+                    hideTimeout = setTimeout(() => {
+                        removeFlyout();
+                    }, 300);
+                }
+
+                function removeFlyout() {
+                    if (flyoutEl && flyoutEl.parentNode) {
+                        flyoutEl.remove();
+                        flyoutEl = null;
+                    }
+                }
+
+                crItem.onmouseenter = () => showFlyout();
+                crItem.onmouseleave = () => hideFlyout();
+
+                crItem.onclick = (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    triggerCloudRedirectAction('tools', appId, gameName, doc);
+                    removeFlyout();
+                };
+
+                const menuObserver = new MutationObserver(() => {
+                    if (!container.parentNode || !crItem.parentNode) {
+                        removeFlyout();
+                        menuObserver.disconnect();
+                    }
+                });
+                menuObserver.observe(doc.body, { childList: true, subtree: true });
+
+                if (propertiesItem && propertiesItem.parentElement === refParent) {
+                    refParent.insertBefore(crItem, propertiesItem);
+                } else {
+                    refParent.appendChild(crItem);
+                }
+            }
+        }
+
         function runInjectionsForDoc(doc) {
             if (!doc || !doc.body) return;
 
@@ -487,6 +831,8 @@ var PluginEntryPointMain = function () {
             injectSuperNavTab(doc);
             injectBottomBarButton(doc);
             injectGameBadge(doc);
+            trackContextMenu(doc);
+            checkAndInjectContextMenu(doc);
         }
 
         function runInjections() {
@@ -574,6 +920,10 @@ var PluginEntryPointMain = function () {
                             d.querySelectorAll('.cr-nav-btn, [id*="cloudredirect-header"], .cr-dropdown-menu').forEach(el => el.remove());
                             const btmBtn = d.getElementById('cloudredirect-bottom-btn');
                             if (btmBtn) btmBtn.remove();
+                            const ctxItem = d.getElementById('cloudredirect-steam-ctx-item');
+                            if (ctxItem) ctxItem.remove();
+                            const flyout = d.getElementById('cr-steam-ctx-flyout');
+                            if (flyout) flyout.remove();
                             const style = d.getElementById('cr-millennium-styles');
                             if (style) style.remove();
                         } catch (e) { }

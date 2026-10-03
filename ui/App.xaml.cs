@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -53,6 +54,7 @@ public partial class App : System.Windows.Application
     private const int SW_RESTORE = 9;
 
     public static bool StartMinimized { get; private set; }
+    public static string? PendingStartupCommand { get; set; }
 
     public static void LogStartup(string msg)
     {
@@ -236,38 +238,7 @@ public partial class App : System.Windows.Application
                                     {
                                         var cmd = File.ReadAllText(ipcFile).Trim();
                                         File.Delete(ipcFile);
-                                        if (cmd.Contains("backup", StringComparison.OrdinalIgnoreCase))
-                                        {
-                                            _ = Services.UniversalCloudSyncService.SyncAllProfilesAsync();
-                                        }
-                                        else if (cmd.Contains("saves", StringComparison.OrdinalIgnoreCase))
-                                        {
-                                            if (Current.MainWindow is MainWindow mw)
-                                            {
-                                                mw.NavigateTo(typeof(Pages.UniversalSavesPage));
-                                            }
-                                        }
-                                        else if (cmd.Contains("tools", StringComparison.OrdinalIgnoreCase) ||
-                                                 cmd.Contains("beta", StringComparison.OrdinalIgnoreCase) ||
-                                                 cmd.Contains("--export-save", StringComparison.OrdinalIgnoreCase) ||
-                                                 cmd.Contains("--resign-save", StringComparison.OrdinalIgnoreCase))
-                                        {
-                                            if (Current.MainWindow is MainWindow mw)
-                                            {
-                                                mw.NavigateTo(typeof(Pages.BetaToolsPage));
-                                            }
-                                        }
-                                        else if (cmd.Contains("--create-snapshot", StringComparison.OrdinalIgnoreCase))
-                                        {
-                                            var path = cmd.Replace("--create-snapshot", "", StringComparison.OrdinalIgnoreCase).Trim().Trim('"');
-                                            if (Directory.Exists(path))
-                                            {
-                                                var name = Path.GetFileName(path.TrimEnd('\\', '/'));
-                                                var snap = Services.SaveHistoryManager.CreateSnapshot(name, path, "Context Menu Instant Snapshot");
-                                                if (snap != null)
-                                                    Services.TrayIconService.Instance.ShowNotification("Save Snapshot Created", $"Backed up {name} ({snap.FormattedSize})");
-                                            }
-                                        }
+                                        ProcessCommand(cmd);
                                     }
                                 }
                                 catch { }
@@ -313,6 +284,17 @@ public partial class App : System.Windows.Application
 
         StartMinimized = e.Args.Any(a => a.Equals("-minimized", StringComparison.OrdinalIgnoreCase) ||
                                          a.Equals("--minimized", StringComparison.OrdinalIgnoreCase));
+
+        var actionArg = e.Args.FirstOrDefault(a =>
+            a.StartsWith("cloudredirect://", StringComparison.OrdinalIgnoreCase) ||
+            a.StartsWith("--export-save", StringComparison.OrdinalIgnoreCase) ||
+            a.StartsWith("--create-snapshot", StringComparison.OrdinalIgnoreCase) ||
+            a.StartsWith("--resign-save", StringComparison.OrdinalIgnoreCase) ||
+            a.StartsWith("--tools", StringComparison.OrdinalIgnoreCase));
+        if (!string.IsNullOrEmpty(actionArg))
+        {
+            PendingStartupCommand = string.Join(" ", e.Args);
+        }
 
         Services.LanguageService.ApplyLanguage(Services.LanguageService.ReadLanguagePreference(), save: false);
         base.OnStartup(e);
@@ -399,5 +381,287 @@ public partial class App : System.Windows.Application
         }
         catch { }
         base.OnExit(e);
+    }
+
+    public static void ProcessCommand(string? command)
+    {
+        if (string.IsNullOrWhiteSpace(command)) return;
+
+        Current?.Dispatcher.BeginInvoke(new Action(async () =>
+        {
+            try
+            {
+                LogStartup($"Processing command: {command}");
+
+                string action = "";
+                string targetPath = "";
+                string appIdStr = "";
+                string gameName = "";
+
+                if (command.StartsWith("cloudredirect://", StringComparison.OrdinalIgnoreCase))
+                {
+                    try
+                    {
+                        var uri = new Uri(command.Trim());
+                        var host = uri.Host.ToLowerInvariant();
+                        if (host == "open") { BringToForeground(); return; }
+                        if (host == "backup")
+                        {
+                            _ = Services.UniversalCloudSyncService.SyncAllProfilesAsync();
+                            BringToForeground();
+                            return;
+                        }
+                        if (host == "saves")
+                        {
+                            if (Current.MainWindow is MainWindow mwS)
+                            {
+                                mwS.NavigateTo(typeof(Pages.UniversalSavesPage));
+                            }
+                            BringToForeground();
+                            return;
+                        }
+
+                        var query = uri.Query.TrimStart('?');
+                        var parts = query.Split('&', StringSplitOptions.RemoveEmptyEntries);
+                        var dict = new System.Collections.Generic.Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                        foreach (var p in parts)
+                        {
+                            var kv = p.Split('=', 2);
+                            if (kv.Length == 2)
+                                dict[Uri.UnescapeDataString(kv[0])] = Uri.UnescapeDataString(kv[1]);
+                            else if (kv.Length == 1)
+                                dict[Uri.UnescapeDataString(kv[0])] = "";
+                        }
+
+                        dict.TryGetValue("cmd", out action);
+                        if (string.IsNullOrEmpty(action)) action = host;
+                        dict.TryGetValue("appid", out appIdStr);
+                        dict.TryGetValue("name", out gameName);
+                        dict.TryGetValue("path", out targetPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        LogStartup($"Error parsing uri: {ex.Message}");
+                    }
+                }
+                else
+                {
+                    if (command.Contains("--export-save", StringComparison.OrdinalIgnoreCase))
+                    {
+                        action = "export-save";
+                        targetPath = ExtractArg(command, "--export-save");
+                    }
+                    else if (command.Contains("--create-snapshot", StringComparison.OrdinalIgnoreCase))
+                    {
+                        action = "create-snapshot";
+                        targetPath = ExtractArg(command, "--create-snapshot");
+                    }
+                    else if (command.Contains("--resign-save", StringComparison.OrdinalIgnoreCase))
+                    {
+                        action = "resign-save";
+                        targetPath = ExtractArg(command, "--resign-save");
+                    }
+                    else if (command.Contains("--tools", StringComparison.OrdinalIgnoreCase) || command.Contains("beta", StringComparison.OrdinalIgnoreCase))
+                    {
+                        action = "tools";
+                    }
+                }
+
+                uint.TryParse(appIdStr, out var parsedAppId);
+
+                // If targetPath is not provided or doesn't exist, resolve from appId / gameName
+                if (string.IsNullOrEmpty(targetPath) || (!Directory.Exists(targetPath) && !File.Exists(targetPath)))
+                {
+                    var resolved = ResolveSavePath(parsedAppId, gameName);
+                    if (!string.IsNullOrEmpty(resolved))
+                    {
+                        targetPath = resolved;
+                    }
+                }
+
+                switch (action.ToLowerInvariant())
+                {
+                    case "export-save":
+                        if (!string.IsNullOrEmpty(targetPath) && (Directory.Exists(targetPath) || File.Exists(targetPath)))
+                        {
+                            var folder = File.Exists(targetPath) ? Path.GetDirectoryName(targetPath)! : targetPath;
+                            var gName = !string.IsNullOrEmpty(gameName) ? gameName : Path.GetFileName(folder.TrimEnd('\\', '/'));
+                            var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+                            var zipName = $"{SanitizeFileName(gName)}_SaveBackup_{DateTime.Now:yyyyMMdd_HHmmss}.zip";
+                            var destZip = Path.Combine(desktop, zipName);
+
+                            var (ok, err, outPath) = await Services.SaveArchiveService.ExportSaveArchiveAsync(
+                                gName, folder, destZip, gName, parsedAppId);
+                            if (ok && outPath != null)
+                            {
+                                Services.TrayIconService.Instance.ShowNotification(
+                                    "Save Export Archive Created",
+                                    $"Backed up {gName} to Desktop: {zipName}");
+                                try { Process.Start("explorer.exe", $"/select,\"{outPath}\""); } catch { }
+                            }
+                            else
+                            {
+                                Services.TrayIconService.Instance.ShowNotification(
+                                    "Save Export Error",
+                                    err ?? "Failed to export save archive.");
+                            }
+                        }
+                        else
+                        {
+                            if (Current.MainWindow is MainWindow mwExp)
+                            {
+                                mwExp.NavigateTo(typeof(Pages.BetaToolsPage));
+                            }
+                            Services.TrayIconService.Instance.ShowNotification(
+                                "1-Click Save Export",
+                                "Select a save directory in Beta Tools to export.");
+                        }
+                        break;
+
+                    case "create-snapshot":
+                        if (!string.IsNullOrEmpty(targetPath) && (Directory.Exists(targetPath) || File.Exists(targetPath)))
+                        {
+                            var folder = File.Exists(targetPath) ? Path.GetDirectoryName(targetPath)! : targetPath;
+                            var gName = !string.IsNullOrEmpty(gameName) ? gameName : Path.GetFileName(folder.TrimEnd('\\', '/'));
+                            var snap = Services.SaveHistoryManager.CreateSnapshot(gName, folder, "Context Menu Instant Snapshot");
+                            if (snap != null)
+                            {
+                                Services.TrayIconService.Instance.ShowNotification(
+                                    "Save Snapshot Created",
+                                    $"Backed up {gName} ({snap.FormattedSize})");
+                            }
+                        }
+                        else
+                        {
+                            if (Current.MainWindow is MainWindow mwSnap)
+                            {
+                                mwSnap.NavigateTo(typeof(Pages.BetaToolsPage));
+                            }
+                        }
+                        break;
+
+                    case "character-slots":
+                    case "character-switch":
+                        if (Current.MainWindow is MainWindow mwSlots)
+                        {
+                            mwSlots.NavigateTo(typeof(Pages.BetaToolsPage));
+                        }
+                        break;
+
+                    case "resign-save":
+                        if (Current.MainWindow is MainWindow mwResign)
+                        {
+                            mwResign.NavigateTo(typeof(Pages.BetaToolsPage));
+                        }
+                        break;
+
+                    case "open-save-dir":
+                        if (!string.IsNullOrEmpty(targetPath) && Directory.Exists(targetPath))
+                        {
+                            try { Process.Start("explorer.exe", targetPath); } catch { }
+                        }
+                        else
+                        {
+                            Services.TrayIconService.Instance.ShowNotification("Save Folder", "Save directory not found or not yet enrolled.");
+                            if (Current.MainWindow is MainWindow mwDir)
+                            {
+                                mwDir.NavigateTo(typeof(Pages.BetaToolsPage));
+                            }
+                        }
+                        break;
+
+                    case "tools":
+                    case "beta":
+                    default:
+                        if (Current.MainWindow is MainWindow mwTools)
+                        {
+                            mwTools.NavigateTo(typeof(Pages.BetaToolsPage));
+                        }
+                        break;
+                }
+
+                BringToForeground();
+            }
+            catch (Exception ex)
+            {
+                LogStartup($"ProcessCommand exception: {ex}");
+            }
+        }));
+    }
+
+    private static string ExtractArg(string cmd, string key)
+    {
+        var idx = cmd.IndexOf(key, StringComparison.OrdinalIgnoreCase);
+        if (idx < 0) return "";
+        var sub = cmd.Substring(idx + key.Length).Trim();
+        if (sub.StartsWith("\""))
+        {
+            var end = sub.IndexOf('"', 1);
+            return end > 0 ? sub.Substring(1, end - 1) : sub.Trim('"');
+        }
+        var space = sub.IndexOf(' ');
+        return space > 0 ? sub.Substring(0, space) : sub;
+    }
+
+    private static string SanitizeFileName(string name)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        return string.Concat(name.Select(c => invalid.Contains(c) ? '_' : c)).Trim();
+    }
+
+    private static string? ResolveSavePath(uint appId, string? gameName)
+    {
+        try
+        {
+            if (Services.UniversalSaveWatcherService.Profiles != null)
+            {
+                var profile = Services.UniversalSaveWatcherService.Profiles.FirstOrDefault(p =>
+                    (appId > 0 && p.SteamAppId == appId) ||
+                    (!string.IsNullOrWhiteSpace(gameName) && p.GameName.Equals(gameName, StringComparison.OrdinalIgnoreCase)));
+                if (profile != null && !string.IsNullOrWhiteSpace(profile.SaveFolderPath) && Directory.Exists(profile.SaveFolderPath))
+                {
+                    return profile.SaveFolderPath;
+                }
+            }
+
+            var active = Services.ActiveGameTrackerService.CurrentActiveGame;
+            if (active != null)
+            {
+                if ((appId > 0 && active.AppId == appId) ||
+                    (!string.IsNullOrWhiteSpace(gameName) && active.GameName.Equals(gameName, StringComparison.OrdinalIgnoreCase)))
+                {
+                    if (!string.IsNullOrWhiteSpace(active.SaveDirectory) && Directory.Exists(active.SaveDirectory))
+                        return active.SaveDirectory;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(gameName) || appId > 0)
+            {
+                var autoDetected = Services.GameSaveAutoDetector.DetectSaveFolder(gameName ?? "", null, appId);
+                if (!string.IsNullOrWhiteSpace(autoDetected) && Directory.Exists(autoDetected))
+                    return autoDetected;
+            }
+
+            if (appId > 0)
+            {
+                var steamPath = Services.SteamDetector.FindSteamPath();
+                if (!string.IsNullOrEmpty(steamPath))
+                {
+                    var uData = Path.Combine(steamPath, "userdata");
+                    if (Directory.Exists(uData))
+                    {
+                        foreach (var userDir in Directory.GetDirectories(uData))
+                        {
+                            var appSave = Path.Combine(userDir, appId.ToString(), "remote");
+                            if (Directory.Exists(appSave))
+                                return appSave;
+                        }
+                    }
+                }
+            }
+        }
+        catch { }
+
+        return null;
     }
 }
