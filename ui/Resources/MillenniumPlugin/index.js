@@ -226,6 +226,135 @@ var PluginEntryPointMain = function () {
                     color: #a4d007;
                     font-weight: bold;
                 }
+
+                /* Steam Library Context Menu Item */
+                .cr-context-menu-item {
+                    cursor: pointer !important;
+                    user-select: none !important;
+                    position: relative !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: space-between !important;
+                    transition: background 0.12s ease, color 0.12s ease !important;
+                    color: #dcdedf !important;
+                    font-family: "Motiva Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+                    font-size: 13px !important;
+                    font-weight: 500 !important;
+                    width: 100% !important;
+                    box-sizing: border-box !important;
+                    white-space: nowrap !important;
+                }
+                .cr-context-menu-item:hover {
+                    background: #1b2838 !important;
+                    color: #ffffff !important;
+                }
+                .cr-ctx-row {
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: space-between !important;
+                    width: 100% !important;
+                    min-width: 0 !important;
+                }
+                .cr-ctx-left {
+                    display: flex !important;
+                    align-items: center !important;
+                    gap: 8px !important;
+                }
+                .cr-ctx-title {
+                    font-size: 13px !important;
+                    font-weight: 500 !important;
+                    color: inherit !important;
+                }
+                .cr-ctx-dot {
+                    display: inline-block !important;
+                    width: 6px !important;
+                    height: 6px !important;
+                    background: #a4d007 !important;
+                    border-radius: 50% !important;
+                    box-shadow: 0 0 6px #a4d007 !important;
+                    margin-left: 2px !important;
+                }
+                .cr-ctx-arrow {
+                    font-size: 14px !important;
+                    color: #8f98a0 !important;
+                    font-weight: bold !important;
+                    margin-left: 16px !important;
+                }
+
+                /* Floating Sub-menu Flyout */
+                .cr-ctx-flyout-menu {
+                    position: fixed !important;
+                    z-index: 2147483647 !important;
+                    width: 290px !important;
+                    background: #172432 !important;
+                    border: 1px solid #364b63 !important;
+                    border-radius: 4px !important;
+                    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(102, 192, 244, 0.25) !important;
+                    padding: 6px !important;
+                    font-family: "Motiva Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+                    user-select: none !important;
+                    pointer-events: auto !important;
+                }
+                .cr-flyout-header {
+                    padding: 6px 10px 8px 10px !important;
+                    border-bottom: 1px solid #233446 !important;
+                    margin-bottom: 4px !important;
+                }
+                .cr-flyout-title {
+                    color: #66c0f4 !important;
+                    font-size: 13px !important;
+                    font-weight: 700 !important;
+                    white-space: nowrap !important;
+                    overflow: hidden !important;
+                    text-overflow: ellipsis !important;
+                }
+                .cr-flyout-status {
+                    color: #8f98a0 !important;
+                    font-size: 10px !important;
+                    text-transform: uppercase !important;
+                    letter-spacing: 0.5px !important;
+                    margin-top: 2px !important;
+                }
+                .cr-flyout-item {
+                    display: flex !important;
+                    align-items: center !important;
+                    gap: 10px !important;
+                    padding: 7px 10px !important;
+                    border-radius: 3px !important;
+                    cursor: pointer !important;
+                    transition: background 0.12s ease, transform 0.12s ease !important;
+                }
+                .cr-flyout-item:hover {
+                    background: linear-gradient(90deg, #1d334a 0%, #152739 100%) !important;
+                }
+                .cr-item-icon {
+                    font-size: 15px !important;
+                    flex-shrink: 0 !important;
+                    width: 20px !important;
+                    text-align: center !important;
+                }
+                .cr-item-text {
+                    display: flex !important;
+                    flex-direction: column !important;
+                    gap: 1px !important;
+                }
+                .cr-item-title {
+                    color: #dcdedf !important;
+                    font-size: 12px !important;
+                    font-weight: 600 !important;
+                }
+                .cr-flyout-item:hover .cr-item-title {
+                    color: #ffffff !important;
+                }
+                .cr-item-desc {
+                    color: #7b8b98 !important;
+                    font-size: 10px !important;
+                }
+                .cr-flyout-divider {
+                    height: 1px !important;
+                    background: #233446 !important;
+                    margin: 4px 6px !important;
+                }
             `;
             doc.head.appendChild(style);
         }
@@ -637,15 +766,21 @@ var PluginEntryPointMain = function () {
                 crItem.className = (targetRef.className || sampleItem?.className || '').trim() + ' cr-context-menu-item';
                 crItem.setAttribute('role', 'menuitem');
                 crItem.setAttribute('tabindex', '0');
+                crItem.style.display = 'flex';
+                crItem.style.alignItems = 'center';
+                crItem.style.justifyContent = 'space-between';
+                crItem.style.width = '100%';
+                crItem.style.boxSizing = 'border-box';
+                crItem.style.whiteSpace = 'nowrap';
 
                 crItem.innerHTML = `
-                    <div class="cr-ctx-row">
-                        <div class="cr-ctx-left">
+                    <div class="cr-ctx-row" style="display:flex !important; align-items:center !important; justify-content:space-between !important; width:100% !important; min-width:0 !important; white-space:nowrap !important;">
+                        <div class="cr-ctx-left" style="display:flex !important; align-items:center !important; gap:8px !important; flex:1 1 auto !important; min-width:0 !important;">
                             ${cloudSvg}
-                            <span class="cr-ctx-title">CloudRedirect</span>
-                            <span class="cr-ctx-dot" title="Save Protection Active"></span>
+                            <span class="cr-ctx-title" style="font-size:13px !important; font-weight:500 !important; color:inherit !important;">CloudRedirect</span>
+                            <span class="cr-ctx-dot" style="display:inline-block !important; width:6px !important; height:6px !important; background:#a4d007 !important; border-radius:50% !important; box-shadow:0 0 6px #a4d007 !important; margin-left:2px !important;" title="Save Protection Active"></span>
                         </div>
-                        <div class="cr-ctx-arrow">›</div>
+                        <div class="cr-ctx-arrow" style="font-size:14px !important; color:#8f98a0 !important; font-weight:bold !important; margin-left:auto !important; padding-left:12px !important; flex-shrink:0 !important;">›</div>
                     </div>
                 `;
 

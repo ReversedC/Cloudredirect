@@ -17,7 +17,7 @@ namespace CloudRedirect.Services;
 /// </summary>
 public static class MobileDashboardServer
 {
-    private static HttpListener? _listener;
+    private static TcpListener? _listener;
     private static CancellationTokenSource? _cts;
     private static bool _isRunning;
 
@@ -66,35 +66,19 @@ public static class MobileDashboardServer
         try
         {
             int port = AppSettings.MobileDashboardPort;
-            _listener = new HttpListener();
-            _listener.Prefixes.Add($"http://*:{port}/");
+            _listener = new TcpListener(IPAddress.Any, port);
+            _listener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             _listener.Start();
 
             _cts = new CancellationTokenSource();
             _isRunning = true;
 
-            Task.Run(() => ListenLoopAsync(_listener, _cts.Token));
+            Task.Run(() => AcceptLoopAsync(_listener, _cts.Token));
         }
         catch (Exception ex)
         {
-            // If binding to http://*:port fails due to lack of admin urlacl reservation, fallback to http://localhost
-            try
-            {
-                int port = AppSettings.MobileDashboardPort;
-                _listener = new HttpListener();
-                _listener.Prefixes.Add($"http://localhost:{port}/");
-                _listener.Prefixes.Add($"http://127.0.0.1:{port}/");
-                _listener.Start();
-
-                _cts = new CancellationTokenSource();
-                _isRunning = true;
-                Task.Run(() => ListenLoopAsync(_listener, _cts.Token));
-            }
-            catch (Exception ex2)
-            {
-                System.Diagnostics.Debug.WriteLine($"[MobileDashboard] Could not start server: {ex.Message} / {ex2.Message}");
-                _isRunning = false;
-            }
+            System.Diagnostics.Debug.WriteLine($"[MobileDashboard] Could not start server: {ex.Message}");
+            _isRunning = false;
         }
     }
 
@@ -105,7 +89,6 @@ public static class MobileDashboardServer
         {
             _cts?.Cancel();
             _listener?.Stop();
-            _listener?.Close();
         }
         catch { }
         finally
@@ -115,14 +98,14 @@ public static class MobileDashboardServer
         }
     }
 
-    private static async Task ListenLoopAsync(HttpListener listener, CancellationToken ct)
+    private static async Task AcceptLoopAsync(TcpListener listener, CancellationToken ct)
     {
-        while (!ct.IsCancellationRequested && listener.IsListening)
+        while (!ct.IsCancellationRequested)
         {
             try
             {
-                var context = await listener.GetContextAsync();
-                _ = Task.Run(() => HandleRequest(context));
+                var client = await listener.AcceptTcpClientAsync(ct);
+                _ = Task.Run(() => HandleClientAsync(client));
             }
             catch
             {
@@ -131,68 +114,90 @@ public static class MobileDashboardServer
         }
     }
 
-    private static void HandleRequest(HttpListenerContext context)
+    private static async Task HandleClientAsync(TcpClient client)
     {
-        try
+        using (client)
         {
-            var req = context.Request;
-            var res = context.Response;
-
-            // Security check: restrict to LAN / loopback IPs
-            var remoteIp = req.RemoteEndPoint?.Address?.ToString() ?? "";
-            if (!IsPrivateOrLoopbackIp(remoteIp))
+            try
             {
-                res.StatusCode = (int)HttpStatusCode.Forbidden;
-                res.Close();
-                return;
-            }
-
-            var path = req.Url?.AbsolutePath.ToLowerInvariant() ?? "/";
-
-            if (path == "/" || path == "/index.html")
-            {
-                var html = RenderMobileHtml();
-                byte[] buffer = Encoding.UTF8.GetBytes(html);
-                res.ContentType = "text/html; charset=utf-8";
-                res.ContentLength64 = buffer.Length;
-                res.OutputStream.Write(buffer, 0, buffer.Length);
-            }
-            else if (path == "/api/status")
-            {
-                var json = RenderStatusJson();
-                byte[] buffer = Encoding.UTF8.GetBytes(json);
-                res.ContentType = "application/json; charset=utf-8";
-                res.ContentLength64 = buffer.Length;
-                res.OutputStream.Write(buffer, 0, buffer.Length);
-            }
-            else if (path == "/api/sync" && req.HttpMethod == "POST")
-            {
-                _ = Task.Run(() => SaveUploadWatcherService.TriggerImmediateSync());
-                byte[] buffer = Encoding.UTF8.GetBytes("{\"ok\":true,\"message\":\"Sync triggered\"}");
-                res.ContentType = "application/json";
-                res.ContentLength64 = buffer.Length;
-                res.OutputStream.Write(buffer, 0, buffer.Length);
-            }
-            else if (path == "/api/snapshot" && req.HttpMethod == "POST")
-            {
-                var active = ActiveGameTrackerService.CurrentActiveGame;
-                if (active != null && !string.IsNullOrEmpty(active.SaveDirectory))
+                // Security check: restrict to LAN / loopback IPs
+                var remoteIp = (client.Client.RemoteEndPoint as IPEndPoint)?.Address?.ToString() ?? "";
+                if (!IsPrivateOrLoopbackIp(remoteIp))
                 {
-                    SaveHistoryManager.CreateSnapshot(active.GameName, active.SaveDirectory, "Mobile Dashboard Manual Snapshot", active.AppId.ToString());
+                    await using var denyStream = client.GetStream();
+                    await SendResponseAsync(denyStream, 403, "text/plain", "Forbidden");
+                    return;
                 }
-                byte[] buffer = Encoding.UTF8.GetBytes("{\"ok\":true,\"message\":\"Snapshot created\"}");
-                res.ContentType = "application/json";
-                res.ContentLength64 = buffer.Length;
-                res.OutputStream.Write(buffer, 0, buffer.Length);
-            }
-            else
-            {
-                res.StatusCode = (int)HttpStatusCode.NotFound;
-            }
 
-            res.Close();
+                await using var stream = client.GetStream();
+                var buffer = new byte[4096];
+                int read = await stream.ReadAsync(buffer, 0, buffer.Length);
+                if (read <= 0) return;
+
+                var reqText = Encoding.UTF8.GetString(buffer, 0, read);
+                var firstLine = reqText.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None).FirstOrDefault() ?? "";
+                var parts = firstLine.Split(' ');
+                if (parts.Length < 2) return;
+
+                var method = parts[0].ToUpperInvariant();
+                var rawPath = parts[1];
+                var path = rawPath.Split('?')[0].ToLowerInvariant();
+
+                if (path == "/" || path == "/index.html")
+                {
+                    var html = RenderMobileHtml();
+                    await SendResponseAsync(stream, 200, "text/html; charset=utf-8", html);
+                }
+                else if (path == "/api/status")
+                {
+                    var json = RenderStatusJson();
+                    await SendResponseAsync(stream, 200, "application/json; charset=utf-8", json);
+                }
+                else if (path == "/api/sync" && method == "POST")
+                {
+                    _ = Task.Run(() => SaveUploadWatcherService.TriggerImmediateSync());
+                    await SendResponseAsync(stream, 200, "application/json; charset=utf-8", "{\"ok\":true,\"message\":\"Sync triggered\"}");
+                }
+                else if (path == "/api/snapshot" && method == "POST")
+                {
+                    var active = ActiveGameTrackerService.CurrentActiveGame;
+                    if (active != null && !string.IsNullOrEmpty(active.SaveDirectory))
+                    {
+                        SaveHistoryManager.CreateSnapshot(active.GameName, active.SaveDirectory, "Mobile Dashboard Manual Snapshot", active.AppId.ToString());
+                    }
+                    await SendResponseAsync(stream, 200, "application/json; charset=utf-8", "{\"ok\":true,\"message\":\"Snapshot created\"}");
+                }
+                else
+                {
+                    await SendResponseAsync(stream, 404, "text/plain", "Not Found");
+                }
+            }
+            catch { }
         }
-        catch { }
+    }
+
+    private static async Task SendResponseAsync(NetworkStream stream, int statusCode, string contentType, string content)
+    {
+        var bodyBytes = Encoding.UTF8.GetBytes(content);
+        var statusMsg = statusCode switch
+        {
+            200 => "OK",
+            403 => "Forbidden",
+            404 => "Not Found",
+            _ => "Status"
+        };
+
+        var header = $"HTTP/1.1 {statusCode} {statusMsg}\r\n" +
+                     $"Content-Type: {contentType}\r\n" +
+                     $"Content-Length: {bodyBytes.Length}\r\n" +
+                     "Connection: close\r\n" +
+                     "Access-Control-Allow-Origin: *\r\n" +
+                     "\r\n";
+
+        var headerBytes = Encoding.ASCII.GetBytes(header);
+        await stream.WriteAsync(headerBytes, 0, headerBytes.Length);
+        await stream.WriteAsync(bodyBytes, 0, bodyBytes.Length);
+        await stream.FlushAsync();
     }
 
     private static bool IsPrivateOrLoopbackIp(string ip)
