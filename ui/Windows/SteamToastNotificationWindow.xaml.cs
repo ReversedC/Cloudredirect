@@ -15,7 +15,8 @@ public enum ToastNotificationType
     Warning,
     AutoHeal,
     Info,
-    GameBoost
+    GameBoost,
+    Tray
 }
 
 public partial class SteamToastNotificationWindow : Window
@@ -113,6 +114,18 @@ public partial class SteamToastNotificationWindow : Window
                 IconContainer.Background = new SolidColorBrush(Color.FromRgb(0x12, 0x22, 0x32));
                 IconContainer.BorderBrush = new SolidColorBrush(Color.FromRgb(0x00, 0xD2, 0xFF));
                 SymbolText.Text = "🚀";
+                ToastShadow.Color = Color.FromRgb(0x00, 0xD2, 0xFF);
+                ProgressCountdown.Fill = new SolidColorBrush(Color.FromRgb(0x00, 0xD2, 0xFF));
+                break;
+
+            case ToastNotificationType.Tray:
+                CategoryBadgeText.Text = "SYSTEM TRAY";
+                CategoryBadgeText.Foreground = new SolidColorBrush(Color.FromRgb(0x66, 0xC0, 0xF4));
+                CategoryBadgeBorder.Background = new SolidColorBrush(Color.FromRgb(0x16, 0x2B, 0x3D));
+                CategoryBadgeBorder.BorderBrush = new SolidColorBrush(Color.FromRgb(0x25, 0x42, 0x5F));
+                IconContainer.Background = new SolidColorBrush(Color.FromRgb(0x12, 0x22, 0x32));
+                IconContainer.BorderBrush = new SolidColorBrush(Color.FromRgb(0x25, 0x42, 0x5F));
+                SymbolText.Text = "☁️";
                 ToastShadow.Color = Color.FromRgb(0x00, 0xD2, 0xFF);
                 ProgressCountdown.Fill = new SolidColorBrush(Color.FromRgb(0x00, 0xD2, 0xFF));
                 break;
@@ -241,6 +254,17 @@ public partial class SteamToastNotificationWindow : Window
                     EasingFunction = new BackEase { Amplitude = 0.6, EasingMode = EasingMode.EaseOut }
                 };
                 SymbolTranslate.BeginAnimation(TranslateTransform.YProperty, thrust);
+                break;
+
+            case ToastNotificationType.Tray:
+                // Gentle pulse animation
+                var trayPulse = new DoubleAnimation(0.88, 1.12, TimeSpan.FromMilliseconds(450))
+                {
+                    AutoReverse = true,
+                    EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+                };
+                SymbolScale.BeginAnimation(ScaleTransform.ScaleXProperty, trayPulse);
+                SymbolScale.BeginAnimation(ScaleTransform.ScaleYProperty, trayPulse);
                 break;
         }
     }

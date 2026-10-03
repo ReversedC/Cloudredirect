@@ -75,14 +75,6 @@ public sealed class WinFormsTrayHelper : IDisposable
         }
     }
 
-    public void ShowBalloon(string title, string message)
-    {
-        try
-        {
-            _notifyIcon?.ShowBalloonTip(3000, title, message, ToolTipIcon.Info);
-        }
-        catch { }
-    }
 
     public void Dispose()
     {

@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Windows;
 using CloudRedirect.TrayHelper;
+using CloudRedirect.Windows;
 
 namespace CloudRedirect.Services;
 
@@ -61,10 +62,13 @@ public sealed class TrayIconService : IDisposable
             _mainWindow.ShowInTaskbar = false;
         });
 
-        if (!_hasShownBalloon && _trayHelper != null)
+        if (!_hasShownBalloon)
         {
             _hasShownBalloon = true;
-            _trayHelper.ShowBalloon("CloudRedirect", "CloudRedirect is running in the background. Cloud save synchronization remains active.");
+            SteamToastService.Show(
+                "CloudRedirect",
+                "Running in background • Cloud save synchronization remains active",
+                ToastNotificationType.Tray);
         }
     }
 

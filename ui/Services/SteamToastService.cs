@@ -82,6 +82,10 @@ public static class SteamToastService
         {
             type = ToastNotificationType.GameBoost;
         }
+        else if (lowerMsg.Contains("tray") || lowerMsg.Contains("background"))
+        {
+            type = ToastNotificationType.Tray;
+        }
 
         // 2. Format title & body cleanly (e.g. "Game Name: details...")
         string cleanTitle = rawTitle;

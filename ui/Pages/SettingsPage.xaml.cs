@@ -99,10 +99,6 @@ public partial class SettingsPage : Page
                 millInstalled ? System.Windows.Media.Color.FromRgb(0x25, 0x42, 0x5F) : System.Windows.Media.Color.FromRgb(0x36, 0x3E, 0x45));
             AutoFitZoomToggle.IsChecked = AppSettings.AutoFitZoom;
 
-            bool isBeta = string.Equals(AppSettings.UpdateBranch, "beta", StringComparison.OrdinalIgnoreCase);
-            BetaBranchToggle.IsChecked = isBeta;
-            UpdateBranchBadgeUI(isBeta);
-
             AutoSyncExitToggle.IsChecked = AppSettings.AutoSyncOnGameExit;
             AutoCheckpointToggle.IsChecked = AppSettings.AutoMidGameCheckpoint;
             AutoConflictHealingToggle.IsChecked = AppSettings.AutoConflictHealing;
@@ -254,24 +250,10 @@ public partial class SettingsPage : Page
         UiZoomManager.Instance.SetAutoFit(isEnabled);
     }
 
-    private void UpdateBranchBadgeUI(bool isBeta)
-    {
-        UpdateBranchBadgeText.Text = isBeta ? "Beta" : "Main";
-        UpdateBranchBadgeText.Foreground = isBeta
-            ? new SolidColorBrush(Color.FromRgb(0xE5, 0xA1, 0x30))
-            : new SolidColorBrush(Color.FromRgb(0x66, 0xC0, 0xF4));
-        UpdateBranchBadge.BorderBrush = isBeta
-            ? new SolidColorBrush(Color.FromRgb(0xD1, 0x89, 0x11))
-            : new SolidColorBrush(Color.FromRgb(0x25, 0x42, 0x5F));
-        UpdateBranchBadge.Background = isBeta
-            ? new SolidColorBrush(Color.FromRgb(0x2D, 0x1F, 0x08))
-            : new SolidColorBrush(Color.FromRgb(0x16, 0x23, 0x32));
-    }
-
     private int _testNotificationCycle = 0;
     private void NotificationTestButton_Click(object sender, RoutedEventArgs e)
     {
-        switch (_testNotificationCycle % 4)
+        switch (_testNotificationCycle % 5)
         {
             case 0:
                 SteamToastService.ShowAuto("CloudRedirect", "☁️ Factory Town 2: Paradise: Saves synchronized to cloud (0.8s)");
@@ -285,6 +267,9 @@ public partial class SettingsPage : Page
             case 3:
                 SteamToastService.ShowAuto("CloudRedirect", "⚠️ Factory Town 2: Paradise: Cloud sync encountered an issue upon exit.");
                 break;
+            case 4:
+                SteamToastService.Show("CloudRedirect", "Running in background • Cloud save synchronization remains active", Windows.ToastNotificationType.Tray);
+                break;
         }
         _testNotificationCycle++;
     }
@@ -297,46 +282,6 @@ public partial class SettingsPage : Page
     private void GameSpaceTestButton_Click(object sender, RoutedEventArgs e)
     {
         GameSpaceService.Instance.Toggle(isPreview: true);
-    }
-
-    private async void BetaBranchToggle_Changed(object sender, RoutedEventArgs e)
-    {
-        if (_syncLoading) return;
-
-        var targetBranch = BetaBranchToggle.IsChecked == true ? "beta" : "main";
-        if (string.Equals(targetBranch, AppSettings.UpdateBranch, StringComparison.OrdinalIgnoreCase))
-            return;
-
-        var targetName = targetBranch == "beta" ? "Beta" : "Main";
-
-        string title = S.Get("Settings_UpdateBranch_RestartTitle");
-        if (string.IsNullOrEmpty(title))
-            title = "Switch Update Channel";
-
-        string msg = S.Format("Settings_UpdateBranch_RestartContent", targetName);
-        if (string.IsNullOrEmpty(msg))
-            msg = $"Switching to the {targetName} channel requires restarting CloudRedirect to check for and apply updates. Would you like to restart now?";
-
-        bool confirm = await Dialog.ConfirmAsync(title, msg);
-        if (confirm)
-        {
-            AppSettings.UpdateBranch = targetBranch;
-            AppUpdater.RestartApp();
-        }
-        else
-        {
-            _syncLoading = true;
-            try
-            {
-                bool isBeta = string.Equals(AppSettings.UpdateBranch, "beta", StringComparison.OrdinalIgnoreCase);
-                BetaBranchToggle.IsChecked = isBeta;
-                UpdateBranchBadgeUI(isBeta);
-            }
-            finally
-            {
-                _syncLoading = false;
-            }
-        }
     }
 
 
