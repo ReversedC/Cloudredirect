@@ -404,131 +404,77 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- In-Game Tools: Dual-tab Switcher (Notes vs Mini Web Browser) -->
+                        <!-- In-Game Web Guides & Mini Browser Launcher Card -->
+                        <Border Background="#16222F" BorderBrush="#24394E" BorderThickness="1"
+                                CornerRadius="8" Padding="12" Margin="0,0,0,14">
+                            <StackPanel>
+                                <DockPanel LastChildFill="False" Margin="0,0,0,6">
+                                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
+                                        <ui:SymbolIcon Symbol="Globe24" FontSize="14" Foreground="#66C0F4" Margin="0,0,6,0" />
+                                        <TextBlock Text="WEB GUIDES &amp; MINI BROWSER" FontSize="11" FontWeight="Bold" Foreground="#66C0F4" />
+                                    </StackPanel>
+                                    <Border Background="#162E1A" BorderBrush="#2C5C26" BorderThickness="1" CornerRadius="4" Padding="5,2" DockPanel.Dock="Right" ToolTip="Built-in Ad &amp; Tracker Blocker active">
+                                        <TextBlock Text="🛡️ AdBlock ON" FontSize="9" FontWeight="Bold" Foreground="#A4D007" />
+                                    </Border>
+                                </DockPanel>
+                                <TextBlock Text="Floating, resizable browser overlay over your game:"
+                                           FontSize="10" Foreground="#8F98A0" Margin="0,0,0,8" />
+
+                                <!-- Main Button to Open Floating Resizable Browser -->
+                                <Button Click="OpenMiniBrowser_Click"
+                                        Style="{StaticResource SteamPlayButtonStyle}"
+                                        HorizontalAlignment="Stretch" Padding="10,7" Margin="0,0,0,8">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <ui:SymbolIcon Symbol="OpenInNewWindow24" FontSize="14" Margin="0,0,8,0" />
+                                        <TextBlock Text="🌐 Open Mini Web Browser ↗" FontSize="11" FontWeight="Bold" />
+                                    </StackPanel>
+                                </Button>
+
+                                <!-- Direct Bookmark Quick Launchers -->
+                                <WrapPanel>
+                                    <Button Click="BookmarkMapGenie_Click" Style="{StaticResource SteamButtonStyle}" Padding="6,3" Margin="0,0,4,4">
+                                        <TextBlock Text="🗺️ MapGenie ↗" FontSize="10" />
+                                    </Button>
+                                    <Button Click="BookmarkSteamGuides_Click" Style="{StaticResource SteamButtonStyle}" Padding="6,3" Margin="0,0,4,4">
+                                        <TextBlock Text="📖 Steam Guides ↗" FontSize="10" />
+                                    </Button>
+                                    <Button Click="BookmarkWiki_Click" Style="{StaticResource SteamButtonStyle}" Padding="6,3" Margin="0,0,4,4">
+                                        <TextBlock Text="📚 Game Wiki ↗" FontSize="10" />
+                                    </Button>
+                                    <Button Click="BookmarkGoogle_Click" Style="{StaticResource SteamButtonStyle}" Padding="6,3" Margin="0,0,4,4">
+                                        <TextBlock Text="🔍 Search ↗" FontSize="10" />
+                                    </Button>
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Game Scratchpad / Notes Section -->
                         <Border Background="#16222F" BorderBrush="#24394E" BorderThickness="1"
                                 CornerRadius="8" Padding="12" Margin="0,0,0,10">
                             <StackPanel>
-                                <!-- Tab Switcher & Browser Controls Header -->
-                                <DockPanel LastChildFill="False" Margin="0,0,0,8">
-                                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
-                                        <Button x:Name="NotesTabBtn" Click="NotesTab_Click"
-                                                Style="{StaticResource SteamActiveTabButtonStyle}"
-                                                Padding="8,4" Margin="0,0,4,0">
-                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <ui:SymbolIcon Symbol="Note24" FontSize="13" Foreground="#E5A130" Margin="0,0,4,0" />
-                                                <TextBlock Text="Notes" FontSize="11" FontWeight="Bold" />
-                                            </StackPanel>
-                                        </Button>
-
-                                        <Button x:Name="WebTabBtn" Click="WebTab_Click"
-                                                Style="{StaticResource SteamButtonStyle}"
-                                                Padding="8,4">
-                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <ui:SymbolIcon Symbol="Globe24" FontSize="13" Foreground="#66C0F4" Margin="0,0,4,0" />
-                                                <TextBlock Text="Web Guides &amp; Maps" FontSize="11" FontWeight="Bold" />
-                                            </StackPanel>
-                                        </Button>
+                                <DockPanel LastChildFill="False" Margin="0,0,0,6">
+                                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
+                                        <ui:SymbolIcon Symbol="Note24" FontSize="14" Foreground="#E5A130" Margin="0,0,6,0" />
+                                        <TextBlock Text="GAME SCRATCHPAD / NOTES" FontSize="11" FontWeight="Bold" Foreground="#66C0F4" />
                                     </StackPanel>
-
-                                    <!-- Right-aligned Actions when Web Tab is Active -->
-                                    <StackPanel x:Name="WebHeaderActions" Orientation="Horizontal" DockPanel.Dock="Right" Visibility="Collapsed" VerticalAlignment="Center">
-                                        <!-- Built-in AdBlock Badge -->
-                                        <Border Background="#162E1A" BorderBrush="#2C5C26" BorderThickness="1" CornerRadius="4" Padding="5,2" Margin="0,0,6,0"
-                                                ToolTip="Built-in Ad &amp; Tracker Blocker active">
-                                            <TextBlock Text="🛡️ AdBlock ON" FontSize="9" FontWeight="Bold" Foreground="#A4D007" />
-                                        </Border>
-
-                                        <!-- Panel Width Expand Toggle Button -->
-                                        <Button x:Name="ExpandDrawerBtn" Click="ToggleExpandDrawer_Click"
-                                                Style="{StaticResource SteamButtonStyle}"
-                                                Padding="6,2" ToolTip="Expand/Shrink panel width for interactive maps">
-                                            <TextBlock x:Name="ExpandBtnText" Text="⤢ 720px" FontSize="10" Foreground="#66C0F4" />
-                                        </Button>
-                                    </StackPanel>
-
                                     <TextBlock x:Name="NotesSavedIndicator" DockPanel.Dock="Right"
                                                Text="Saved" FontSize="10" Foreground="#A4D007" Visibility="Collapsed" VerticalAlignment="Center" />
                                 </DockPanel>
+                                <TextBlock Text="Codes, puzzle clues, coords (auto-saved per game):"
+                                           FontSize="10" Foreground="#8F98A0" Margin="0,0,0,6" />
 
-                                <!-- Tab 1: Game Scratchpad / Notes -->
-                                <Grid x:Name="NotesPanel" Visibility="Visible">
-                                    <StackPanel>
-                                        <TextBlock Text="Codes, puzzle clues, coords (auto-saved per game):"
-                                                   FontSize="10" Foreground="#8F98A0" Margin="0,0,0,6" />
-
-                                        <TextBox x:Name="GameNotesTextBox"
-                                                 AcceptsReturn="True"
-                                                 TextWrapping="Wrap"
-                                                 Height="100"
-                                                 FontSize="11"
-                                                 Background="#0F1720"
-                                                 Foreground="#C6D4DF"
-                                                 BorderBrush="#253A4E"
-                                                 BorderThickness="1"
-                                                 Padding="8,6"
-                                                 VerticalScrollBarVisibility="Auto"
-                                                 TextChanged="GameNotesTextBox_TextChanged" />
-                                    </StackPanel>
-                                </Grid>
-
-                                <!-- Tab 2: Docked Mini Web Browser with Built-in Ad Blocker -->
-                                <Grid x:Name="WebBrowserPanel" Visibility="Collapsed">
-                                    <StackPanel>
-                                        <!-- Quick Bookmarks -->
-                                        <WrapPanel Margin="0,0,0,6">
-                                            <Button Click="BookmarkMapGenie_Click" Style="{StaticResource SteamButtonStyle}" Padding="6,2" Margin="0,0,4,4">
-                                                <TextBlock Text="🗺️ MapGenie" FontSize="10" />
-                                            </Button>
-                                            <Button Click="BookmarkSteamGuides_Click" Style="{StaticResource SteamButtonStyle}" Padding="6,2" Margin="0,0,4,4">
-                                                <TextBlock Text="📖 Steam Guides" FontSize="10" />
-                                            </Button>
-                                            <Button Click="BookmarkWiki_Click" Style="{StaticResource SteamButtonStyle}" Padding="6,2" Margin="0,0,4,4">
-                                                <TextBlock Text="📚 Game Wiki" FontSize="10" />
-                                            </Button>
-                                            <Button Click="BookmarkGoogle_Click" Style="{StaticResource SteamButtonStyle}" Padding="6,2" Margin="0,0,4,4">
-                                                <TextBlock Text="🔍 Search" FontSize="10" />
-                                            </Button>
-                                        </WrapPanel>
-
-                                        <!-- Browser Navigation Bar -->
-                                        <Grid Margin="0,0,0,6">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-
-                                            <Button Grid.Column="0" Click="BrowserBack_Click" Style="{StaticResource SteamButtonStyle}" Padding="6,4" Margin="0,0,3,0" ToolTip="Back">
-                                                <TextBlock Text="◀" FontSize="10" />
-                                            </Button>
-                                            <Button Grid.Column="1" Click="BrowserReload_Click" Style="{StaticResource SteamButtonStyle}" Padding="6,4" Margin="0,0,4,0" ToolTip="Refresh">
-                                                <TextBlock Text="🔄" FontSize="10" />
-                                            </Button>
-                                            <TextBox Grid.Column="2" x:Name="BrowserUrlInput" Text="https://mapgenie.io"
-                                                     FontSize="11" Background="#0F1720" Foreground="#FFFFFF" BorderBrush="#253A4E"
-                                                     BorderThickness="1" Padding="6,4" VerticalContentAlignment="Center" KeyDown="BrowserUrlInput_KeyDown" />
-                                            <Button Grid.Column="3" Click="BrowserGo_Click" Style="{StaticResource SteamButtonStyle}" Padding="8,4" Margin="3,0,0,0">
-                                                <TextBlock Text="Go" FontSize="10" FontWeight="Bold" Foreground="#66C0F4" />
-                                            </Button>
-                                        </Grid>
-
-                                        <!-- Embedded WebView2 Frame -->
-                                        <Border Height="380" Background="#0B1015" BorderBrush="#253A4E" BorderThickness="1" CornerRadius="4" ClipToBounds="True">
-                                            <Grid>
-                                                <wv2:WebView2 x:Name="MiniBrowserWebView" />
-                                                <!-- Loading / AdBlock Overlay -->
-                                                <Border x:Name="BrowserLoadingIndicator" Background="#E60E1620" Visibility="Collapsed" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                        <TextBlock Text="Loading guide..." FontSize="11" Foreground="#66C0F4" HorizontalAlignment="Center" />
-                                                        <TextBlock Text="🛡️ Blocking trackers &amp; ads" FontSize="10" Foreground="#A4D007" HorizontalAlignment="Center" Margin="0,4,0,0" />
-                                                    </StackPanel>
-                                                </Border>
-                                            </Grid>
-                                        </Border>
-                                    </StackPanel>
-                                </Grid>
-
+                                <TextBox x:Name="GameNotesTextBox"
+                                         AcceptsReturn="True"
+                                         TextWrapping="Wrap"
+                                         Height="84"
+                                         FontSize="11"
+                                         Background="#0F1720"
+                                         Foreground="#C6D4DF"
+                                         BorderBrush="#253A4E"
+                                         BorderThickness="1"
+                                         Padding="8,6"
+                                         VerticalScrollBarVisibility="Auto"
+                                         TextChanged="GameNotesTextBox_TextChanged" />
                             </StackPanel>
                         </Border>
 

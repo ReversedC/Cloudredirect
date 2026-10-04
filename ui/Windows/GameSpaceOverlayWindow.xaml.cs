@@ -35,28 +35,6 @@ public partial class GameSpaceOverlayWindow : Window
     private bool _isClosing;
     private string? _currentGameName;
     private bool _forceKillPending;
-    private bool _isDrawerExpanded;
-    private bool _isBrowserInitialized;
-
-    private static readonly string[] AdDomains = new[]
-    {
-        "doubleclick.net",
-        "googlesyndication.com",
-        "googleadservices.com",
-        "adnxs.com",
-        "taboola.com",
-        "outbrain.com",
-        "criteo.com",
-        "amazon-adsystem.com",
-        "scorecardresearch.com",
-        "rubiconproject.com",
-        "pubmatic.com",
-        "adroll.com",
-        "adsystem",
-        "adskeeper",
-        "adservice",
-        "fandom-ads"
-    };
 
     public GameSpaceOverlayWindow()
     {
@@ -117,10 +95,9 @@ public partial class GameSpaceOverlayWindow : Window
     {
         _isClosing = false;
         var workArea = SystemParameters.WorkArea;
-        double currentWidth = _isDrawerExpanded ? 720 : 380;
-        Width = currentWidth;
-        DrawerBorder.Width = currentWidth;
-        Left = workArea.Right - currentWidth;
+        Width = 380;
+        DrawerBorder.Width = 380;
+        Left = workArea.Right - 380;
         Top = workArea.Top;
         Height = workArea.Height;
 
@@ -620,170 +597,14 @@ public partial class GameSpaceOverlayWindow : Window
         _notesDebounceTimer.Start();
     }
 
-    private void NotesTab_Click(object sender, RoutedEventArgs e)
+    private void OpenMiniBrowser_Click(object sender, RoutedEventArgs e)
     {
-        NotesPanel.Visibility = Visibility.Visible;
-        WebBrowserPanel.Visibility = Visibility.Collapsed;
-        WebHeaderActions.Visibility = Visibility.Collapsed;
-
-        NotesTabBtn.Style = (Style)FindResource("SteamActiveTabButtonStyle");
-        WebTabBtn.Style = (Style)FindResource("SteamButtonStyle");
-    }
-
-    private async void WebTab_Click(object sender, RoutedEventArgs e)
-    {
-        NotesPanel.Visibility = Visibility.Collapsed;
-        WebBrowserPanel.Visibility = Visibility.Visible;
-        WebHeaderActions.Visibility = Visibility.Visible;
-
-        WebTabBtn.Style = (Style)FindResource("SteamActiveTabButtonStyle");
-        NotesTabBtn.Style = (Style)FindResource("SteamButtonStyle");
-
-        if (!_isBrowserInitialized)
-        {
-            await InitWebBrowserAsync();
-        }
-    }
-
-    private async Task InitWebBrowserAsync()
-    {
-        if (_isBrowserInitialized) return;
-
-        try
-        {
-            BrowserLoadingIndicator.Visibility = Visibility.Visible;
-
-            var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var userDataFolder = Path.Combine(appData, "CloudRedirect", "gamespace_browser");
-            Directory.CreateDirectory(userDataFolder);
-
-            var options = new CoreWebView2EnvironmentOptions();
-            var env = await CoreWebView2Environment.CreateAsync(null, userDataFolder, options);
-            await MiniBrowserWebView.EnsureCoreWebView2Async(env);
-
-            MiniBrowserWebView.DefaultBackgroundColor = System.Drawing.Color.FromArgb(0x0E, 0x16, 0x20);
-            MiniBrowserWebView.CoreWebView2.Settings.IsStatusBarEnabled = false;
-
-            // 1. Network-level Ad & Tracker Blocker
-            MiniBrowserWebView.CoreWebView2.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All);
-            MiniBrowserWebView.CoreWebView2.WebResourceRequested += CoreWebView2_WebResourceRequested;
-
-            // 2. Cosmetic Ad Banner & Slot remover CSS
-            await MiniBrowserWebView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(@"
-                (function() {
-                    const css = `
-                        .ad-container, .top-ads-container, .bottom-ads-container, 
-                        [id*='google_ads'], [id*='aswift'], [class*='advertisement'], 
-                        .fandom-sticky-header, .gpt-ad, .ad-slot, .ad_wrapper,
-                        [data-ad-unit], ins.adsbygoogle {
-                            display: none !important;
-                            visibility: hidden !important;
-                            height: 0 !important;
-                            max-height: 0 !important;
-                            pointer-events: none !important;
-                        }
-                    `;
-                    const style = document.createElement('style');
-                    style.type = 'text/css';
-                    style.appendChild(document.createTextNode(css));
-                    (document.head || document.documentElement).appendChild(style);
-                })();
-            ");
-
-            MiniBrowserWebView.NavigationStarting += (_, args) =>
-            {
-                BrowserLoadingIndicator.Visibility = Visibility.Visible;
-                BrowserUrlInput.Text = args.Uri;
-            };
-
-            MiniBrowserWebView.NavigationCompleted += (_, _) =>
-            {
-                BrowserLoadingIndicator.Visibility = Visibility.Collapsed;
-            };
-
-            MiniBrowserWebView.CoreWebView2.Navigate(BrowserUrlInput.Text);
-            _isBrowserInitialized = true;
-        }
-        catch (Exception ex)
-        {
-            BrowserLoadingIndicator.Visibility = Visibility.Collapsed;
-            App.LogStartup($"MiniBrowser init failed: {ex.Message}");
-        }
-    }
-
-    private void CoreWebView2_WebResourceRequested(object? sender, CoreWebView2WebResourceRequestedEventArgs e)
-    {
-        var uri = e.Request.Uri;
-        foreach (var domain in AdDomains)
-        {
-            if (uri.Contains(domain, StringComparison.OrdinalIgnoreCase))
-            {
-                // Block network request by returning empty 204 No Content
-                var response = MiniBrowserWebView.CoreWebView2.Environment.CreateWebResourceResponse(
-                    Stream.Null, 204, "No Content", "Content-Type: text/plain");
-                e.Response = response;
-                return;
-            }
-        }
-    }
-
-    private void BrowserBack_Click(object sender, RoutedEventArgs e)
-    {
-        if (_isBrowserInitialized && MiniBrowserWebView.CanGoBack)
-        {
-            MiniBrowserWebView.GoBack();
-        }
-    }
-
-    private void BrowserReload_Click(object sender, RoutedEventArgs e)
-    {
-        if (_isBrowserInitialized)
-        {
-            MiniBrowserWebView.Reload();
-        }
-    }
-
-    private void BrowserGo_Click(object sender, RoutedEventArgs e)
-    {
-        NavigateBrowser(BrowserUrlInput.Text);
-    }
-
-    private void BrowserUrlInput_KeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Enter)
-        {
-            NavigateBrowser(BrowserUrlInput.Text);
-        }
-    }
-
-    private void NavigateBrowser(string input)
-    {
-        string url = input.Trim();
-        if (string.IsNullOrWhiteSpace(url)) return;
-
-        if (!url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
-            !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-        {
-            if (url.Contains('.') && !url.Contains(' '))
-            {
-                url = "https://" + url;
-            }
-            else
-            {
-                url = "https://www.google.com/search?q=" + Uri.EscapeDataString(url);
-            }
-        }
-
-        BrowserUrlInput.Text = url;
-        if (_isBrowserInitialized)
-        {
-            MiniBrowserWebView.CoreWebView2.Navigate(url);
-        }
+        MiniBrowserWindow.Open();
     }
 
     private void BookmarkMapGenie_Click(object sender, RoutedEventArgs e)
     {
-        NavigateBrowser("https://mapgenie.io");
+        MiniBrowserWindow.Open("https://mapgenie.io");
     }
 
     private void BookmarkSteamGuides_Click(object sender, RoutedEventArgs e)
@@ -791,11 +612,11 @@ public partial class GameSpaceOverlayWindow : Window
         var game = ActiveGameTrackerService.CurrentGame;
         if (game != null && game.AppId > 0)
         {
-            NavigateBrowser($"https://steamcommunity.com/app/{game.AppId}/guides/");
+            MiniBrowserWindow.Open($"https://steamcommunity.com/app/{game.AppId}/guides/");
         }
         else
         {
-            NavigateBrowser("https://steamcommunity.com/?subsection=guides");
+            MiniBrowserWindow.Open("https://steamcommunity.com/?subsection=guides");
         }
     }
 
@@ -804,30 +625,17 @@ public partial class GameSpaceOverlayWindow : Window
         var game = ActiveGameTrackerService.CurrentGame;
         if (game != null && !string.IsNullOrWhiteSpace(game.Name))
         {
-            NavigateBrowser($"https://www.google.com/search?q={Uri.EscapeDataString(game.Name + " wiki guide")}");
+            MiniBrowserWindow.Open($"https://www.google.com/search?q={Uri.EscapeDataString(game.Name + " wiki guide")}");
         }
         else
         {
-            NavigateBrowser("https://www.fandom.com");
+            MiniBrowserWindow.Open("https://www.fandom.com");
         }
     }
 
     private void BookmarkGoogle_Click(object sender, RoutedEventArgs e)
     {
-        NavigateBrowser("https://www.google.com");
-    }
-
-    private void ToggleExpandDrawer_Click(object sender, RoutedEventArgs e)
-    {
-        var workArea = SystemParameters.WorkArea;
-        _isDrawerExpanded = !_isDrawerExpanded;
-
-        double targetWidth = _isDrawerExpanded ? Math.Min(740, workArea.Width - 100) : 380;
-        ExpandBtnText.Text = _isDrawerExpanded ? "⤡ 380px" : "⤢ 720px";
-
-        Width = targetWidth;
-        DrawerBorder.Width = targetWidth;
-        Left = workArea.Right - targetWidth;
+        MiniBrowserWindow.Open("https://www.google.com");
     }
 
     private void OpenMainApp_Click(object sender, RoutedEventArgs e)
