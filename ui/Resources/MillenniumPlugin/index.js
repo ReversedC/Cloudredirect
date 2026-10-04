@@ -169,11 +169,21 @@ var PluginEntryPointMain = function () {
                     user-select: none !important;
                     font-family: "Motiva Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
                     transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease !important;
+                    cursor: grab !important;
+                    max-width: calc(100vw - 32px) !important;
+                    width: auto !important;
+                    box-sizing: border-box !important;
                 }
                 .cr-fab-container:hover {
                     border-color: #66c0f4 !important;
                     box-shadow: 0 10px 28px rgba(0, 0, 0, 0.85), 0 0 22px rgba(102, 192, 244, 0.4) !important;
                     transform: translateY(-1px) !important;
+                }
+                .cr-fab-container.cr-fab-dragging,
+                .cr-fab-container.cr-fab-dragging * {
+                    cursor: grabbing !important;
+                    user-select: none !important;
+                    transition: none !important;
                 }
                 .cr-fab-drag {
                     cursor: grab !important;
@@ -243,6 +253,29 @@ var PluginEntryPointMain = function () {
                 }
                 .cr-fab-label {
                     line-height: 1 !important;
+                }
+                @media (max-width: 1200px) {
+                    .cr-fab-container {
+                        padding: 4px 10px 4px 6px !important;
+                        gap: 5px !important;
+                    }
+                    .cr-fab-item {
+                        height: 26px !important;
+                        padding: 0 9px !important;
+                        font-size: 10.5px !important;
+                    }
+                }
+                @media (max-width: 900px) {
+                    .cr-fab-container {
+                        padding: 3px 8px 3px 5px !important;
+                        gap: 4px !important;
+                        border-radius: 20px !important;
+                    }
+                    .cr-fab-item {
+                        height: 24px !important;
+                        padding: 0 7px !important;
+                        font-size: 10px !important;
+                    }
                 }
 
                 .cr-status-dot {
@@ -1179,7 +1212,7 @@ var PluginEntryPointMain = function () {
                         <span class="cr-modal-icon">🛠️</span>
                         <div class="cr-modal-title-text" title="${escapeHtml(tutorial.title)}">
                             <span class="cr-modal-app-name">${escapeHtml(tutorial.game || tutorial.title)}</span>
-                            <span class="cr-modal-guide-badge">PatchWiki</span>
+                            <span class="cr-modal-guide-badge">Tutorial</span>
                         </div>
                     </div>
 
@@ -1218,7 +1251,7 @@ var PluginEntryPointMain = function () {
                 </div>
 
                 <div class="cr-modal-footer">
-                    <span class="cr-footer-status">✓ Steam CEF In-Client Mini Window • PatchWiki Community</span>
+                    <span class="cr-footer-status">✓ Steam CEF In-Client Mini Window • Tutorial Community</span>
                     <span class="cr-footer-link" id="cr-footer-deep-link">${escapeHtml(tutorial.id)}</span>
                 </div>
             `;
@@ -1387,48 +1420,109 @@ var PluginEntryPointMain = function () {
                     fab.className = 'cr-fab-container';
                     doc.body.appendChild(fab);
 
-                    // Add drag behavior to FAB
+                    // Smooth "When drag just drag" anywhere on the FAB with auto-resize docking
                     let isDragging = false;
+                    let hasMoved = false;
                     let dragStartX = 0;
                     let dragStartY = 0;
                     let initialLeft = 0;
                     let initialTop = 0;
 
                     fab.onmousedown = (e) => {
-                        if (e.target.closest('.cr-fab-item') || e.target.closest('button') || e.target.closest('a')) {
-                            return;
-                        }
-                        isDragging = true;
+                        if (e.button !== 0) return; // Left click only
+
                         const rect = fab.getBoundingClientRect();
                         dragStartX = e.clientX;
                         dragStartY = e.clientY;
                         initialLeft = rect.left;
                         initialTop = rect.top;
+                        isDragging = true;
+                        hasMoved = false;
 
                         function onMouseMove(ev) {
                             if (!isDragging) return;
                             const dx = ev.clientX - dragStartX;
                             const dy = ev.clientY - dragStartY;
-                            const maxLeft = (doc.defaultView?.innerWidth || window.innerWidth || 1200) - 80;
-                            const maxTop = (doc.defaultView?.innerHeight || window.innerHeight || 800) - 40;
-                            const newLeft = Math.max(10, Math.min(maxLeft, initialLeft + dx));
-                            const newTop = Math.max(10, Math.min(maxTop, initialTop + dy));
-                            fab.style.left = newLeft + 'px';
-                            fab.style.top = newTop + 'px';
-                            fab.style.right = 'auto';
-                            fab.style.bottom = 'auto';
+                            if (!hasMoved && Math.hypot(dx, dy) > 4) {
+                                hasMoved = true;
+                                fab.classList.add('cr-fab-dragging');
+                            }
+                            if (hasMoved) {
+                                const winW = doc.defaultView?.innerWidth || window.innerWidth || 1200;
+                                const winH = doc.defaultView?.innerHeight || window.innerHeight || 800;
+                                const maxLeft = winW - rect.width - 10;
+                                const maxTop = winH - rect.height - 10;
+                                const newLeft = Math.max(10, Math.min(maxLeft, initialLeft + dx));
+                                const newTop = Math.max(10, Math.min(maxTop, initialTop + dy));
+
+                                fab.style.left = newLeft + 'px';
+                                fab.style.top = newTop + 'px';
+                                fab.style.right = 'auto';
+                                fab.style.bottom = 'auto';
+                            }
                         }
 
                         function onMouseUp() {
-                            isDragging = false;
+                            if (isDragging) {
+                                isDragging = false;
+                                fab.classList.remove('cr-fab-dragging');
+                                if (hasMoved) {
+                                    fab.__wasJustDragged = true;
+                                    setTimeout(() => { fab.__wasJustDragged = false; }, 120);
+
+                                    // Auto-dock to nearest edges so resizing the Steam window keeps FAB in place
+                                    const finalRect = fab.getBoundingClientRect();
+                                    const winW = doc.defaultView?.innerWidth || window.innerWidth || 1200;
+                                    const winH = doc.defaultView?.innerHeight || window.innerHeight || 800;
+
+                                    if (finalRect.left + finalRect.width / 2 > winW / 2) {
+                                        const distRight = Math.max(10, winW - finalRect.right);
+                                        fab.style.right = distRight + 'px';
+                                        fab.style.left = 'auto';
+                                    } else {
+                                        fab.style.left = Math.max(10, finalRect.left) + 'px';
+                                        fab.style.right = 'auto';
+                                    }
+
+                                    if (finalRect.top + finalRect.height / 2 > winH / 2) {
+                                        const distBottom = Math.max(10, winH - finalRect.bottom);
+                                        fab.style.bottom = distBottom + 'px';
+                                        fab.style.top = 'auto';
+                                    } else {
+                                        fab.style.top = Math.max(10, finalRect.top) + 'px';
+                                        fab.style.bottom = 'auto';
+                                    }
+                                }
+                            }
                             doc.removeEventListener('mousemove', onMouseMove);
                             doc.removeEventListener('mouseup', onMouseUp);
                         }
 
                         doc.addEventListener('mousemove', onMouseMove);
                         doc.addEventListener('mouseup', onMouseUp);
-                        e.preventDefault();
                     };
+
+                    // Auto-resize / reposition listener when Steam CEF window resizes
+                    const win = doc.defaultView || window;
+                    if (win && !win.__cr_fab_resize_attached) {
+                        win.__cr_fab_resize_attached = true;
+                        win.addEventListener('resize', () => {
+                            const f = doc.getElementById('cr-library-fab');
+                            if (f && f.style.display !== 'none') {
+                                const rect = f.getBoundingClientRect();
+                                const winW = win.innerWidth || 1200;
+                                const winH = win.innerHeight || 800;
+                                if (rect.right > winW - 10) {
+                                    f.style.left = 'auto';
+                                    f.style.right = '16px';
+                                }
+                                if (rect.bottom > winH - 10) {
+                                    f.style.top = 'auto';
+                                    f.style.bottom = '16px';
+                                }
+                            }
+                        });
+                    }
                 }
 
                 fab.setAttribute('data-appid', strAppId);
@@ -1466,12 +1560,12 @@ var PluginEntryPointMain = function () {
                         <span class="cr-fab-check">&#10003;</span>
                     </div>
                     <div class="cr-fab-divider"></div>
-                    <div class="cr-fab-item cr-fab-wiki" id="cr-fab-wiki-btn" title="${tutorial ? ('Open PatchWiki Guide for ' + escapeHtml(tutorial.title || tutorial.game)) : ('Search PatchWiki Guides for ' + escapeHtml(gameTitle || ('App ' + appId)))}">
+                    <div class="cr-fab-item cr-fab-wiki" id="cr-fab-wiki-btn" title="${tutorial ? ('Open Tutorial for ' + escapeHtml(tutorial.title || tutorial.game)) : ('Search Tutorials for ' + escapeHtml(gameTitle || ('App ' + appId)))}">
                         <svg class="cr-patchwiki-svg" viewBox="0 0 24 24">
                             <path d="M19 2H6c-1.2 0-2 .9-2 2v16c0 1.1.9 2 2 2h13c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4zm13 16H6c-.55 0-1-.45-1-1V5.5c.31.29.7.5 1.17.5H19v14z"/>
                         </svg>
-                        <span class="cr-fab-label">PatchWiki Guide</span>
-                        <span class="cr-patchwiki-pill ${hasTutorial ? 'cr-pill-wiki' : 'cr-pill-search'}">${hasTutorial ? 'Wiki' : 'Guide'}</span>
+                        <span class="cr-fab-label">Tutorial</span>
+                        <span class="cr-patchwiki-pill ${hasTutorial ? 'cr-pill-wiki' : 'cr-pill-search'}">${hasTutorial ? 'Guide' : 'Search'}</span>
                     </div>
                 `;
 
@@ -1479,6 +1573,7 @@ var PluginEntryPointMain = function () {
                 const crBtn = fab.querySelector('#cr-fab-cr-btn');
                 if (crBtn) {
                     crBtn.onclick = (e) => {
+                        if (fab.__wasJustDragged) return;
                         e.stopPropagation();
                         e.preventDefault();
                         launchApp(doc);
@@ -1488,6 +1583,7 @@ var PluginEntryPointMain = function () {
                 const wikiBtn = fab.querySelector('#cr-fab-wiki-btn');
                 if (wikiBtn) {
                     wikiBtn.onclick = (e) => {
+                        if (fab.__wasJustDragged) return;
                         e.stopPropagation();
                         e.preventDefault();
                         if (tutorial) {
@@ -1502,7 +1598,7 @@ var PluginEntryPointMain = function () {
                                 tags: ['guide'],
                                 author: 'Community',
                                 date: new Date().toISOString().split('T')[0],
-                                desc: `Search PatchWiki guides and tutorials for ${gameTitle || appId}`
+                                desc: `Search community tutorials and guides for ${gameTitle || appId}`
                             };
                             openSteamPatchWikiMiniWindow(searchObj, doc);
                         }
