@@ -84,9 +84,8 @@ var PluginEntryPointMain = function () {
 
         function ensureStyles(doc) {
             if (!doc || !doc.head) return;
-            const existing = doc.getElementById('cr-millennium-styles');
-            if (existing) {
-                existing.remove();
+            if (doc.getElementById('cr-millennium-styles')) {
+                return;
             }
             const style = doc.createElement('style');
             style.id = 'cr-millennium-styles';
@@ -611,55 +610,30 @@ var PluginEntryPointMain = function () {
 
         // Helper to locate the exact SuperNav tab bar container in doc
         function findSuperNavInfo(doc) {
-            const allEls = doc.querySelectorAll('div, a, span, button');
+            if (!doc || !doc.body) return null;
 
-            for (const el of allEls) {
-                const t = (el.textContent || '').trim().toUpperCase();
-                if (t === 'COMMUNITY' || t === 'STORE' || t === 'LIBRARY') {
-                    // Traverse up within 5 levels to locate the SuperNav container
-                    let curr = el;
-                    let depth = 0;
-                    while (curr && curr !== doc.body && depth < 5) {
-                        const parent = curr.parentElement;
-                        if (!parent) break;
-                        const pText = (parent.textContent || '').toUpperCase();
-                        if (pText.includes('STORE') && pText.includes('LIBRARY') && pText.includes('COMMUNITY')) {
-                            const children = Array.from(parent.children);
-                            let sampleTab = null;
-                            let lastNavTab = null;
-                            let passedCommunity = false;
+            // Fast targeted check: look for SuperNav container
+            const container = doc.querySelector('div[class*="supernav_container"], nav[class*="supernav"], div[class*="SuperNavContainer"]');
+            if (container && container.children && container.children.length > 0) {
+                const tabs = Array.from(container.children);
+                return {
+                    container: container,
+                    sampleTab: tabs[0],
+                    insertAfter: tabs[tabs.length - 1]
+                };
+            }
 
-                            for (const child of children) {
-                                const cText = (child.textContent || '').trim().toUpperCase();
-                                if (cText.includes('COMMUNITY')) {
-                                    sampleTab = child;
-                                    lastNavTab = child;
-                                    passedCommunity = true;
-                                } else if (cText.includes('STORE') || cText.includes('LIBRARY')) {
-                                    if (!sampleTab) sampleTab = child;
-                                    if (!passedCommunity) lastNavTab = child;
-                                } else if (passedCommunity) {
-                                    if (cText.length > 0 && !cText.includes('HTTP') && !cText.includes('🔍') && !cText.includes('SEARCH') && !cText.includes('✕')) {
-                                        lastNavTab = child;
-                                        sampleTab = child;
-                                    }
-                                    break;
-                                }
-                            }
-
-                            if (!sampleTab) sampleTab = lastNavTab;
-
-                            if (parent && lastNavTab) {
-                                return {
-                                    container: parent,
-                                    sampleTab: sampleTab,
-                                    insertAfter: lastNavTab
-                                };
-                            }
-                        }
-                        curr = parent;
-                        depth++;
-                    }
+            // Fast fallback: look specifically for community or store nav links
+            const navLink = doc.querySelector('a[href*="steamcommunity.com"], a[href*="store.steampowered.com"]');
+            if (navLink) {
+                const tab = navLink.closest('div[class*="supernav_"], div[class*="menuitem"], div') || navLink;
+                const parent = tab.parentElement;
+                if (parent && parent.children && parent.children.length > 0) {
+                    return {
+                        container: parent,
+                        sampleTab: tab,
+                        insertAfter: parent.lastElementChild || tab
+                    };
                 }
             }
 
@@ -671,8 +645,10 @@ var PluginEntryPointMain = function () {
             if (!doc || !doc.body) return;
 
             const existing = doc.getElementById('cloudredirect-supernav-item');
+            if (existing && existing.parentNode) {
+                return;
+            }
             if (existing) {
-                if (existing.parentNode) return;
                 existing.remove();
             }
 
@@ -750,52 +726,21 @@ var PluginEntryPointMain = function () {
             try {
                 if (doc.getElementById('cloudredirect-bottom-btn')) return;
 
-                let targetSibling = null;
-                let parentContainer = null;
-
-                // Strategy 1: Find existing mod buttons like "Steam Unlock"
-                const allElements = doc.querySelectorAll('button, div, a');
-                for (const el of allElements) {
-                    const text = (el.innerText || el.textContent || '').trim();
-                    if (text.includes('Steam Unlock') || (el.className && typeof el.className === 'string' && el.className.includes('activation'))) {
-                        const btn = el.closest('button, [role="button"], div[class*="button"]') || el;
-                        targetSibling = btn;
-                        parentContainer = btn.parentNode;
-                        break;
-                    }
-                }
-
-                // Strategy 2: Find "+ Add a Game" button
-                if (!targetSibling) {
-                    for (const el of allElements) {
-                        const text = (el.innerText || el.textContent || '').trim();
-                        if (text.includes('Add a Game') || text.includes('Add Game')) {
-                            const btn = el.closest('button, [role="button"], div[class*="button"]') || el;
-                            targetSibling = btn;
-                            parentContainer = btn.parentNode;
-                            break;
-                        }
-                    }
-                }
-
-                // Strategy 3: Try standard selectors for Add a Game
-                if (!targetSibling) {
-                    const addGameCandidates = doc.querySelectorAll('button[class*="addgamebutton_"], div[class*="addgamebutton_"], [class*="AddGameButton"]');
-                    for (const el of addGameCandidates) {
-                        if (el.offsetWidth > 0 || el.offsetHeight > 0) {
-                            targetSibling = el;
-                            parentContainer = el.parentNode;
-                            break;
-                        }
-                    }
-                }
-
-                // Strategy 4: Fallback to bottom bar container
-                if (!parentContainer) {
-                    parentContainer = doc.querySelector('div[class*="bottombar_"], div[class*="bottombarcontrols_"], footer, .bottom_bar, [class*="BottomBar"]');
-                }
-
+                // Targeted search ONLY in bottom bar containers
+                const parentContainer = doc.querySelector('div[class*="bottombar_"], div[class*="bottombarcontrols_"], footer, .bottom_bar, [class*="BottomBar"]');
                 if (!parentContainer) return;
+
+                // Find Add Game or Unlock button inside parentContainer only
+                let targetSibling = parentContainer.querySelector('button[class*="addgamebutton_"], div[class*="addgamebutton_"], [class*="AddGameButton"]');
+                if (!targetSibling) {
+                    for (const el of parentContainer.children) {
+                        const text = (el.textContent || '').trim();
+                        if (text.includes('Add') || text.includes('Unlock') || text.includes('Game')) {
+                            targetSibling = el;
+                            break;
+                        }
+                    }
+                }
 
                 const btn = doc.createElement('div');
                 btn.id = 'cloudredirect-bottom-btn';
@@ -853,65 +798,70 @@ var PluginEntryPointMain = function () {
             return null;
         }
 
-        async function loadPatchWikiData() {
-            if (patchWikiCache && Object.keys(patchWikiCache).length > 0) return patchWikiCache;
-            if (isFetchingPatchWiki) return null;
-            isFetchingPatchWiki = true;
+        let patchWikiPromise = null;
 
-            // 1. Try Backend Lua get_patchwiki_tutorials()
-            try {
-                const res = await __call_server_method__("get_patchwiki_tutorials", {});
-                if (res && res.success && res.data) {
-                    const parsed = JSON.parse(res.data);
-                    if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
-                        patchWikiCache = parsed;
-                        isFetchingPatchWiki = false;
-                        return patchWikiCache;
+        function loadPatchWikiData() {
+            if (patchWikiCache && Object.keys(patchWikiCache).length > 0) {
+                return Promise.resolve(patchWikiCache);
+            }
+            if (patchWikiPromise) return patchWikiPromise;
+
+            patchWikiPromise = (async () => {
+                // 1. Try Backend Lua get_patchwiki_tutorials()
+                try {
+                    const res = await __call_server_method__("get_patchwiki_tutorials", {});
+                    if (res && res.success && res.data) {
+                        const parsed = JSON.parse(res.data);
+                        if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
+                            patchWikiCache = parsed;
+                            return patchWikiCache;
+                        }
                     }
-                }
-            } catch (e) { }
+                } catch (e) { }
 
-            // 2. Fetch directly from GitHub Pages index.json
-            try {
-                const resp = await fetch("https://mirzaarsyad74-cmyk.github.io/patchwiki/index.json", { cache: "force-cache" });
-                if (resp.ok) {
-                    const list = await resp.json();
-                    if (Array.isArray(list)) {
-                        const map = {};
-                        for (const item of list) {
-                            const appId = item.appId || extractAppIdFromMetadata(item.id, item.title, item.game);
-                            const tObj = {
-                                id: item.id,
-                                title: item.title,
-                                game: item.game,
-                                desc: item.desc,
-                                tags: item.tags,
-                                author: item.author,
-                                date: item.date,
-                                appId: appId,
-                                url: `https://mirzaarsyad74-cmyk.github.io/patchwiki/?tutorial=${encodeURIComponent(item.id)}#read/${encodeURIComponent(item.id)}`
-                            };
-                            if (appId) {
-                                map[appId.toString()] = tObj;
-                            }
-                            if (item.game) {
-                                const norm = item.game.toLowerCase().replace(/[^a-z0-9]/g, '');
-                                if (norm.length >= 3) {
-                                    map['name:' + norm] = tObj;
+                // 2. Fetch directly from GitHub Pages index.json
+                try {
+                    const resp = await fetch("https://mirzaarsyad74-cmyk.github.io/patchwiki/index.json", { cache: "force-cache" });
+                    if (resp.ok) {
+                        const list = await resp.json();
+                        if (Array.isArray(list)) {
+                            const map = {};
+                            for (const item of list) {
+                                const appId = item.appId || extractAppIdFromMetadata(item.id, item.title, item.game);
+                                const tObj = {
+                                    id: item.id,
+                                    title: item.title,
+                                    game: item.game,
+                                    desc: item.desc,
+                                    tags: item.tags,
+                                    author: item.author,
+                                    date: item.date,
+                                    appId: appId,
+                                    url: `https://mirzaarsyad74-cmyk.github.io/patchwiki/?tutorial=${encodeURIComponent(item.id)}#read/${encodeURIComponent(item.id)}`
+                                };
+                                if (appId) {
+                                    map[appId.toString()] = tObj;
+                                }
+                                if (item.game) {
+                                    const norm = item.game.toLowerCase().replace(/[^a-z0-9]/g, '');
+                                    if (norm.length >= 3) {
+                                        map['name:' + norm] = tObj;
+                                    }
                                 }
                             }
+                            patchWikiCache = map;
+                            return patchWikiCache;
                         }
-                        patchWikiCache = map;
-                        isFetchingPatchWiki = false;
-                        return patchWikiCache;
                     }
+                } catch (e) {
+                    console.warn('[CloudRedirect] PatchWiki web fetch error:', e);
                 }
-            } catch (e) {
-                console.warn('[CloudRedirect] PatchWiki web fetch error:', e);
-            }
 
-            isFetchingPatchWiki = false;
-            return patchWikiCache || {};
+                patchWikiCache = patchWikiCache || {};
+                return patchWikiCache;
+            })();
+
+            return patchWikiPromise;
         }
 
         function getAppDetails(doc, targetEl) {
@@ -996,38 +946,23 @@ var PluginEntryPointMain = function () {
                 } catch (e) { }
             }
 
-            // 3. Fallback: Banner / Hero Images (e.g. https://shared.steamstatic.com/store_item_assets/steam/apps/1020790/header.jpg)
-            if (doc && !appId) {
+            // 3. Fallback: URL check
+            if (!appId) {
                 try {
-                    const imgs = doc.querySelectorAll('img[src*="/apps/"], img[src*="/app/"]');
-                    for (const img of imgs) {
-                        const src = img.getAttribute('src') || '';
-                        const m = src.match(/(?:app|apps)\/(\d{3,9})/i);
-                        if (m) {
-                            const parsed = parseInt(m[1], 10);
-                            if (parsed > 0) {
-                                appId = parsed;
-                                break;
-                            }
-                        }
-                    }
+                    const href = doc.defaultView?.location?.href || window.location?.href || '';
+                    const m = href.match(/(?:app|details)\/(\d{3,9})/i);
+                    if (m) appId = parseInt(m[1], 10);
                 } catch (e) { }
             }
 
-            // 4. Fallback: Links (Store Page, Community Hub, etc.)
+            // 4. Fallback: Hero / Banner image
             if (doc && !appId) {
                 try {
-                    const links = doc.querySelectorAll('a[href*="/app/"], a[href*="steam://nav/games/details/"], a[href*="rungameid/"]');
-                    for (const a of links) {
-                        const href = a.getAttribute('href') || '';
-                        const m = href.match(/(?:app\/|details\/|rungameid\/)(\d{3,9})/i);
-                        if (m) {
-                            const parsed = parseInt(m[1], 10);
-                            if (parsed > 0) {
-                                appId = parsed;
-                                break;
-                            }
-                        }
+                    const hero = doc.querySelector('div[class*="Hero"], div[class*="header"], div[class*="Banner"]');
+                    const img = (hero || doc).querySelector('img[src*="/apps/"], img[src*="/app/"]');
+                    if (img) {
+                        const m = (img.getAttribute('src') || '').match(/(?:app|apps)\/(\d{3,9})/i);
+                        if (m) appId = parseInt(m[1], 10);
                     }
                 } catch (e) { }
             }
@@ -1359,6 +1294,22 @@ var PluginEntryPointMain = function () {
             doc.body.appendChild(modal);
         }
 
+        let isInjecting = false;
+        let injectionDebounceTimers = new WeakMap();
+
+        function scheduleInjectionsForDoc(doc) {
+            if (!doc || !doc.body) return;
+            if (injectionDebounceTimers.has(doc)) {
+                clearTimeout(injectionDebounceTimers.get(doc));
+            }
+
+            const timer = setTimeout(() => {
+                injectionDebounceTimers.delete(doc);
+                runInjectionsForDoc(doc);
+            }, 120);
+            injectionDebounceTimers.set(doc, timer);
+        }
+
         function findGameActionAnchors(doc) {
             if (!doc || !doc.body) return [];
             const anchors = [];
@@ -1370,55 +1321,28 @@ var PluginEntryPointMain = function () {
                 anchors.push({ el, type, container: container || el.parentElement || el });
             }
 
-            // 1. Primary: Install or Play action buttons (AppActionButton)
-            // Production Steam CSS hash: QsZdWtHTlIK9KIKbscNTt
-            const appActionBtns = doc.querySelectorAll('div[class*="QsZdWtHTlIK9KIKbscNTt"], button[class*="QsZdWtHTlIK9KIKbscNTt"], [class*="AppActionButton"], [class*="PlayButton"]');
-            appActionBtns.forEach(btn => {
-                if (btn.offsetWidth > 0 || btn.offsetHeight > 0) {
-                    addAnchor(btn, 'action-button', btn.parentElement);
-                }
-            });
-
-            // 2. Text-based search for Play/Install buttons if not found by class
-            if (anchors.length === 0) {
-                const candidateBtns = doc.querySelectorAll('button, div[role="button"], div[class*="Button"], a[role="button"]');
-                for (const btn of candidateBtns) {
-                    if (btn.offsetWidth === 0 || btn.offsetHeight === 0) continue;
-                    // Ignore sidebar, titlebar, supernav, bottombar
-                    if (btn.closest('#cloudredirect-supernav-item, .cr-supernav-menu, [class*="GameList"], [class*="TitleBar"], [class*="BottomBar"], [class*="bottombar"]')) continue;
-
-                    const t = (btn.innerText || btn.textContent || '').trim().toUpperCase();
-                    if (t.startsWith('INSTALL') || t.startsWith('PLAY') || t.startsWith('LAUNCH') || t.startsWith('RESUME') || t.startsWith('UPDATE') || t.startsWith('PRE-LOAD') || t.startsWith('STREAM')) {
-                        if (btn.offsetWidth >= 35 && btn.offsetHeight >= 18) {
-                            addAnchor(btn, 'action-button', btn.parentElement);
-                        }
-                    }
-                }
-            }
-
-            // 3. ActionButtonAndStatusPanel (_1fHBRg7vFnKszK6EiOdIEY) or ActionRow (_2Gj21aHb49txPLFed_iV9M)
+            // 1. Action panels in Game Details overview
             const panels = doc.querySelectorAll('div[class*="_1fHBRg7vFnKszK6EiOdIEY"], div[class*="_2Gj21aHb49txPLFed_iV9M"], [class*="ActionButtonAndStatusPanel"], [class*="ActionRow"]');
             panels.forEach(p => {
-                if ((p.offsetWidth > 0 || p.offsetHeight > 0) && !seen.has(p)) {
-                    addAnchor(p, 'action-panel', p);
+                if (!seen.has(p)) {
+                    const btn = p.querySelector('div[class*="QsZdWtHTlIK9KIKbscNTt"], button[class*="QsZdWtHTlIK9KIKbscNTt"], [class*="AppActionButton"], [class*="PlayButton"]');
+                    addAnchor(btn || p, 'action-button', p);
                 }
             });
 
-            // 4. Sticky PlayBar (_3fLo166MlaNqP8r8tTyRz / _2zxzStp5qY5M1evOm8keES)
-            const stickyPlayBars = doc.querySelectorAll('div[class*="_3fLo166MlaNqP8r8tTyRz"], div[class*="_2zxzStp5qY5M1evOm8keES"], div[class*="PlayBar"], div[class*="ActionSection"]');
+            // 2. Sticky PlayBar
+            const stickyPlayBars = doc.querySelectorAll('div[class*="_3fLo166MlaNqP8r8tTyRz"], div[class*="_2zxzStp5qY5M1evOm8keES"]');
             stickyPlayBars.forEach(pb => {
-                if ((pb.offsetWidth > 0 || pb.offsetHeight > 0) && !seen.has(pb)) {
+                if (!seen.has(pb)) {
                     addAnchor(pb, 'sticky-bar', pb);
                 }
             });
 
-            // 5. RightControls (_1EAxK56o5a9Nieu5HYkJ4k / _1thLDT_28YIf6OkgIb6n-4 / AppButtons)
+            // 3. Fallback: AppActionButton
             if (anchors.length === 0) {
-                const rightControls = doc.querySelectorAll('div[class*="_1EAxK56o5a9Nieu5HYkJ4k"], div[class*="_1thLDT_28YIf6OkgIb6n-4"], [class*="RightControls"], [class*="AppButtons"]');
-                rightControls.forEach(rc => {
-                    if ((rc.offsetWidth > 0 || rc.offsetHeight > 0) && !seen.has(rc)) {
-                        addAnchor(rc, 'right-controls', rc.parentElement);
-                    }
+                const appActionBtns = doc.querySelectorAll('div[class*="QsZdWtHTlIK9KIKbscNTt"], button[class*="QsZdWtHTlIK9KIKbscNTt"], [class*="AppActionButton"]');
+                appActionBtns.forEach(btn => {
+                    addAnchor(btn, 'action-button', btn.parentElement);
                 });
             }
 
@@ -1441,18 +1365,22 @@ var PluginEntryPointMain = function () {
                     const appId = appDetails?.appId;
                     const gameTitle = appDetails?.title;
 
-                    // If we don't have an appId, skip this anchor
                     if (!appId) continue;
-
                     const strAppId = String(appId);
 
-                    // 1. Handle CloudRedirect Badge
-                    let badge = container.querySelector('.cr-game-badge');
-                    if (badge && badge.getAttribute('data-appid') !== strAppId) {
-                        badge.remove();
-                        badge = null;
+                    // Fast check: if both elements already exist for this exact AppID, do zero work
+                    const existingBadge = container.querySelector('.cr-game-badge[data-appid="' + strAppId + '"]');
+                    const existingBtn = container.querySelector('.cr-patchwiki-btn[data-appid="' + strAppId + '"]');
+                    if (existingBadge && existingBtn) {
+                        continue;
                     }
 
+                    // Remove any stale badge/button from previous game
+                    container.querySelectorAll('.cr-game-badge:not([data-appid="' + strAppId + '"])').forEach(el => el.remove());
+                    container.querySelectorAll('.cr-patchwiki-btn:not([data-appid="' + strAppId + '"])').forEach(el => el.remove());
+
+                    // 1. Create CloudRedirect Badge if missing
+                    let badge = existingBadge;
                     if (!badge) {
                         badge = doc.createElement('div');
                         badge.className = 'cr-game-badge';
@@ -1470,10 +1398,8 @@ var PluginEntryPointMain = function () {
                         };
                     }
 
-                    // 2. Handle PatchWiki Guide Button
-                    let pwBtn = container.querySelector('.cr-patchwiki-btn');
-
-                    // Find matching tutorial from PatchWiki cache
+                    // 2. Create PatchWiki Guide Button if missing
+                    let pwBtn = existingBtn;
                     let tutorial = null;
                     if (patchWikiCache) {
                         tutorial = patchWikiCache[strAppId];
@@ -1492,16 +1418,11 @@ var PluginEntryPointMain = function () {
                         }
                     } else {
                         loadPatchWikiData().then(() => {
-                            if (doc) injectGameBadge(doc);
+                            scheduleInjectionsForDoc(doc);
                         }).catch(() => {});
                     }
 
                     const hasTutorial = Boolean(tutorial);
-                    if (pwBtn && (pwBtn.getAttribute('data-appid') !== strAppId || pwBtn.getAttribute('data-has-tutorial') !== String(hasTutorial))) {
-                        pwBtn.remove();
-                        pwBtn = null;
-                    }
-
                     if (!pwBtn) {
                         pwBtn = doc.createElement('div');
                         pwBtn.className = 'cr-patchwiki-btn';
@@ -1550,20 +1471,14 @@ var PluginEntryPointMain = function () {
                         }
                     }
 
-                    // 3. Insert Elements
-                    if (type === 'action-button' && anchorEl.parentNode === container) {
-                        if (anchorEl.nextSibling !== badge) {
-                            container.insertBefore(badge, anchorEl.nextSibling);
+                    // 3. Insert Elements safely without re-triggering layouts if already positioned
+                    const insertTarget = (anchorEl && anchorEl !== container && anchorEl.parentNode === container) ? anchorEl : container.firstElementChild;
+                    if (insertTarget && insertTarget.parentNode === container) {
+                        if (badge.parentNode !== container || badge.previousSibling !== insertTarget) {
+                            container.insertBefore(badge, insertTarget.nextSibling);
                         }
-                        if (badge.nextSibling !== pwBtn) {
+                        if (pwBtn.parentNode !== container || pwBtn.previousSibling !== badge) {
                             container.insertBefore(pwBtn, badge.nextSibling);
-                        }
-                    } else if (type === 'right-controls' && anchorEl.parentNode === container) {
-                        if (badge.parentNode !== container) {
-                            container.insertBefore(badge, anchorEl);
-                        }
-                        if (pwBtn.parentNode !== container) {
-                            container.insertBefore(pwBtn, anchorEl);
                         }
                     } else {
                         if (badge.parentNode !== container) {
@@ -1580,41 +1495,28 @@ var PluginEntryPointMain = function () {
         }
 
         function runInjectionsForDoc(doc) {
-            if (!doc || !doc.body) return;
+            if (!doc || !doc.body || isInjecting) return;
+            isInjecting = true;
 
             try {
-                // Remove any legacy header buttons or clipped dropdown menus
-                const legacyBtn = doc.getElementById('cloudredirect-header-btn');
-                if (legacyBtn) legacyBtn.remove();
-                doc.querySelectorAll('.cr-nav-btn, [id*="cloudredirect-header"], .cr-dropdown-menu').forEach(el => el.remove());
-            } catch (e) { }
-
-            try {
-                // If supernav item has old classes or wrong height/display, replace it
-                const superItem = doc.getElementById('cloudredirect-supernav-item');
-                if (superItem) {
-                    if (superItem.style.height || superItem.style.display || superItem.querySelector('.cr-supernav-btn')?.style.height) {
-                        superItem.remove();
-                    } else if (superItem.classList.contains('cr-active')) {
-                        superItem.classList.remove('cr-active');
-                    }
-                }
-            } catch (e) { }
-
-            try { ensureStyles(doc); } catch (e) { }
-            try { injectSuperNavTab(doc); } catch (e) { }
-            try { injectBottomBarButton(doc); } catch (e) { }
-            try { injectGameBadge(doc); } catch (e) { }
+                ensureStyles(doc);
+                injectSuperNavTab(doc);
+                injectBottomBarButton(doc);
+                injectGameBadge(doc);
+            } finally {
+                // Keep guard active across microtasks to ignore mutations caused by our own DOM inserts
+                setTimeout(() => {
+                    isInjecting = false;
+                }, 60);
+            }
         }
 
         function runInjections() {
             const docs = getAllSteamDocuments();
             for (const doc of docs) {
                 try {
-                    runInjectionsForDoc(doc);
-                } catch (e) {
-                    console.warn('[CloudRedirect] Injection error:', e);
-                }
+                    scheduleInjectionsForDoc(doc);
+                } catch (e) { }
             }
         }
 
@@ -1626,8 +1528,31 @@ var PluginEntryPointMain = function () {
                 if (!d || !d.body || observedDocs.has(d)) return;
                 observedDocs.add(d);
                 try {
-                    const observer = new MutationObserver(() => {
-                        runInjectionsForDoc(d);
+                    const observer = new MutationObserver((mutations) => {
+                        if (isInjecting) return;
+
+                        // Verify if any mutation was caused by elements outside CloudRedirect
+                        let relevantMutation = false;
+                        for (let i = 0; i < mutations.length; i++) {
+                            const m = mutations[i];
+                            const t = m.target;
+                            if (t && t.nodeType === 1) {
+                                if (t.id === 'cr-patchwiki-modal' ||
+                                    t.id === 'cloudredirect-supernav-item' ||
+                                    t.id === 'cloudredirect-bottom-btn' ||
+                                    t.id === 'cr-millennium-styles' ||
+                                    t.classList?.contains('cr-game-badge') ||
+                                    t.classList?.contains('cr-patchwiki-btn')) {
+                                    continue;
+                                }
+                            }
+                            relevantMutation = true;
+                            break;
+                        }
+
+                        if (relevantMutation) {
+                            scheduleInjectionsForDoc(d);
+                        }
                     });
                     observer.observe(d.body, {
                         childList: true,
@@ -1636,20 +1561,19 @@ var PluginEntryPointMain = function () {
                 } catch (e) { }
             }
 
-            // Periodically check all windows (including after page transitions)
+            // Periodically check all windows lightly
             setInterval(() => {
                 const docs = getAllSteamDocuments();
                 for (const d of docs) {
                     registerDocObserver(d);
                 }
                 runInjections();
-            }, 800);
+            }, 3500);
 
             try {
                 if (typeof Millennium !== 'undefined' && typeof Millennium.AddWindowCreateHook === 'function') {
                     Millennium.AddWindowCreateHook((popup) => {
-                        setTimeout(() => runInjections(), 300);
-                        setTimeout(() => runInjections(), 1500);
+                        setTimeout(() => runInjections(), 400);
                     });
                 }
             } catch (e) { }
