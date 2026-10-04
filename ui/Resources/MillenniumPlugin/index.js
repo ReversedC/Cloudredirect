@@ -488,34 +488,6 @@ var PluginEntryPointMain = function () {
                     gap: 6px;
                     flex-shrink: 0;
                 }
-                .cr-modal-tabs {
-                    display: flex;
-                    background: #0d141b;
-                    border: 1px solid #233748;
-                    border-radius: 4px;
-                    padding: 2px;
-                    margin-right: 6px;
-                }
-                .cr-tab-btn {
-                    background: transparent;
-                    border: none;
-                    color: #8f98a0;
-                    font-size: 11px;
-                    font-weight: 600;
-                    padding: 3px 10px;
-                    border-radius: 3px;
-                    cursor: pointer;
-                    transition: all 0.15s ease;
-                    display: flex;
-                    align-items: center;
-                    gap: 4px;
-                }
-                .cr-tab-btn:hover { color: #ffffff; }
-                .cr-tab-btn.cr-tab-active {
-                    background: #2a475e;
-                    color: #66c0f4;
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-                }
                 .cr-modal-btn {
                     width: 28px;
                     height: 28px;
@@ -548,147 +520,12 @@ var PluginEntryPointMain = function () {
                     position: relative;
                     background: #0b1016;
                 }
-                .cr-tab-pane {
-                    display: none;
-                    width: 100%;
-                    height: 100%;
-                    overflow: hidden;
-                }
-                .cr-tab-pane.cr-pane-active {
-                    display: flex;
-                    flex-direction: column;
-                }
                 .cr-patchwiki-frame {
                     width: 100%;
                     height: 100%;
                     border: none;
                     background: #0f1722;
                 }
-                .cr-reader-container {
-                    flex: 1;
-                    overflow-y: auto;
-                    padding: 20px 28px;
-                    line-height: 1.6;
-                    color: #dcdedf;
-                }
-                .cr-reader-summary-card {
-                    background: #141f2c;
-                    border: 1px solid #233749;
-                    border-radius: 6px;
-                    padding: 14px 18px;
-                    margin-bottom: 20px;
-                }
-                .cr-reader-meta-row {
-                    display: flex;
-                    flex-wrap: wrap;
-                    gap: 16px;
-                    font-size: 12px;
-                    color: #8f98a0;
-                    margin-bottom: 8px;
-                }
-                .cr-reader-tags-row {
-                    display: flex;
-                    flex-wrap: wrap;
-                    gap: 6px;
-                    margin-bottom: 8px;
-                }
-                .cr-reader-tag {
-                    background: rgba(102, 192, 244, 0.15);
-                    border: 1px solid rgba(102, 192, 244, 0.4);
-                    color: #66c0f4;
-                    padding: 2px 8px;
-                    border-radius: 12px;
-                    font-size: 11px;
-                    font-weight: 600;
-                }
-                .cr-reader-desc-text {
-                    font-size: 13px;
-                    color: #c6d4df;
-                    margin: 0;
-                }
-                .cr-reader-body-markdown h1,
-                .cr-reader-body-markdown h2,
-                .cr-reader-body-markdown h3 {
-                    color: #ffffff;
-                    margin-top: 18px;
-                    margin-bottom: 8px;
-                    border-bottom: 1px solid #243547;
-                    padding-bottom: 4px;
-                }
-                .cr-reader-body-markdown h1 { font-size: 18px; }
-                .cr-reader-body-markdown h2 { font-size: 15px; color: #66c0f4; }
-                .cr-reader-body-markdown h3 { font-size: 13px; color: #a4d007; }
-                .cr-reader-body-markdown p { margin: 8px 0; font-size: 13px; }
-                .cr-reader-body-markdown ul,
-                .cr-reader-body-markdown ol { margin: 8px 0 8px 24px; padding: 0; font-size: 13px; }
-                .cr-reader-body-markdown li { margin: 4px 0; }
-                .cr-code-block {
-                    background: #070b0f;
-                    border: 1px solid #1f2f3e;
-                    border-radius: 6px;
-                    margin: 12px 0;
-                    overflow: hidden;
-                }
-                .cr-code-header {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    background: #111a24;
-                    padding: 4px 10px;
-                    font-size: 11px;
-                    color: #8f98a0;
-                    border-bottom: 1px solid #1f2f3e;
-                }
-                .cr-code-copy-btn {
-                    background: #1c2b3a;
-                    border: 1px solid #2f4961;
-                    color: #66c0f4;
-                    border-radius: 3px;
-                    padding: 2px 8px;
-                    font-size: 11px;
-                    cursor: pointer;
-                }
-                .cr-code-copy-btn:hover { background: #273d52; color: #ffffff; }
-                .cr-code-block pre {
-                    margin: 0;
-                    padding: 10px 14px;
-                    overflow-x: auto;
-                    font-family: Consolas, "Courier New", monospace;
-                    font-size: 12px;
-                    color: #9cdcfe;
-                }
-                .cr-inline-code {
-                    background: rgba(0, 0, 0, 0.4);
-                    border: 1px solid #233446;
-                    padding: 1px 5px;
-                    border-radius: 3px;
-                    font-family: Consolas, "Courier New", monospace;
-                    font-size: 12px;
-                    color: #e5c07b;
-                }
-                .cr-guide-link { color: #66c0f4; text-decoration: underline; }
-                .cr-guide-link:hover { color: #ffffff; }
-                .cr-reader-loading { padding: 24px 0; color: #8f98a0; font-size: 13px; }
-                .cr-reader-fallback-box {
-                    padding: 20px;
-                    background: #141f2c;
-                    border: 1px solid #233749;
-                    border-radius: 6px;
-                    margin-top: 14px;
-                    text-align: center;
-                }
-                .cr-switch-to-web-btn {
-                    background: linear-gradient(to right, #47bfff, #1a9fff);
-                    border: none;
-                    border-radius: 4px;
-                    color: #ffffff;
-                    font-weight: 600;
-                    font-size: 12px;
-                    padding: 6px 16px;
-                    cursor: pointer;
-                    margin-top: 8px;
-                }
-                .cr-switch-to-web-btn:hover { background: linear-gradient(to right, #6cd0ff, #38afff); }
                 .cr-modal-footer {
                     height: 26px;
                     background: #0d141b;
@@ -863,14 +700,24 @@ var PluginEntryPointMain = function () {
 
         async function fetchPluginStatus() {
             try {
-                const res = await __call_server_method__("get_status", {});
-                if (res && res.data) {
-                    const parsed = JSON.parse(res.data);
-                    if (parsed && typeof parsed === 'object') {
-                        appStatusCache = parsed;
-                    }
+                let res = await __call_server_method__("get_status", {});
+                if (typeof res === 'string') {
+                    try { res = JSON.parse(res); } catch (e) { }
                 }
-            } catch (e) { }
+                let data = res;
+                if (res && res.data) {
+                    data = res.data;
+                }
+                if (typeof data === 'string') {
+                    const cleanJson = data.replace(/^\uFEFF/, '').trim();
+                    try { data = JSON.parse(cleanJson); } catch (e) { }
+                }
+                if (data && typeof data === 'object') {
+                    appStatusCache = data;
+                }
+            } catch (e) {
+                console.warn('[CloudRedirect] fetchPluginStatus error:', e);
+            }
             return appStatusCache;
         }
 
@@ -930,12 +777,20 @@ var PluginEntryPointMain = function () {
             patchWikiPromise = (async () => {
                 // 1. Try Backend Lua get_patchwiki_tutorials() for instant local load
                 try {
-                    const res = await __call_server_method__("get_patchwiki_tutorials", {});
-                    if (res && res.success && res.data) {
-                        const parsed = JSON.parse(res.data);
-                        if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
-                            patchWikiCache = parsed;
-                        }
+                    let res = await __call_server_method__("get_patchwiki_tutorials", {});
+                    if (typeof res === 'string') {
+                        try { res = JSON.parse(res); } catch (e) { }
+                    }
+                    let data = res;
+                    if (res && res.data) {
+                        data = res.data;
+                    }
+                    if (typeof data === 'string') {
+                        const cleanJson = data.replace(/^\uFEFF/, '').trim();
+                        try { data = JSON.parse(cleanJson); } catch (e) { }
+                    }
+                    if (data && typeof data === 'object' && Object.keys(data).length > 0) {
+                        patchWikiCache = data;
                     }
                 } catch (e) { }
 
@@ -968,16 +823,16 @@ var PluginEntryPointMain = function () {
             let isShortcut = null;
 
             // 1. Traverse React Fiber on targetEl (or active game details container) and its ancestors
-            const detailsEl = targetEl || (doc ? doc.querySelector('div[class*="PlayBar"], div[class*="gameDetail"], div[class*="GameDetail"], div[class*="HeroContainer"], div[class*="appDetails"], div[class*="headerImageContainer"]') : null);
+            const detailsEl = targetEl || (doc ? doc.querySelector('div[class*="PlayBar"], div[class*="playbar"], div[class*="gameDetail"], div[class*="GameDetail"], div[class*="HeroContainer"], div[class*="appDetails"], div[class*="headerImageContainer"]') : null);
             if (detailsEl) {
                 try {
                     let curr = detailsEl;
                     let depth = 0;
-                    while (curr && depth < 20) {
+                    while (curr && depth < 25) {
                         for (const k of Object.keys(curr)) {
                             if (k.startsWith('__reactFiber$') || k.startsWith('__reactInternalInstance$')) {
                                 let fiber = curr[k];
-                                for (let i = 0; fiber && i < 35; i++) {
+                                for (let i = 0; fiber && i < 40; i++) {
                                     const p = fiber.memoizedProps;
                                     if (p) {
                                         if (!appId) {
@@ -1017,18 +872,18 @@ var PluginEntryPointMain = function () {
                 } catch (e) { }
             }
 
-            // 2. Check selected game in library list sidebar (class _1UBpAXP408Ez_L_mXhW5Q9 / Selected)
+            // 2. Selected game in library list sidebar (class _1UBpAXP408Ez_L_mXhW5Q9 / Selected)
             if (doc && (!appId || !title)) {
                 try {
                     const selected = doc.querySelector('div[class*="_1UBpAXP408Ez_L_mXhW5Q9"], div[class*="Selected"], div[class*="selected_"]');
                     if (selected) {
                         let curr = selected;
                         let depth = 0;
-                        while (curr && depth < 10) {
+                        while (curr && depth < 15) {
                             for (const k of Object.keys(curr)) {
                                 if (k.startsWith('__reactFiber$') || k.startsWith('__reactInternalInstance$')) {
                                     let fiber = curr[k];
-                                    for (let i = 0; fiber && i < 25; i++) {
+                                    for (let i = 0; fiber && i < 30; i++) {
                                         const p = fiber.memoizedProps;
                                         if (p) {
                                             if (!appId) {
@@ -1054,12 +909,13 @@ var PluginEntryPointMain = function () {
                                                 const rawShortcut = p.overview?.m_bIsShortcut ?? p.overview?.bIsShortcut ?? p.game?.is_shortcut ?? (p.overview?.app_type === 1073741824);
                                                 if (rawShortcut !== undefined) isShortcut = Boolean(rawShortcut);
                                             }
-                                            if (appId && title) return { appId, title, isOwned: Boolean(isOwned), isFree: Boolean(isFree), isShortcut: Boolean(isShortcut) };
+                                            if (appId && title) break;
                                         }
                                         fiber = fiber.return;
                                     }
                                 }
                             }
+                            if (appId && title) break;
                             curr = curr.parentElement;
                             depth++;
                         }
@@ -1072,7 +928,56 @@ var PluginEntryPointMain = function () {
                 } catch (e) { }
             }
 
-            // 3. Fallback: URL check
+            // 3. Fallback: Check links in game details (Store Page, Community Hub, Discussions, Guides)
+            if (doc && !appId) {
+                try {
+                    const links = doc.querySelectorAll('a[href*="/app/"], a[href*="steam://store/"], a[href*="steam://url/StoreAppPage/"]');
+                    for (const link of links) {
+                        const href = link.getAttribute('href') || '';
+                        const m = href.match(/(?:app|store|StoreAppPage)\/(\d{3,9})/i);
+                        if (m) {
+                            const parsed = parseInt(m[1], 10);
+                            if (parsed > 0) {
+                                appId = parsed;
+                                break;
+                            }
+                        }
+                    }
+                } catch (e) { }
+            }
+
+            // 4. Fallback: Hero / Banner / Logo image or background-image
+            if (doc && !appId) {
+                try {
+                    const imgs = doc.querySelectorAll('img[src*="/apps/"], img[src*="/app/"]');
+                    for (const img of imgs) {
+                        const m = (img.getAttribute('src') || '').match(/(?:app|apps)\/(\d{3,9})/i);
+                        if (m) {
+                            const parsed = parseInt(m[1], 10);
+                            if (parsed > 0) {
+                                appId = parsed;
+                                break;
+                            }
+                        }
+                    }
+                    if (!appId) {
+                        const styledEls = doc.querySelectorAll('div[style*="/apps/"], div[style*="/app/"]');
+                        for (const el of styledEls) {
+                            const style = el.getAttribute('style') || '';
+                            const m = style.match(/(?:app|apps)\/(\d{3,9})/i);
+                            if (m) {
+                                const parsed = parseInt(m[1], 10);
+                                if (parsed > 0) {
+                                    appId = parsed;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                } catch (e) { }
+            }
+
+            // 5. Fallback: URL check
             if (!appId) {
                 try {
                     const href = doc.defaultView?.location?.href || window.location?.href || '';
@@ -1081,29 +986,43 @@ var PluginEntryPointMain = function () {
                 } catch (e) { }
             }
 
-            // 4. Fallback: Hero / Banner image
-            if (doc && !appId) {
+            // 6. Title Fallbacks
+            if (!title && doc) {
                 try {
-                    const hero = doc.querySelector('div[class*="Hero"], div[class*="header"], div[class*="Banner"]');
-                    const img = (hero || doc).querySelector('img[src*="/apps/"], img[src*="/app/"]');
-                    if (img) {
-                        const m = (img.getAttribute('src') || '').match(/(?:app|apps)\/(\d{3,9})/i);
-                        if (m) appId = parseInt(m[1], 10);
+                    const logoImg = doc.querySelector('img[class*="Logo"][alt], img[class*="logo"][alt]');
+                    if (logoImg && logoImg.getAttribute('alt')) {
+                        title = logoImg.getAttribute('alt').trim();
+                    }
+                    if (!title && doc.title) {
+                        let clean = doc.title.replace(/^Steam\s*[-–]\s*/i, '').replace(/\s*[-–]\s*Steam$/i, '').trim();
+                        if (clean && !clean.toLowerCase().includes('library') && !clean.toLowerCase().includes('steam')) {
+                            title = clean;
+                        }
                     }
                 } catch (e) { }
             }
 
-            // 5. Fallback: doc.title for Title
-            if (!title && doc && doc.title) {
-                try {
-                    let clean = doc.title.replace(/^Steam\s*[-–]\s*/i, '').replace(/\s*[-–]\s*Steam$/i, '').trim();
-                    if (clean && !clean.toLowerCase().includes('library') && !clean.toLowerCase().includes('steam')) {
-                        title = clean;
-                    }
-                } catch (e) { }
+            // 7. Infer isOwned and isShortcut if not determined from fiber
+            if (isOwned === null && doc) {
+                const hasPlayBar = doc.querySelector('div[class*="PlayBar"], div[class*="playbar"], div[class*="PlayButton"], button[class*="PlayButton"], button[class*="playButton"], div[class*="InstallButton"], div[class*="UpdateButton"]');
+                if (hasPlayBar) {
+                    isOwned = true;
+                }
             }
 
-            return { appId, title, isOwned: Boolean(isOwned), isFree: Boolean(isFree), isShortcut: Boolean(isShortcut) };
+            if (isShortcut === null && appId) {
+                if (appId > 2147483648) {
+                    isShortcut = true;
+                }
+            }
+
+            return {
+                appId,
+                title,
+                isOwned: isOwned ?? true,
+                isFree: Boolean(isFree),
+                isShortcut: Boolean(isShortcut)
+            };
         }
 
         const knownFreeAppIds = new Set([
@@ -1113,43 +1032,47 @@ var PluginEntryPointMain = function () {
 
         function isAppFree(doc, appId, appDetails) {
             if (appDetails && appDetails.isFree) return true;
-            if (knownFreeAppIds.has(appId)) return true;
-            if (appDetailsFreeCache.has(appId)) return appDetailsFreeCache.get(appId);
+            if (!appId) return false;
+            const numId = parseInt(appId, 10);
+            if (knownFreeAppIds.has(numId)) return true;
+            if (appDetailsFreeCache.has(numId)) return appDetailsFreeCache.get(numId);
 
             if (doc) {
                 const freeTag = doc.querySelector('a[href*="/genre/Free"], a[href*="/tag/113"], div[class*="FreeToPlay"]');
                 if (freeTag) {
-                    appDetailsFreeCache.set(appId, true);
+                    appDetailsFreeCache.set(numId, true);
                     return true;
                 }
             }
 
-            if (!appDetailsFreeCache.has(appId)) {
-                appDetailsFreeCache.set(appId, false);
-                fetch(`https://store.steampowered.com/api/appdetails?appids=${appId}`)
+            if (!appDetailsFreeCache.has(numId)) {
+                appDetailsFreeCache.set(numId, false);
+                fetch(`https://store.steampowered.com/api/appdetails?appids=${numId}`)
                     .then(r => r.json())
                     .then(data => {
-                        const isFree = data && data[appId] && data[appId].data && data[appId].data.is_free === true;
+                        const isFree = data && data[numId] && data[numId].data && data[numId].data.is_free === true;
                         if (isFree) {
-                            appDetailsFreeCache.set(appId, true);
+                            appDetailsFreeCache.set(numId, true);
                             getAllSteamDocuments().forEach(d => {
-                                const f = d.getElementById('cr-library-fab');
-                                if (f && f.getAttribute('data-appid') === String(appId)) {
-                                    injectGameFAB(d);
-                                }
+                                scheduleInjectionsForDoc(d);
                             });
                         }
                     })
                     .catch(() => {});
             }
 
-            return appDetailsFreeCache.get(appId) || false;
+            return appDetailsFreeCache.get(numId) || false;
         }
 
         function isAppRedirected(appId, appDetails) {
             if (appDetails && appDetails.isShortcut) return true;
+            if (!appId) return false;
+            const strId = String(appId);
+            const numId = parseInt(appId, 10);
             if (appStatusCache && Array.isArray(appStatusCache.unlockedAppIds)) {
-                if (appStatusCache.unlockedAppIds.includes(appId)) return true;
+                if (appStatusCache.unlockedAppIds.some(id => String(id) === strId || Number(id) === numId)) {
+                    return true;
+                }
             }
             return false;
         }
@@ -1162,121 +1085,6 @@ var PluginEntryPointMain = function () {
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#39;');
-        }
-
-        function renderMarkdown(md) {
-            if (!md) return '';
-            let html = escapeHtml(md);
-
-            // Code blocks
-            html = html.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (match, lang, code) => {
-                return `<div class="cr-code-block"><div class="cr-code-header"><span>${lang || 'Code'}</span><button class="cr-code-copy-btn">Copy</button></div><pre><code>${code}</code></pre></div>`;
-            });
-
-            // Inline code
-            html = html.replace(/`([^`]+)`/g, '<code class="cr-inline-code">$1</code>');
-
-            // Headers
-            html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
-            html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
-            html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
-
-            // Bold
-            html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-
-            // Links
-            html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="cr-guide-link">$1</a>');
-
-            // Blockquotes
-            html = html.replace(/^> (.*$)/gim, '<blockquote>$1</blockquote>');
-
-            // Unordered lists
-            html = html.replace(/^\s*[-*]\s+(.*$)/gim, '<li>$1</li>');
-            html = html.replace(/(<li>.*<\/li>)/gms, '<ul>$1</ul>');
-
-            // Line breaks
-            html = html.replace(/\n\n+/g, '</p><p>').replace(/\n/g, '<br>');
-            return `<p>${html}</p>`;
-        }
-
-        async function loadReaderContent(modal, tutorial) {
-            const container = modal.querySelector('#cr-reader-content-area');
-            if (!container) return;
-
-            const tagsHtml = (tutorial.tags && Array.isArray(tutorial.tags))
-                ? tutorial.tags.map(t => `<span class="cr-reader-tag">#${escapeHtml(t)}</span>`).join(' ')
-                : '';
-
-            container.innerHTML = `
-                <div class="cr-reader-summary-card">
-                    <div class="cr-reader-meta-row">
-                        ${tutorial.author ? `<span class="cr-meta-item">👤 <b>Author:</b> ${escapeHtml(tutorial.author)}</span>` : ''}
-                        ${tutorial.date ? `<span class="cr-meta-item">📅 <b>Updated:</b> ${escapeHtml(tutorial.date)}</span>` : ''}
-                        ${tutorial.appId ? `<span class="cr-meta-item">🆔 <b>AppID:</b> ${escapeHtml(tutorial.appId.toString())}</span>` : ''}
-                    </div>
-                    ${tagsHtml ? `<div class="cr-reader-tags-row">${tagsHtml}</div>` : ''}
-                    ${tutorial.desc ? `<p class="cr-reader-desc-text">${escapeHtml(tutorial.desc)}</p>` : ''}
-                </div>
-                <div class="cr-reader-body-markdown">
-                    <div class="cr-reader-loading">⏳ Loading full tutorial guide content...</div>
-                </div>
-            `;
-
-            const bodyArea = container.querySelector('.cr-reader-body-markdown');
-
-            try {
-                let chunkFile = null;
-                if (manifestCache && manifestCache[tutorial.id]) {
-                    chunkFile = manifestCache[tutorial.id];
-                } else {
-                    const mfResp = await fetch("https://mirzaarsyad74-cmyk.github.io/patchwiki/manifest.json");
-                    if (mfResp.ok) {
-                        manifestCache = await mfResp.json();
-                        chunkFile = manifestCache[tutorial.id];
-                    }
-                }
-
-                if (chunkFile) {
-                    const chunkResp = await fetch("https://mirzaarsyad74-cmyk.github.io/patchwiki/" + chunkFile);
-                    if (chunkResp.ok) {
-                        const chunkData = await chunkResp.json();
-                        let guide = null;
-                        if (Array.isArray(chunkData)) {
-                            guide = chunkData.find(x => x.id === tutorial.id);
-                        } else if (chunkData && typeof chunkData === 'object') {
-                            guide = chunkData[tutorial.id] || chunkData;
-                        }
-
-                        if (guide && guide.content) {
-                            bodyArea.innerHTML = renderMarkdown(guide.content);
-                            bodyArea.querySelectorAll('.cr-code-copy-btn').forEach(btn => {
-                                btn.onclick = () => {
-                                    const code = btn.closest('.cr-code-block')?.querySelector('code')?.innerText || '';
-                                    if (navigator.clipboard) {
-                                        navigator.clipboard.writeText(code);
-                                        const orig = btn.textContent;
-                                        btn.textContent = '✓ Copied!';
-                                        setTimeout(() => btn.textContent = orig, 2000);
-                                    }
-                                };
-                            });
-                            return;
-                        }
-                    }
-                }
-            } catch (e) {
-                console.warn('[CloudRedirect] Error fetching tutorial chunk:', e);
-            }
-
-            bodyArea.innerHTML = `
-                <div class="cr-reader-fallback-box">
-                    <p>Full interactive guide available in Web View.</p>
-                    <button class="cr-switch-to-web-btn">Switch to 🌐 Web View</button>
-                </div>
-            `;
-            bodyArea.querySelector('.cr-switch-to-web-btn')?.addEventListener('click', () => {
-                modal.querySelector('.cr-tab-btn[data-tab="web"]')?.click();
-            });
         }
 
         function getBustedTutorialUrl(url) {
@@ -1314,14 +1122,6 @@ var PluginEntryPointMain = function () {
                 const deepLink = modal.querySelector('#cr-footer-deep-link');
                 if (deepLink) deepLink.textContent = tutorial.id;
 
-                if (tutorial.id && tutorial.id.startsWith('search-')) {
-                    modal.querySelector('.cr-tab-btn[data-tab="web"]')?.click();
-                } else {
-                    const activeTab = modal.querySelector('.cr-tab-btn.cr-tab-active');
-                    if (activeTab && activeTab.getAttribute('data-tab') === 'reader') {
-                        loadReaderContent(modal, tutorial);
-                    }
-                }
                 return;
             }
 
@@ -1339,11 +1139,6 @@ var PluginEntryPointMain = function () {
                     </div>
 
                     <div class="cr-modal-actions">
-                        <div class="cr-modal-tabs">
-                            <button class="cr-tab-btn cr-tab-active" data-tab="web" title="Interactive Web View">🌐 Web</button>
-                            <button class="cr-tab-btn" data-tab="reader" title="Fast Offline Reader">📖 Reader</button>
-                        </div>
-
                         <button class="cr-modal-btn cr-btn-refresh" title="Refresh Guides (Auto-update)" id="cr-modal-refresh-btn">&#x21bb;</button>
 
                         <button class="cr-modal-btn cr-btn-external" title="Open in External Browser / Steam Overlay" id="cr-modal-open-external">
@@ -1363,15 +1158,7 @@ var PluginEntryPointMain = function () {
                 </div>
 
                 <div class="cr-modal-body">
-                    <div class="cr-tab-pane cr-pane-web cr-pane-active">
-                        <iframe class="cr-patchwiki-frame" src="${getBustedTutorialUrl(tutorial.url)}" allow="clipboard-read; clipboard-write; fullscreen"></iframe>
-                    </div>
-
-                    <div class="cr-tab-pane cr-pane-reader">
-                        <div class="cr-reader-container">
-                            <div id="cr-reader-content-area"></div>
-                        </div>
-                    </div>
+                    <iframe class="cr-patchwiki-frame" src="${getBustedTutorialUrl(tutorial.url)}" allow="clipboard-read; clipboard-write; fullscreen"></iframe>
                 </div>
 
                 <div class="cr-modal-footer">
@@ -1389,7 +1176,7 @@ var PluginEntryPointMain = function () {
             let initialTop = 0;
 
             header.onmousedown = (e) => {
-                if (e.target.closest('button') || e.target.closest('.cr-modal-tabs') || e.target.closest('a')) {
+                if (e.target.closest('button') || e.target.closest('a')) {
                     return;
                 }
                 if (modal.classList.contains('cr-modal-maximized')) return;
@@ -1437,26 +1224,7 @@ var PluginEntryPointMain = function () {
                 e.preventDefault();
             };
 
-            // 2. Tab switching
-            const tabBtns = modal.querySelectorAll('.cr-tab-btn');
-            tabBtns.forEach(btn => {
-                btn.onclick = (e) => {
-                    e.stopPropagation();
-                    const tab = btn.getAttribute('data-tab');
-                    modal.querySelectorAll('.cr-tab-btn').forEach(b => b.classList.remove('cr-tab-active'));
-                    btn.classList.add('cr-tab-active');
-
-                    modal.querySelectorAll('.cr-tab-pane').forEach(p => p.classList.remove('cr-pane-active'));
-                    const pane = modal.querySelector(`.cr-pane-${tab}`);
-                    if (pane) pane.classList.add('cr-pane-active');
-
-                    if (tab === 'reader') {
-                        loadReaderContent(modal, currentModalTutorial);
-                    }
-                };
-            });
-
-            // 3. Control buttons
+            // 2. Control buttons
             const refreshBtn = modal.querySelector('#cr-modal-refresh-btn');
             if (refreshBtn) {
                 refreshBtn.onclick = async (e) => {
@@ -1476,10 +1244,6 @@ var PluginEntryPointMain = function () {
                         if (currentModalTutorial) {
                             iframe.src = getBustedTutorialUrl(currentModalTutorial.url);
                         }
-                    }
-                    const activeTab = modal.querySelector('.cr-tab-btn.cr-tab-active');
-                    if (activeTab && activeTab.getAttribute('data-tab') === 'reader' && currentModalTutorial) {
-                        loadReaderContent(modal, currentModalTutorial);
                     }
                 };
             }
@@ -1558,12 +1322,6 @@ var PluginEntryPointMain = function () {
                 }
 
                 const strAppId = String(appId);
-
-                // If FAB already exists for this exact AppID, make sure it's visible and return
-                if (fab && fab.getAttribute('data-appid') === strAppId) {
-                    fab.style.display = 'inline-flex';
-                    return;
-                }
 
                 if (!fab) {
                     fab = doc.createElement('div');
@@ -1676,19 +1434,20 @@ var PluginEntryPointMain = function () {
                     }
                 }
 
-                fab.setAttribute('data-appid', strAppId);
-                fab.style.display = 'inline-flex';
-
                 let tutorial = null;
                 if (patchWikiCache) {
-                    tutorial = patchWikiCache[strAppId];
-                    if (!tutorial && gameTitle) {
+                    // Match ONLY by exact Steam AppID
+                    if (strAppId && patchWikiCache[strAppId]) {
+                        tutorial = patchWikiCache[strAppId];
+                    } else if (gameTitle) {
+                        // Strict fallback: ONLY if title exactly matches, with minimum 4 chars (NEVER substring/includes)
                         const normTitle = gameTitle.toLowerCase().replace(/[^a-z0-9]/g, '');
-                        if (normTitle.length >= 3) {
+                        if (normTitle.length >= 4) {
                             for (const k of Object.keys(patchWikiCache)) {
                                 const tItem = patchWikiCache[k];
+                                if (!tItem) continue;
                                 const itemNorm = (tItem.game || tItem.title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-                                if (itemNorm.includes(normTitle) || normTitle.includes(itemNorm)) {
+                                if (itemNorm.length >= 4 && itemNorm === normTitle) {
                                     tutorial = tItem;
                                     break;
                                 }
@@ -1697,6 +1456,12 @@ var PluginEntryPointMain = function () {
                     }
                 } else {
                     loadPatchWikiData().then(() => {
+                        scheduleInjectionsForDoc(doc);
+                    }).catch(() => {});
+                }
+
+                if (!appStatusCache) {
+                    fetchPluginStatus().then(() => {
                         scheduleInjectionsForDoc(doc);
                     }).catch(() => {});
                 }
@@ -1713,12 +1478,12 @@ var PluginEntryPointMain = function () {
                 // If neither button should be shown, hide FAB completely!
                 if (!shouldShowTutorial && !shouldShowCloudRedirect) {
                     fab.style.display = 'none';
+                    fab.removeAttribute('data-cr-key');
                     return;
                 }
 
-                const currentKey = `${strAppId}:${shouldShowCloudRedirect ? 1 : 0}:${shouldShowTutorial ? 1 : 0}`;
-                if (fab.getAttribute('data-cr-key') === currentKey) {
-                    fab.style.display = 'inline-flex';
+                const currentKey = `${strAppId}:${shouldShowCloudRedirect ? 1 : 0}:${shouldShowTutorial ? 1 : 0}:${tutorial?.id || ''}`;
+                if (fab.getAttribute('data-cr-key') === currentKey && fab.style.display !== 'none') {
                     return;
                 }
 
@@ -1892,22 +1657,26 @@ var PluginEntryPointMain = function () {
         }
 
         const index = async function PluginMain() {
+            try {
+                await Promise.allSettled([fetchPluginStatus(), loadPatchWikiData()]);
+            } catch (e) { }
+
             setupObserver();
-            loadPatchWikiData().catch(() => {});
-            fetchPluginStatus().catch(() => {});
 
             // Auto-refresh PatchWiki tutorials & status every 2.5 minutes so Steam guides are always live
             setInterval(() => {
                 refreshPatchWikiData().then(() => {
                     const docs = getAllSteamDocuments();
                     for (const d of docs) {
-                        const fab = d.getElementById('cr-library-fab');
-                        if (fab && fab.style.display !== 'none') {
-                            injectGameFAB(d);
-                        }
+                        scheduleInjectionsForDoc(d);
                     }
                 }).catch(() => {});
-                fetchPluginStatus().catch(() => {});
+                fetchPluginStatus().then(() => {
+                    const docs = getAllSteamDocuments();
+                    for (const d of docs) {
+                        scheduleInjectionsForDoc(d);
+                    }
+                }).catch(() => {});
             }, 150000);
 
             try {
