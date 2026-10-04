@@ -199,31 +199,36 @@ var PluginEntryPointMain = function () {
 
                 /* Game Detail Page Badge */
                 .cr-game-badge {
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 6px;
-                    background: rgba(22, 34, 46, 0.85);
-                    border: 1px solid #2d4c6b;
-                    border-radius: 14px;
-                    padding: 0 10px;
-                    height: 28px !important;
-                    line-height: 28px !important;
+                    display: inline-flex !important;
+                    align-items: center !important;
+                    gap: 6px !important;
+                    background: rgba(22, 34, 46, 0.9) !important;
+                    border: 1px solid #2d4c6b !important;
+                    border-radius: 4px !important;
+                    padding: 0 10px !important;
+                    height: 32px !important;
+                    min-height: 32px !important;
+                    max-height: 32px !important;
+                    line-height: 32px !important;
                     white-space: nowrap !important;
-                    font-family: "Motiva Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-                    font-size: 11px;
-                    font-weight: 600;
-                    color: #c6d4df;
-                    cursor: pointer;
-                    transition: all 0.2s ease;
-                    user-select: none;
-                    margin-left: 10px;
-                    vertical-align: middle;
+                    font-family: "Motiva Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+                    font-size: 11px !important;
+                    font-weight: 600 !important;
+                    color: #c6d4df !important;
+                    cursor: pointer !important;
+                    transition: all 0.2s ease !important;
+                    user-select: none !important;
+                    margin: 0 4px !important;
+                    vertical-align: middle !important;
+                    box-sizing: border-box !important;
+                    flex-shrink: 0 !important;
+                    z-index: 10 !important;
                 }
                 .cr-game-badge:hover {
-                    background: #233b52;
-                    border-color: #66c0f4;
-                    color: #ffffff;
-                    box-shadow: 0 0 10px rgba(102, 192, 244, 0.4);
+                    background: #233b52 !important;
+                    border-color: #66c0f4 !important;
+                    color: #ffffff !important;
+                    box-shadow: 0 0 10px rgba(102, 192, 244, 0.4) !important;
                 }
                 .cr-game-badge-check {
                     color: #a4d007;
@@ -234,33 +239,38 @@ var PluginEntryPointMain = function () {
 
                 /* Game Page Button: .cr-patchwiki-btn */
                 .cr-patchwiki-btn {
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 6px;
-                    background: linear-gradient(135deg, rgba(28, 52, 75, 0.95), rgba(16, 32, 48, 0.95));
-                    border: 1px solid #3d6e99;
-                    border-radius: 14px;
-                    padding: 0 10px;
-                    height: 28px !important;
-                    line-height: 28px !important;
+                    display: inline-flex !important;
+                    align-items: center !important;
+                    gap: 6px !important;
+                    background: linear-gradient(135deg, rgba(28, 52, 75, 0.95), rgba(16, 32, 48, 0.95)) !important;
+                    border: 1px solid #3d6e99 !important;
+                    border-radius: 4px !important;
+                    padding: 0 10px !important;
+                    height: 32px !important;
+                    min-height: 32px !important;
+                    max-height: 32px !important;
+                    line-height: 32px !important;
                     white-space: nowrap !important;
-                    font-family: "Motiva Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-                    font-size: 11px;
-                    font-weight: 600;
-                    color: #66c0f4;
-                    cursor: pointer;
-                    transition: all 0.2s ease;
-                    user-select: none;
-                    margin-left: 8px;
-                    vertical-align: middle;
-                    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+                    font-family: "Motiva Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+                    font-size: 11px !important;
+                    font-weight: 600 !important;
+                    color: #66c0f4 !important;
+                    cursor: pointer !important;
+                    transition: all 0.2s ease !important;
+                    user-select: none !important;
+                    margin: 0 4px !important;
+                    vertical-align: middle !important;
+                    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35) !important;
+                    box-sizing: border-box !important;
+                    flex-shrink: 0 !important;
+                    z-index: 10 !important;
                 }
                 .cr-patchwiki-btn:hover {
-                    background: linear-gradient(135deg, rgba(38, 72, 104, 1), rgba(24, 46, 68, 1));
-                    border-color: #66c0f4;
-                    color: #ffffff;
-                    box-shadow: 0 0 12px rgba(102, 192, 244, 0.5);
-                    transform: translateY(-1px);
+                    background: linear-gradient(135deg, rgba(38, 72, 104, 1), rgba(24, 46, 68, 1)) !important;
+                    border-color: #66c0f4 !important;
+                    color: #ffffff !important;
+                    box-shadow: 0 0 12px rgba(102, 192, 244, 0.5) !important;
+                    transform: translateY(-1px) !important;
                 }
                 .cr-patchwiki-svg {
                     width: 14px;
@@ -737,75 +747,81 @@ var PluginEntryPointMain = function () {
         // 1. Inject Button in Bottom Bar (next to Add Game / Steam Unlock)
         function injectBottomBarButton(doc) {
             if (!doc || !doc.body) return;
-            if (doc.getElementById('cloudredirect-bottom-btn')) return;
+            try {
+                if (doc.getElementById('cloudredirect-bottom-btn')) return;
 
-            let targetSibling = null;
-            let parentContainer = null;
+                let targetSibling = null;
+                let parentContainer = null;
 
-            // Strategy 1: Find existing mod buttons like "Steam Unlock"
-            const allElements = doc.querySelectorAll('button, div, a');
-            for (const el of allElements) {
-                const text = el.textContent || '';
-                if (text.includes('Steam Unlock') || (el.className && typeof el.className === 'string' && el.className.includes('activation'))) {
-                    targetSibling = el;
-                    parentContainer = el.parentNode;
-                    break;
-                }
-            }
-
-            // Strategy 2: Find "+ Add a Game" button
-            if (!targetSibling) {
+                // Strategy 1: Find existing mod buttons like "Steam Unlock"
+                const allElements = doc.querySelectorAll('button, div, a');
                 for (const el of allElements) {
-                    const text = el.textContent || '';
-                    if (text.includes('Add a Game') || text.includes('Add Game')) {
-                        targetSibling = el;
-                        parentContainer = el.parentNode;
+                    const text = (el.innerText || el.textContent || '').trim();
+                    if (text.includes('Steam Unlock') || (el.className && typeof el.className === 'string' && el.className.includes('activation'))) {
+                        const btn = el.closest('button, [role="button"], div[class*="button"]') || el;
+                        targetSibling = btn;
+                        parentContainer = btn.parentNode;
                         break;
                     }
                 }
-            }
 
-            // Strategy 3: Try standard selectors for Add a Game
-            if (!targetSibling) {
-                const addGameCandidates = doc.querySelectorAll('button[class*="addgamebutton_"], div[class*="addgamebutton_"], [class*="AddGameButton"]');
-                for (const el of addGameCandidates) {
-                    if (el.offsetParent !== null || el.offsetWidth > 0) {
-                        targetSibling = el;
-                        parentContainer = el.parentNode;
-                        break;
+                // Strategy 2: Find "+ Add a Game" button
+                if (!targetSibling) {
+                    for (const el of allElements) {
+                        const text = (el.innerText || el.textContent || '').trim();
+                        if (text.includes('Add a Game') || text.includes('Add Game')) {
+                            const btn = el.closest('button, [role="button"], div[class*="button"]') || el;
+                            targetSibling = btn;
+                            parentContainer = btn.parentNode;
+                            break;
+                        }
                     }
                 }
-            }
 
-            // Strategy 4: Fallback to bottom bar container
-            if (!parentContainer) {
-                parentContainer = doc.querySelector('div[class*="bottombar_"], div[class*="bottombarcontrols_"], footer, .bottom_bar');
-            }
+                // Strategy 3: Try standard selectors for Add a Game
+                if (!targetSibling) {
+                    const addGameCandidates = doc.querySelectorAll('button[class*="addgamebutton_"], div[class*="addgamebutton_"], [class*="AddGameButton"]');
+                    for (const el of addGameCandidates) {
+                        if (el.offsetWidth > 0 || el.offsetHeight > 0) {
+                            targetSibling = el;
+                            parentContainer = el.parentNode;
+                            break;
+                        }
+                    }
+                }
 
-            if (!parentContainer) return;
+                // Strategy 4: Fallback to bottom bar container
+                if (!parentContainer) {
+                    parentContainer = doc.querySelector('div[class*="bottombar_"], div[class*="bottombarcontrols_"], footer, .bottom_bar, [class*="BottomBar"]');
+                }
 
-            const btn = doc.createElement('div');
-            btn.id = 'cloudredirect-bottom-btn';
-            btn.className = 'cr-bottom-bar-btn';
-            btn.title = 'CloudRedirect v2.9.74 (Save Protection Active - Click to Open App)';
-            btn.innerHTML = `
-                ${cloudSvg}
-                <span>CloudRedirect</span>
-                <span class="cr-status-dot"></span>
-            `;
+                if (!parentContainer) return;
 
-            btn.onclick = (e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                launchApp(doc);
-            };
+                const btn = doc.createElement('div');
+                btn.id = 'cloudredirect-bottom-btn';
+                btn.className = 'cr-bottom-bar-btn';
+                btn.title = 'CloudRedirect (Save Protection Active - Click to Open App)';
+                btn.innerHTML = `
+                    ${cloudSvg}
+                    <span>CloudRedirect</span>
+                    <span class="cr-status-dot"></span>
+                `;
 
-            if (targetSibling && targetSibling.parentNode === parentContainer) {
-                targetSibling.parentNode.insertBefore(btn, targetSibling.nextSibling);
-            } else if (parentContainer.firstChild) {
-                parentContainer.insertBefore(btn, parentContainer.firstChild);
-            } else {
-                parentContainer.appendChild(btn);
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    launchApp(doc);
+                };
+
+                if (targetSibling && targetSibling.parentNode === parentContainer) {
+                    parentContainer.insertBefore(btn, targetSibling.nextSibling);
+                } else if (parentContainer.firstChild) {
+                    parentContainer.insertBefore(btn, parentContainer.firstChild);
+                } else {
+                    parentContainer.appendChild(btn);
+                }
+            } catch (err) {
+                console.warn('[CloudRedirect] injectBottomBarButton error:', err);
             }
         }
 
@@ -898,64 +914,34 @@ var PluginEntryPointMain = function () {
             return patchWikiCache || {};
         }
 
-        function getCurrentAppId(doc, bar) {
-            // 1. Check bar and ancestors for data-appid
-            if (bar) {
-                const withData = bar.closest('[data-appid]') || bar.closest('[data-app-id]') || bar.closest('[data-gameid]');
-                if (withData) {
-                    const val = withData.getAttribute('data-appid') || withData.getAttribute('data-app-id') || withData.getAttribute('data-gameid');
-                    const num = parseInt(val, 10);
-                    if (num > 0) return num;
-                }
-            }
+        function getAppDetails(doc, targetEl) {
+            let appId = null;
+            let title = null;
 
-            // 2. Check doc elements with data-appid
-            if (doc) {
-                const appDetailsEl = doc.querySelector('div[class*="appdetails_"][data-appid], div[class*="gameheader_"][data-appid], div[class*="appdetailssection_"][data-appid], [class*="AppDetails"][data-appid]');
-                if (appDetailsEl) {
-                    const val = appDetailsEl.getAttribute('data-appid');
-                    const num = parseInt(val, 10);
-                    if (num > 0) return num;
-                }
-                const anyAppIdEl = doc.querySelector('div[class*="appdetails"] [data-appid], div[class*="playbar"] [data-appid]');
-                if (anyAppIdEl) {
-                    const val = anyAppIdEl.getAttribute('data-appid');
-                    const num = parseInt(val, 10);
-                    if (num > 0) return num;
-                }
-            }
-
-            // 3. Search links in bar or doc
-            const searchContainers = [bar, doc].filter(Boolean);
-            for (const c of searchContainers) {
-                const links = c.querySelectorAll('a[href*="/app/"], a[href*="steam://nav/games/details/"], a[href*="rungameid/"], a[href*="appid="]');
-                for (const a of links) {
-                    const href = a.getAttribute('href') || '';
-                    const m = href.match(/(?:app\/|details\/|rungameid\/|appid=)(\d{3,9})/i);
-                    if (m) {
-                        const num = parseInt(m[1], 10);
-                        if (num > 0) return num;
-                    }
-                }
-            }
-
-            // 4. React Fiber properties
-            if (bar) {
+            // 1. Traverse React Fiber on targetEl and its ancestors
+            if (targetEl) {
                 try {
-                    let curr = bar;
+                    let curr = targetEl;
                     let depth = 0;
-                    while (curr && depth < 12) {
+                    while (curr && depth < 20) {
                         for (const k of Object.keys(curr)) {
                             if (k.startsWith('__reactFiber$') || k.startsWith('__reactInternalInstance$')) {
                                 let fiber = curr[k];
-                                for (let i = 0; fiber && i < 20; i++) {
+                                for (let i = 0; fiber && i < 35; i++) {
                                     const p = fiber.memoizedProps;
                                     if (p) {
-                                        if (typeof p.appid === 'number' && p.appid > 0) return p.appid;
-                                        if (typeof p.appId === 'number' && p.appId > 0) return p.appId;
-                                        if (p.overview && typeof p.overview.appid === 'number' && p.overview.appid > 0) return p.overview.appid;
-                                        if (p.game && typeof p.game.appid === 'number' && p.game.appid > 0) return p.game.appid;
-                                        if (p.app && typeof p.app.appid === 'number' && p.app.appid > 0) return p.app.appid;
+                                        if (!appId) {
+                                            const rawId = p.appid || p.appId || p.overview?.appid || p.details?.unAppID || p.game?.appid || p.app?.appid || p.item?.appid;
+                                            if (rawId) {
+                                                const parsed = parseInt(rawId, 10);
+                                                if (parsed > 0) appId = parsed;
+                                            }
+                                        }
+                                        if (!title) {
+                                            const rawTitle = p.overview?.display_name || p.details?.strDisplayName || p.game?.name || p.app?.name || p.item?.display_name || p.display_name || p.name;
+                                            if (typeof rawTitle === 'string' && rawTitle.trim().length > 0) title = rawTitle.trim();
+                                        }
+                                        if (appId && title) return { appId, title };
                                     }
                                     fiber = fiber.return;
                                 }
@@ -967,62 +953,96 @@ var PluginEntryPointMain = function () {
                 } catch (e) { }
             }
 
-            // 5. URL or Hash
-            try {
-                const loc = doc?.location?.href || window.location.href || '';
-                const m = loc.match(/(?:app|details|games\/details)\/(\d{3,9})/i);
-                if (m) {
-                    const num = parseInt(m[1], 10);
-                    if (num > 0) return num;
-                }
-            } catch (e) { }
-
-            return null;
-        }
-
-        function getCurrentGameTitle(doc, bar) {
-            // 1. React Fiber properties on bar or ancestors
-            if (bar) {
+            // 2. Check selected game in library list sidebar (class _1UBpAXP408Ez_L_mXhW5Q9 / Selected)
+            if (doc && (!appId || !title)) {
                 try {
-                    let curr = bar;
-                    let depth = 0;
-                    while (curr && depth < 12) {
-                        for (const k of Object.keys(curr)) {
-                            if (k.startsWith('__reactFiber$') || k.startsWith('__reactInternalInstance$')) {
-                                let fiber = curr[k];
-                                for (let i = 0; fiber && i < 20; i++) {
-                                    const p = fiber.memoizedProps;
-                                    if (p) {
-                                        const name = p.overview?.display_name || p.game?.name || p.app?.name || p.display_name || p.name;
-                                        if (typeof name === 'string' && name.trim().length > 0) return name.trim();
+                    const selected = doc.querySelector('div[class*="_1UBpAXP408Ez_L_mXhW5Q9"], div[class*="Selected"], div[class*="selected_"]');
+                    if (selected) {
+                        let curr = selected;
+                        let depth = 0;
+                        while (curr && depth < 10) {
+                            for (const k of Object.keys(curr)) {
+                                if (k.startsWith('__reactFiber$') || k.startsWith('__reactInternalInstance$')) {
+                                    let fiber = curr[k];
+                                    for (let i = 0; fiber && i < 25; i++) {
+                                        const p = fiber.memoizedProps;
+                                        if (p) {
+                                            if (!appId) {
+                                                const rawId = p.appid || p.appId || p.overview?.appid || p.item?.appid || p.game?.appid;
+                                                if (rawId) {
+                                                    const parsed = parseInt(rawId, 10);
+                                                    if (parsed > 0) appId = parsed;
+                                                }
+                                            }
+                                            if (!title) {
+                                                const rawTitle = p.overview?.display_name || p.item?.display_name || p.game?.name || p.name;
+                                                if (typeof rawTitle === 'string' && rawTitle.trim().length > 0) title = rawTitle.trim();
+                                            }
+                                            if (appId && title) return { appId, title };
+                                        }
+                                        fiber = fiber.return;
                                     }
-                                    fiber = fiber.return;
                                 }
                             }
+                            curr = curr.parentElement;
+                            depth++;
                         }
-                        curr = curr.parentElement;
-                        depth++;
+
+                        if (!title) {
+                            const nameEl = selected.querySelector('div[class*="_2SXJM0PeFEi3gbC7V3S5pE"], div[class*="GameListEntryName"], span');
+                            if (nameEl && nameEl.textContent) title = nameEl.textContent.trim();
+                        }
                     }
                 } catch (e) { }
             }
 
-            // 2. DOM elements
-            if (doc) {
-                const titleEls = doc.querySelectorAll('div[class*="gameheader_"] div[class*="headercontent_"] div[class*="gametitle_"], div[class*="appdetails_"] [class*="HeaderContent"] [class*="GameTitle"], div[class*="appdetails_"] [class*="gametitle"], div[class*="playbar_"] [class*="gametitle"]');
-                for (const el of titleEls) {
-                    const text = el.innerText || el.textContent || '';
-                    if (text.trim().length > 0 && !text.includes('CloudRedirect')) return text.trim();
-                }
+            // 3. Fallback: Banner / Hero Images (e.g. https://shared.steamstatic.com/store_item_assets/steam/apps/1020790/header.jpg)
+            if (doc && !appId) {
+                try {
+                    const imgs = doc.querySelectorAll('img[src*="/apps/"], img[src*="/app/"]');
+                    for (const img of imgs) {
+                        const src = img.getAttribute('src') || '';
+                        const m = src.match(/(?:app|apps)\/(\d{3,9})/i);
+                        if (m) {
+                            const parsed = parseInt(m[1], 10);
+                            if (parsed > 0) {
+                                appId = parsed;
+                                break;
+                            }
+                        }
+                    }
+                } catch (e) { }
+            }
 
-                // 3. Document title
-                if (doc.title && typeof doc.title === 'string') {
+            // 4. Fallback: Links (Store Page, Community Hub, etc.)
+            if (doc && !appId) {
+                try {
+                    const links = doc.querySelectorAll('a[href*="/app/"], a[href*="steam://nav/games/details/"], a[href*="rungameid/"]');
+                    for (const a of links) {
+                        const href = a.getAttribute('href') || '';
+                        const m = href.match(/(?:app\/|details\/|rungameid\/)(\d{3,9})/i);
+                        if (m) {
+                            const parsed = parseInt(m[1], 10);
+                            if (parsed > 0) {
+                                appId = parsed;
+                                break;
+                            }
+                        }
+                    }
+                } catch (e) { }
+            }
+
+            // 5. Fallback: doc.title for Title
+            if (!title && doc && doc.title) {
+                try {
                     let clean = doc.title.replace(/^Steam\s*[-–]\s*/i, '').replace(/\s*[-–]\s*Steam$/i, '').trim();
-                    if (clean && clean.length > 0 && !clean.toLowerCase().includes('library') && !clean.toLowerCase().includes('steam')) {
-                        return clean;
+                    if (clean && !clean.toLowerCase().includes('library') && !clean.toLowerCase().includes('steam')) {
+                        title = clean;
                     }
-                }
+                } catch (e) { }
             }
-            return null;
+
+            return { appId, title };
         }
 
         function escapeHtml(text) {
@@ -1339,154 +1359,252 @@ var PluginEntryPointMain = function () {
             doc.body.appendChild(modal);
         }
 
-        // Injects PatchWiki button into game action bar (always shown on game details page)
-        function injectPatchWikiButtonForBar(doc, bar) {
-            if (!doc || !bar) return;
+        function findGameActionAnchors(doc) {
+            if (!doc || !doc.body) return [];
+            const anchors = [];
+            const seen = new Set();
 
-            const appId = getCurrentAppId(doc, bar);
-            const gameTitle = getCurrentGameTitle(doc, bar);
+            function addAnchor(el, type, container) {
+                if (!el || seen.has(el)) return;
+                seen.add(el);
+                anchors.push({ el, type, container: container || el.parentElement || el });
+            }
 
-            // If we don't have an appId, we can't reliably target a game
-            if (!appId) return;
+            // 1. Primary: Install or Play action buttons (AppActionButton)
+            // Production Steam CSS hash: QsZdWtHTlIK9KIKbscNTt
+            const appActionBtns = doc.querySelectorAll('div[class*="QsZdWtHTlIK9KIKbscNTt"], button[class*="QsZdWtHTlIK9KIKbscNTt"], [class*="AppActionButton"], [class*="PlayButton"]');
+            appActionBtns.forEach(btn => {
+                if (btn.offsetWidth > 0 || btn.offsetHeight > 0) {
+                    addAnchor(btn, 'action-button', btn.parentElement);
+                }
+            });
 
-            // Find matching tutorial if patchWikiCache is loaded
-            let tutorial = null;
-            if (patchWikiCache) {
-                tutorial = patchWikiCache[appId.toString()];
-                // Also fallback to match by clean game title if no direct AppID match
-                if (!tutorial && gameTitle) {
-                    const normTitle = gameTitle.toLowerCase().replace(/[^a-z0-9]/g, '');
-                    if (normTitle.length >= 3) {
-                        for (const k of Object.keys(patchWikiCache)) {
-                            const item = patchWikiCache[k];
-                            const itemNorm = (item.game || item.title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-                            if (itemNorm.includes(normTitle) || normTitle.includes(itemNorm)) {
-                                tutorial = item;
-                                break;
-                            }
+            // 2. Text-based search for Play/Install buttons if not found by class
+            if (anchors.length === 0) {
+                const candidateBtns = doc.querySelectorAll('button, div[role="button"], div[class*="Button"], a[role="button"]');
+                for (const btn of candidateBtns) {
+                    if (btn.offsetWidth === 0 || btn.offsetHeight === 0) continue;
+                    // Ignore sidebar, titlebar, supernav, bottombar
+                    if (btn.closest('#cloudredirect-supernav-item, .cr-supernav-menu, [class*="GameList"], [class*="TitleBar"], [class*="BottomBar"], [class*="bottombar"]')) continue;
+
+                    const t = (btn.innerText || btn.textContent || '').trim().toUpperCase();
+                    if (t.startsWith('INSTALL') || t.startsWith('PLAY') || t.startsWith('LAUNCH') || t.startsWith('RESUME') || t.startsWith('UPDATE') || t.startsWith('PRE-LOAD') || t.startsWith('STREAM')) {
+                        if (btn.offsetWidth >= 35 && btn.offsetHeight >= 18) {
+                            addAnchor(btn, 'action-button', btn.parentElement);
                         }
                     }
                 }
-            } else {
-                // If cache not loaded yet, initiate background load and re-inject once loaded
-                loadPatchWikiData().then(() => {
-                    if (doc && bar) injectPatchWikiButtonForBar(doc, bar);
-                }).catch(() => {});
             }
 
-            const existingBtn = bar.querySelector('.cr-patchwiki-btn');
-            if (existingBtn) {
-                if (existingBtn.getAttribute('data-appid') === appId.toString() &&
-                    existingBtn.getAttribute('data-has-tutorial') === (tutorial ? 'true' : 'false')) {
-                    return;
+            // 3. ActionButtonAndStatusPanel (_1fHBRg7vFnKszK6EiOdIEY) or ActionRow (_2Gj21aHb49txPLFed_iV9M)
+            const panels = doc.querySelectorAll('div[class*="_1fHBRg7vFnKszK6EiOdIEY"], div[class*="_2Gj21aHb49txPLFed_iV9M"], [class*="ActionButtonAndStatusPanel"], [class*="ActionRow"]');
+            panels.forEach(p => {
+                if ((p.offsetWidth > 0 || p.offsetHeight > 0) && !seen.has(p)) {
+                    addAnchor(p, 'action-panel', p);
                 }
-                existingBtn.remove();
+            });
+
+            // 4. Sticky PlayBar (_3fLo166MlaNqP8r8tTyRz / _2zxzStp5qY5M1evOm8keES)
+            const stickyPlayBars = doc.querySelectorAll('div[class*="_3fLo166MlaNqP8r8tTyRz"], div[class*="_2zxzStp5qY5M1evOm8keES"], div[class*="PlayBar"], div[class*="ActionSection"]');
+            stickyPlayBars.forEach(pb => {
+                if ((pb.offsetWidth > 0 || pb.offsetHeight > 0) && !seen.has(pb)) {
+                    addAnchor(pb, 'sticky-bar', pb);
+                }
+            });
+
+            // 5. RightControls (_1EAxK56o5a9Nieu5HYkJ4k / _1thLDT_28YIf6OkgIb6n-4 / AppButtons)
+            if (anchors.length === 0) {
+                const rightControls = doc.querySelectorAll('div[class*="_1EAxK56o5a9Nieu5HYkJ4k"], div[class*="_1thLDT_28YIf6OkgIb6n-4"], [class*="RightControls"], [class*="AppButtons"]');
+                rightControls.forEach(rc => {
+                    if ((rc.offsetWidth > 0 || rc.offsetHeight > 0) && !seen.has(rc)) {
+                        addAnchor(rc, 'right-controls', rc.parentElement);
+                    }
+                });
             }
 
-            const pwBtn = doc.createElement('div');
-            pwBtn.className = 'cr-patchwiki-btn';
-            pwBtn.setAttribute('data-appid', appId.toString());
-            pwBtn.setAttribute('data-has-tutorial', tutorial ? 'true' : 'false');
-
-            if (tutorial) {
-                pwBtn.title = `Open PatchWiki Tutorial for ${tutorial.title || tutorial.game} (In-Steam Mini Window)`;
-                pwBtn.innerHTML = `
-                    <svg class="cr-patchwiki-svg" viewBox="0 0 24 24">
-                        <path d="M19 2H6c-1.2 0-2 .9-2 2v16c0 1.1.9 2 2 2h13c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4zm13 16H6c-.55 0-1-.45-1-1V5.5c.31.29.7.5 1.17.5H19v14z"/>
-                    </svg>
-                    <span>PatchWiki Guide</span>
-                    <span class="cr-patchwiki-pill cr-pill-wiki">Wiki</span>
-                `;
-                pwBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    openSteamPatchWikiMiniWindow(tutorial, doc);
-                };
-            } else {
-                // No exact tutorial yet -> provide Search & Community Guide launcher
-                pwBtn.title = `Search PatchWiki Community Guides for ${gameTitle || ('App ' + appId)} (In-Steam Mini Window)`;
-                pwBtn.innerHTML = `
-                    <svg class="cr-patchwiki-svg" viewBox="0 0 24 24">
-                        <path d="M19 2H6c-1.2 0-2 .9-2 2v16c0 1.1.9 2 2 2h13c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4zm13 16H6c-.55 0-1-.45-1-1V5.5c.31.29.7.5 1.17.5H19v14z"/>
-                    </svg>
-                    <span>PatchWiki Guide</span>
-                    <span class="cr-patchwiki-pill cr-pill-search">Guide</span>
-                `;
-                pwBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    const searchObj = {
-                        id: 'search-' + appId,
-                        appId: appId,
-                        game: gameTitle || ('App ' + appId),
-                        title: gameTitle ? `${gameTitle} - Community Guides` : `App ${appId} - Community Guides`,
-                        url: `https://mirzaarsyad74-cmyk.github.io/patchwiki/?search=${encodeURIComponent(gameTitle || appId)}&appid=${appId}`,
-                        tags: ['guide'],
-                        author: 'Community',
-                        date: new Date().toISOString().split('T')[0],
-                        desc: `Search PatchWiki guides and tutorials for ${gameTitle || appId}`
-                    };
-                    openSteamPatchWikiMiniWindow(searchObj, doc);
-                };
-            }
-
-            const badge = bar.querySelector('.cr-game-badge');
-            if (badge && badge.nextSibling) {
-                bar.insertBefore(pwBtn, badge.nextSibling);
-            } else {
-                bar.appendChild(pwBtn);
-            }
+            return anchors;
         }
 
         // 2. Inject Game Details Page Badge and PatchWiki Button
         function injectGameBadge(doc) {
             if (!doc || !doc.body) return;
-            const gameActionBars = doc.querySelectorAll('div[class*="playbar_"], div[class*="appactionandstats_"], div[class*="appdetailsheader_"], div[class*="gameheader_"], div[class*="headerbuttons_"]');
-            gameActionBars.forEach(bar => {
-                if (!bar.querySelector('.cr-game-badge')) {
-                    const badge = doc.createElement('div');
-                    badge.className = 'cr-game-badge';
-                    badge.title = 'Game save files are actively redirected and backed up by CloudRedirect (Click to Open)';
-                    badge.innerHTML = `
-                        ${cloudSvg}
-                        <span>CloudRedirect</span>
-                        <span class="cr-game-badge-check">&#10003;</span>
-                    `;
-                    badge.onclick = (e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        launchApp(doc);
-                    };
 
-                    bar.appendChild(badge);
+            try {
+                const anchors = findGameActionAnchors(doc);
+                if (!anchors || anchors.length === 0) return;
+
+                for (const item of anchors) {
+                    const { el: anchorEl, type, container } = item;
+                    if (!container) continue;
+
+                    const appDetails = getAppDetails(doc, anchorEl) || getAppDetails(doc, null);
+                    const appId = appDetails?.appId;
+                    const gameTitle = appDetails?.title;
+
+                    // If we don't have an appId, skip this anchor
+                    if (!appId) continue;
+
+                    const strAppId = String(appId);
+
+                    // 1. Handle CloudRedirect Badge
+                    let badge = container.querySelector('.cr-game-badge');
+                    if (badge && badge.getAttribute('data-appid') !== strAppId) {
+                        badge.remove();
+                        badge = null;
+                    }
+
+                    if (!badge) {
+                        badge = doc.createElement('div');
+                        badge.className = 'cr-game-badge';
+                        badge.setAttribute('data-appid', strAppId);
+                        badge.title = 'Game save files are actively redirected and backed up by CloudRedirect (Click to Open)';
+                        badge.innerHTML = `
+                            ${cloudSvg}
+                            <span>CloudRedirect</span>
+                            <span class="cr-game-badge-check">&#10003;</span>
+                        `;
+                        badge.onclick = (e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            launchApp(doc);
+                        };
+                    }
+
+                    // 2. Handle PatchWiki Guide Button
+                    let pwBtn = container.querySelector('.cr-patchwiki-btn');
+
+                    // Find matching tutorial from PatchWiki cache
+                    let tutorial = null;
+                    if (patchWikiCache) {
+                        tutorial = patchWikiCache[strAppId];
+                        if (!tutorial && gameTitle) {
+                            const normTitle = gameTitle.toLowerCase().replace(/[^a-z0-9]/g, '');
+                            if (normTitle.length >= 3) {
+                                for (const k of Object.keys(patchWikiCache)) {
+                                    const tItem = patchWikiCache[k];
+                                    const itemNorm = (tItem.game || tItem.title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                                    if (itemNorm.includes(normTitle) || normTitle.includes(itemNorm)) {
+                                        tutorial = tItem;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        loadPatchWikiData().then(() => {
+                            if (doc) injectGameBadge(doc);
+                        }).catch(() => {});
+                    }
+
+                    const hasTutorial = Boolean(tutorial);
+                    if (pwBtn && (pwBtn.getAttribute('data-appid') !== strAppId || pwBtn.getAttribute('data-has-tutorial') !== String(hasTutorial))) {
+                        pwBtn.remove();
+                        pwBtn = null;
+                    }
+
+                    if (!pwBtn) {
+                        pwBtn = doc.createElement('div');
+                        pwBtn.className = 'cr-patchwiki-btn';
+                        pwBtn.setAttribute('data-appid', strAppId);
+                        pwBtn.setAttribute('data-has-tutorial', String(hasTutorial));
+
+                        if (tutorial) {
+                            pwBtn.title = `Open PatchWiki Guide for ${tutorial.title || tutorial.game} (In-Steam Mini Window)`;
+                            pwBtn.innerHTML = `
+                                <svg class="cr-patchwiki-svg" viewBox="0 0 24 24">
+                                    <path d="M19 2H6c-1.2 0-2 .9-2 2v16c0 1.1.9 2 2 2h13c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4zm13 16H6c-.55 0-1-.45-1-1V5.5c.31.29.7.5 1.17.5H19v14z"/>
+                                </svg>
+                                <span>PatchWiki Guide</span>
+                                <span class="cr-patchwiki-pill cr-pill-wiki">Wiki</span>
+                            `;
+                            pwBtn.onclick = (e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                openSteamPatchWikiMiniWindow(tutorial, doc);
+                            };
+                        } else {
+                            pwBtn.title = `Search PatchWiki Community Guides for ${gameTitle || ('App ' + appId)} (In-Steam Mini Window)`;
+                            pwBtn.innerHTML = `
+                                <svg class="cr-patchwiki-svg" viewBox="0 0 24 24">
+                                    <path d="M19 2H6c-1.2 0-2 .9-2 2v16c0 1.1.9 2 2 2h13c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4zm13 16H6c-.55 0-1-.45-1-1V5.5c.31.29.7.5 1.17.5H19v14z"/>
+                                </svg>
+                                <span>PatchWiki Guide</span>
+                                <span class="cr-patchwiki-pill cr-pill-search">Guide</span>
+                            `;
+                            pwBtn.onclick = (e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                const searchObj = {
+                                    id: 'search-' + appId,
+                                    appId: appId,
+                                    game: gameTitle || ('App ' + appId),
+                                    title: gameTitle ? `${gameTitle} - Community Guides` : `App ${appId} - Community Guides`,
+                                    url: `https://mirzaarsyad74-cmyk.github.io/patchwiki/?search=${encodeURIComponent(gameTitle || appId)}&appid=${appId}`,
+                                    tags: ['guide'],
+                                    author: 'Community',
+                                    date: new Date().toISOString().split('T')[0],
+                                    desc: `Search PatchWiki guides and tutorials for ${gameTitle || appId}`
+                                };
+                                openSteamPatchWikiMiniWindow(searchObj, doc);
+                            };
+                        }
+                    }
+
+                    // 3. Insert Elements
+                    if (type === 'action-button' && anchorEl.parentNode === container) {
+                        if (anchorEl.nextSibling !== badge) {
+                            container.insertBefore(badge, anchorEl.nextSibling);
+                        }
+                        if (badge.nextSibling !== pwBtn) {
+                            container.insertBefore(pwBtn, badge.nextSibling);
+                        }
+                    } else if (type === 'right-controls' && anchorEl.parentNode === container) {
+                        if (badge.parentNode !== container) {
+                            container.insertBefore(badge, anchorEl);
+                        }
+                        if (pwBtn.parentNode !== container) {
+                            container.insertBefore(pwBtn, anchorEl);
+                        }
+                    } else {
+                        if (badge.parentNode !== container) {
+                            container.appendChild(badge);
+                        }
+                        if (pwBtn.parentNode !== container) {
+                            container.appendChild(pwBtn);
+                        }
+                    }
                 }
-
-                injectPatchWikiButtonForBar(doc, bar);
-            });
+            } catch (err) {
+                console.warn('[CloudRedirect] injectGameBadge error:', err);
+            }
         }
 
         function runInjectionsForDoc(doc) {
             if (!doc || !doc.body) return;
 
-            // Remove any legacy header buttons or clipped dropdown menus
-            const legacyBtn = doc.getElementById('cloudredirect-header-btn');
-            if (legacyBtn) legacyBtn.remove();
-            doc.querySelectorAll('.cr-nav-btn, [id*="cloudredirect-header"], .cr-dropdown-menu').forEach(el => el.remove());
+            try {
+                // Remove any legacy header buttons or clipped dropdown menus
+                const legacyBtn = doc.getElementById('cloudredirect-header-btn');
+                if (legacyBtn) legacyBtn.remove();
+                doc.querySelectorAll('.cr-nav-btn, [id*="cloudredirect-header"], .cr-dropdown-menu').forEach(el => el.remove());
+            } catch (e) { }
 
-            // If supernav item has old classes or wrong height/display, replace it
-            const superItem = doc.getElementById('cloudredirect-supernav-item');
-            if (superItem) {
-                if (superItem.style.height || superItem.style.display || superItem.querySelector('.cr-supernav-btn')?.style.height) {
-                    superItem.remove();
-                } else if (superItem.classList.contains('cr-active')) {
-                    superItem.classList.remove('cr-active');
+            try {
+                // If supernav item has old classes or wrong height/display, replace it
+                const superItem = doc.getElementById('cloudredirect-supernav-item');
+                if (superItem) {
+                    if (superItem.style.height || superItem.style.display || superItem.querySelector('.cr-supernav-btn')?.style.height) {
+                        superItem.remove();
+                    } else if (superItem.classList.contains('cr-active')) {
+                        superItem.classList.remove('cr-active');
+                    }
                 }
-            }
+            } catch (e) { }
 
-            ensureStyles(doc);
-            injectSuperNavTab(doc);
-            injectBottomBarButton(doc);
-            injectGameBadge(doc);
+            try { ensureStyles(doc); } catch (e) { }
+            try { injectSuperNavTab(doc); } catch (e) { }
+            try { injectBottomBarButton(doc); } catch (e) { }
+            try { injectGameBadge(doc); } catch (e) { }
         }
 
         function runInjections() {

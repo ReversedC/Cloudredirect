@@ -109,32 +109,37 @@
 
 /* Game Detail Page Badge */
 .cr-game-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: rgba(22, 34, 46, 0.85);
-    border: 1px solid #2d4c6b;
-    border-radius: 14px;
-    padding: 0 10px;
-    height: 28px !important;
-    line-height: 28px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    background: rgba(22, 34, 46, 0.9) !important;
+    border: 1px solid #2d4c6b !important;
+    border-radius: 4px !important;
+    padding: 0 10px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    max-height: 32px !important;
+    line-height: 32px !important;
     white-space: nowrap !important;
-    font-family: "Motiva Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    font-size: 11px;
-    font-weight: 600;
-    color: #c6d4df;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    user-select: none;
-    margin-left: 10px;
-    vertical-align: middle;
+    font-family: "Motiva Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: #c6d4df !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    user-select: none !important;
+    margin: 0 4px !important;
+    vertical-align: middle !important;
+    box-sizing: border-box !important;
+    flex-shrink: 0 !important;
+    z-index: 10 !important;
 }
 
 .cr-game-badge:hover {
-    background: #233b52;
-    border-color: #66c0f4;
-    color: #ffffff;
-    box-shadow: 0 0 10px rgba(102, 192, 244, 0.4);
+    background: #233b52 !important;
+    border-color: #66c0f4 !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 10px rgba(102, 192, 244, 0.4) !important;
 }
 
 .cr-game-badge-check {
@@ -146,34 +151,39 @@
 
 /* Game Page Button: .cr-patchwiki-btn */
 .cr-patchwiki-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: linear-gradient(135deg, rgba(28, 52, 75, 0.95), rgba(16, 32, 48, 0.95));
-    border: 1px solid #3d6e99;
-    border-radius: 14px;
-    padding: 0 10px;
-    height: 28px !important;
-    line-height: 28px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    background: linear-gradient(135deg, rgba(28, 52, 75, 0.95), rgba(16, 32, 48, 0.95)) !important;
+    border: 1px solid #3d6e99 !important;
+    border-radius: 4px !important;
+    padding: 0 10px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    max-height: 32px !important;
+    line-height: 32px !important;
     white-space: nowrap !important;
-    font-family: "Motiva Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    font-size: 11px;
-    font-weight: 600;
-    color: #66c0f4;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    user-select: none;
-    margin-left: 8px;
-    vertical-align: middle;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+    font-family: "Motiva Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: #66c0f4 !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    user-select: none !important;
+    margin: 0 4px !important;
+    vertical-align: middle !important;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35) !important;
+    box-sizing: border-box !important;
+    flex-shrink: 0 !important;
+    z-index: 10 !important;
 }
 
 .cr-patchwiki-btn:hover {
-    background: linear-gradient(135deg, rgba(38, 72, 104, 1), rgba(24, 46, 68, 1));
-    border-color: #66c0f4;
-    color: #ffffff;
-    box-shadow: 0 0 12px rgba(102, 192, 244, 0.5);
-    transform: translateY(-1px);
+    background: linear-gradient(135deg, rgba(38, 72, 104, 1), rgba(24, 46, 68, 1)) !important;
+    border-color: #66c0f4 !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 12px rgba(102, 192, 244, 0.5) !important;
+    transform: translateY(-1px) !important;
 }
 
 .cr-patchwiki-svg {
