@@ -674,11 +674,6 @@ public partial class DashboardPage : Page
             return;
         }
 
-        if (!Services.SteamDetector.IsSteamRunning())
-        {
-            return;
-        }
-
         var confirmed = await Services.Dialog.ConfirmAsync(S.Get("Dashboard_RestartSteam"),
             S.Get("Dashboard_RestartSteamPrompt"));
 
@@ -687,67 +682,26 @@ public partial class DashboardPage : Page
         var button = (Wpf.Ui.Controls.Button)sender;
         button.IsEnabled = false;
         var originalContent = button.Content;
-        button.Content = S.Get("Dashboard_ShuttingDownSteam");
 
         try
         {
-            // Ask Steam to shut down correctly
-            Process.Start(new ProcessStartInfo
+            if (Services.SteamDetector.IsSteamRunning())
             {
-                FileName = steamExe,
-                Arguments = "-shutdown",
-                UseShellExecute = true
-            })?.Dispose();
-
-            // Poll until Steam processes exit (up to 15 seconds)
-            bool exited = await Task.Run(async () =>
-            {
-                for (int i = 0; i < 30; i++) // 30 x 500ms = 15s
-                {
-                    await Task.Delay(500);
-                    var procs = Process.GetProcessesByName("steam");
-                    bool any = procs.Length > 0;
-                    foreach (var p in procs) p.Dispose();
-                    if (!any) return true;
-                }
-                return false;
-            });
-
-            if (!exited)
-            {
-                // Graceful shutdown didn't work -- offer force-kill
-                var forceKill = await Services.Dialog.ConfirmAsync(S.Get("Dashboard_SteamStillRunning"),
-                    S.Get("Dashboard_SteamStillRunningPrompt"));
-
-                if (forceKill)
-                {
-                    button.Content = S.Get("Dashboard_ForceKilling");
-                    await Task.Run(() =>
-                    {
-                        foreach (var proc in Process.GetProcessesByName("steam"))
-                        {
-                            try { proc.Kill(); }
-                            catch { /* already exited */ }
-                            finally { proc.Dispose(); }
-                        }
-                    });
-
-                    // Brief wait for process table cleanup
-                    await Task.Delay(1000);
-                }
-                else
-                {
-                    return; // User cancelled
-                }
+                button.Content = S.Get("Dashboard_ShuttingDownSteam");
+                await Services.SteamDetector.StopSteamAsync(steamPath, timeoutSeconds: 6);
+                await Task.Delay(1000);
             }
 
-            // Start Steam
             button.Content = S.Get("Dashboard_StartingSteam");
-            Process.Start(new ProcessStartInfo
+            bool started = await Task.Run(() => Services.SteamDetector.StartSteam(steamPath));
+            if (!started)
             {
-                FileName = steamExe,
-                UseShellExecute = true
-            })?.Dispose();
+                await Services.Dialog.ShowErrorAsync(S.Get("Common_Error"), S.Get("Dashboard_SteamExeNotFound"));
+            }
+            else
+            {
+                await Task.Delay(1500);
+            }
         }
         catch (Exception ex)
         {
@@ -769,48 +723,11 @@ public partial class DashboardPage : Page
         try
         {
             // Shut down Steam if it's running
-            var steamRunning = await Task.Run(() =>
-            {
-                var procs = Process.GetProcessesByName("steam");
-                bool running = procs.Length > 0;
-                foreach (var p in procs) p.Dispose();
-                return running;
-            });
-
+            var steamRunning = Services.SteamDetector.IsSteamRunning();
             if (steamRunning)
             {
                 DllStatus.Text = S.Get("Dashboard_ClosingSteam");
-
-                await Task.Run(() =>
-                {
-                    var steamExe = Path.Combine(_steamPath, "steam.exe");
-                    if (File.Exists(steamExe))
-                    {
-                        Process.Start(new ProcessStartInfo
-                        {
-                            FileName = steamExe,
-                            Arguments = "-shutdown",
-                            UseShellExecute = true
-                        })?.Dispose();
-                    }
-
-                    // Wait up to 15s for graceful exit
-                    for (int i = 0; i < 30; i++)
-                    {
-                        System.Threading.Thread.Sleep(500);
-                        var check = Process.GetProcessesByName("steam");
-                        bool any = check.Length > 0;
-                        foreach (var p in check) p.Dispose();
-                        if (!any) return;
-                    }
-
-                    // Force-kill stragglers
-                    foreach (var p in Process.GetProcessesByName("steam"))
-                    {
-                        try { p.Kill(); } catch { }
-                        finally { p.Dispose(); }
-                    }
-                });
+                await Services.SteamDetector.StopSteamAsync(_steamPath, timeoutSeconds: 6);
             }
 
             DllStatus.Text = S.Get("Dashboard_Updating");
@@ -835,11 +752,7 @@ public partial class DashboardPage : Page
                         S.Get("Dashboard_DllUpdatedRestartPrompt"));
                     if (restart)
                     {
-                        Process.Start(new ProcessStartInfo
-                        {
-                            FileName = Path.Combine(_steamPath, "steam.exe"),
-                            UseShellExecute = true
-                        })?.Dispose();
+                        Services.SteamDetector.StartSteam(_steamPath);
                     }
                 }
             }

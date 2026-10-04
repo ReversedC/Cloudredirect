@@ -940,6 +940,200 @@ public static class SteamDetector
     }
 
     /// <summary>
+    /// Launches the Steam client executable with proper WorkingDirectory, shell execution, and fallback strategies.
+    /// </summary>
+    public static bool StartSteam(string? steamPath = null, string? arguments = null)
+    {
+        steamPath ??= FindSteamPath();
+        if (string.IsNullOrEmpty(steamPath)) return false;
+        var steamExe = Path.Combine(steamPath, "steam.exe");
+        if (!File.Exists(steamExe)) return false;
+
+        // Strategy 1: Direct Process.Start with explicit WorkingDirectory
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = steamExe,
+                WorkingDirectory = steamPath,
+                UseShellExecute = true
+            };
+            if (!string.IsNullOrEmpty(arguments))
+            {
+                psi.Arguments = arguments;
+            }
+
+            Process.Start(psi)?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[SteamDetector] StartSteam direct failed: {ex.Message}");
+        }
+
+        // Wait and verify if Steam process appeared
+        for (int i = 0; i < 5; i++)
+        {
+            Thread.Sleep(400);
+            if (IsSteamRunning()) return true;
+        }
+
+        // Strategy 2: Explorer shell launch (launches directly in current user shell context)
+        try
+        {
+            Debug.WriteLine("[SteamDetector] StartSteam attempting explorer.exe fallback...");
+            var psi = new ProcessStartInfo
+            {
+                FileName = "explorer.exe",
+                Arguments = $"\"{steamExe}\"",
+                UseShellExecute = true
+            };
+            Process.Start(psi)?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[SteamDetector] StartSteam explorer fallback failed: {ex.Message}");
+        }
+
+        for (int i = 0; i < 5; i++)
+        {
+            Thread.Sleep(400);
+            if (IsSteamRunning()) return true;
+        }
+
+        // Strategy 3: Registered protocol fallback
+        if (string.IsNullOrEmpty(arguments))
+        {
+            try
+            {
+                Debug.WriteLine("[SteamDetector] StartSteam attempting steam:// protocol fallback...");
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "steam://open/main",
+                    UseShellExecute = true
+                })?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[SteamDetector] StartSteam protocol fallback failed: {ex.Message}");
+            }
+
+            for (int i = 0; i < 5; i++)
+            {
+                Thread.Sleep(400);
+                if (IsSteamRunning()) return true;
+            }
+        }
+
+        return IsSteamRunning();
+    }
+
+    /// <summary>
+    /// Gracefully closes Steam and all associated webhelper processes, falling back to termination if needed.
+    /// </summary>
+    public static async Task<bool> StopSteamAsync(string? steamPath = null, int timeoutSeconds = 6)
+    {
+        steamPath ??= FindSteamPath();
+        var steamExe = !string.IsNullOrEmpty(steamPath) ? Path.Combine(steamPath, "steam.exe") : null;
+
+        var initialProcs = Process.GetProcessesByName("steam");
+        bool wasRunning = initialProcs.Length > 0;
+        foreach (var p in initialProcs) p.Dispose();
+
+        if (!wasRunning)
+        {
+            // Clean up any orphaned steamwebhelper processes
+            await Task.Run(() =>
+            {
+                foreach (var p in Process.GetProcessesByName("steamwebhelper"))
+                {
+                    try { p.Kill(); p.WaitForExit(500); } catch { }
+                    finally { p.Dispose(); }
+                }
+            });
+            await Task.Delay(500);
+            return true;
+        }
+
+        // 1. Send graceful shutdown command
+        if (!string.IsNullOrEmpty(steamExe) && File.Exists(steamExe))
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = steamExe,
+                    Arguments = "-shutdown",
+                    WorkingDirectory = steamPath,
+                    UseShellExecute = true
+                })?.Dispose();
+            }
+            catch { }
+        }
+
+        // 2. Poll for steam.exe exit
+        int maxAttempts = Math.Max(6, timeoutSeconds * 2);
+        bool exited = await Task.Run(async () =>
+        {
+            for (int i = 0; i < maxAttempts; i++)
+            {
+                await Task.Delay(500);
+                var procs = Process.GetProcessesByName("steam");
+                bool any = procs.Length > 0;
+                foreach (var p in procs) p.Dispose();
+                if (!any) return true;
+            }
+            return false;
+        });
+
+        // 3. Force kill if graceful shutdown didn't complete
+        if (!exited)
+        {
+            await Task.Run(() =>
+            {
+                foreach (var proc in Process.GetProcessesByName("steam"))
+                {
+                    try
+                    {
+                        proc.Kill();
+                        proc.WaitForExit(1000);
+                    }
+                    catch { }
+                    finally { proc.Dispose(); }
+                }
+            });
+        }
+
+        // 4. Clean up any remaining steamwebhelper processes so next launch won't hit mutex/IPC collision
+        await Task.Run(async () =>
+        {
+            // Give webhelpers up to 2 seconds to exit gracefully
+            for (int i = 0; i < 4; i++)
+            {
+                var webhelpers = Process.GetProcessesByName("steamwebhelper");
+                bool any = webhelpers.Length > 0;
+                foreach (var p in webhelpers) p.Dispose();
+                if (!any) return;
+                await Task.Delay(500);
+            }
+
+            // Force kill stragglers
+            foreach (var p in Process.GetProcessesByName("steamwebhelper"))
+            {
+                try
+                {
+                    p.Kill();
+                    p.WaitForExit(500);
+                }
+                catch { }
+                finally { p.Dispose(); }
+            }
+        });
+
+        await Task.Delay(1200);
+        return true;
+    }
+
+    /// <summary>
     /// Restarts the Steam client gracefully, waiting for shutdown and launching steam.exe again.
     /// </summary>
     public static async Task<bool> RestartSteamAsync(string? steamPath = null)
@@ -949,48 +1143,14 @@ public static class SteamDetector
         var steamExe = Path.Combine(steamPath, "steam.exe");
         if (!File.Exists(steamExe)) return false;
 
-        if (IsSteamRunning())
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = steamExe,
-                Arguments = "-shutdown",
-                UseShellExecute = true
-            })?.Dispose();
+        // Stop Steam cleanly
+        await StopSteamAsync(steamPath, timeoutSeconds: 6);
 
-            bool exited = await Task.Run(async () =>
-            {
-                for (int i = 0; i < 30; i++)
-                {
-                    await Task.Delay(500);
-                    var procs = Process.GetProcessesByName("steam");
-                    bool any = procs.Length > 0;
-                    foreach (var p in procs) p.Dispose();
-                    if (!any) return true;
-                }
-                return false;
-            });
+        // Cooldown before relaunch to ensure single-instance mutex and IPC pipes are released
+        await Task.Delay(1500);
 
-            if (!exited)
-            {
-                foreach (var proc in Process.GetProcessesByName("steam"))
-                {
-                    try { proc.Kill(); }
-                    catch { }
-                    finally { proc.Dispose(); }
-                }
-                await Task.Delay(1000);
-            }
-        }
-
-        await Task.Delay(1000);
-        Process.Start(new ProcessStartInfo
-        {
-            FileName = steamExe,
-            UseShellExecute = true
-        })?.Dispose();
-
-        return true;
+        // Start Steam with multi-strategy verification in background task
+        return await Task.Run(() => StartSteam(steamPath));
     }
 
     public static bool IsLuaGame(uint appId, string? steamPath = null)

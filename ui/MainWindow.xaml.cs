@@ -506,46 +506,7 @@ public partial class MainWindow : FluentWindow
 
     private async void RestartSteamItem_Click(object sender, RoutedEventArgs e)
     {
-        var steamPath = Services.SteamDetector.FindSteamPath();
-        if (steamPath == null) return;
-
-        var steamExe = Path.Combine(steamPath, "steam.exe");
-        if (!File.Exists(steamExe)) return;
-
-        // Graceful shutdown first
-        var procs = Process.GetProcessesByName("steam");
-        bool wasRunning = procs.Length > 0;
-        foreach (var p in procs) p.Dispose();
-
-        if (wasRunning)
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = steamExe,
-                Arguments = "-shutdown",
-                UseShellExecute = true
-            })?.Dispose();
-
-            // Wait up to 15s for Steam to close
-            for (int i = 0; i < 30; i++)
-            {
-                await Task.Delay(500);
-                var check = Process.GetProcessesByName("steam");
-                bool still = check.Length > 0;
-                foreach (var p in check) p.Dispose();
-                if (!still) break;
-            }
-        }
-
-        try
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = steamExe,
-                UseShellExecute = true
-            })?.Dispose();
-        }
-        catch { }
+        await Services.SteamDetector.RestartSteamAsync();
     }
 
     private void ZoomOut_Click(object sender, RoutedEventArgs e)
