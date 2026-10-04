@@ -154,7 +154,6 @@ public class UiZoomManager
 
         _debounceTimer?.Stop();
         IsAutoFit = false;
-        AppSettings.AutoFitZoom = false;
         // Snap to clean 10% steps
         double current = Math.Round(CurrentScale * 10.0) / 10.0;
         double newScale = Math.Round(current + 0.10, 2);
@@ -173,7 +172,6 @@ public class UiZoomManager
 
         _debounceTimer?.Stop();
         IsAutoFit = false;
-        AppSettings.AutoFitZoom = false;
         // Snap to clean 10% steps
         double current = Math.Round(CurrentScale * 10.0) / 10.0;
         double newScale = Math.Round(current - 0.10, 2);

@@ -176,13 +176,21 @@ public sealed class GameSpaceService
 
         app.Dispatcher.Invoke(() =>
         {
-            if (_overlayWindow == null)
+            try
             {
-                _overlayWindow = new GameSpaceOverlayWindow();
-                _overlayWindow.Closed += (_, _) => _overlayWindow = null;
-            }
+                if (_overlayWindow == null)
+                {
+                    _overlayWindow = new GameSpaceOverlayWindow();
+                    _overlayWindow.Closed += (_, _) => _overlayWindow = null;
+                }
 
-            _overlayWindow.ShowOverlay();
+                _overlayWindow.ShowOverlay();
+                App.LogStartup("GameSpace ShowOverlay opened successfully.");
+            }
+            catch (Exception ex)
+            {
+                App.LogStartup("GameSpace ShowOverlay error: " + ex);
+            }
         });
     }
 
