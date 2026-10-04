@@ -62,6 +62,24 @@ public partial class MiniBrowserWindow : Window
         }
     }
 
+    public static void CloseBrowser()
+    {
+        var app = Application.Current;
+        if (app == null) return;
+        app.Dispatcher?.BeginInvoke(new Action(() =>
+        {
+            try
+            {
+                if (_instance != null)
+                {
+                    _instance.Close();
+                    _instance = null;
+                }
+            }
+            catch { }
+        }));
+    }
+
     public MiniBrowserWindow()
     {
         InitializeComponent();

@@ -26,6 +26,19 @@ public sealed class GameSpaceService
 
     private GameSpaceOverlayWindow? _overlayWindow;
 
+    public GameSpaceService()
+    {
+        ActiveGameTrackerService.OnActiveGameChanged += game =>
+        {
+            if (game == null)
+            {
+                // Game has exited: automatically exit Game Space overlay and Mini Browser
+                CloseOverlay();
+                MiniBrowserWindow.CloseBrowser();
+            }
+        };
+    }
+
     #region Win32 Memory Status
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]

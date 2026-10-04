@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Runtime.InteropServices;
 using Microsoft.Win32;
 
 namespace CloudRedirect.Services;
@@ -68,6 +69,46 @@ public static class ActiveGameTrackerService
         _pollTimer = null;
     }
 
+    #region Win32 Process Image Discovery
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr OpenProcess(uint processAccess, bool bInheritHandle, int processId);
+
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+    private static extern bool QueryFullProcessImageName(IntPtr hProcess, int dwFlags, System.Text.StringBuilder lpExeName, ref int lpdwSize);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool CloseHandle(IntPtr hObject);
+
+    private const uint PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
+
+    public static string? GetProcessFilePath(int pid)
+    {
+        IntPtr h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
+        if (h == IntPtr.Zero) return null;
+        try
+        {
+            var sb = new System.Text.StringBuilder(1024);
+            int size = sb.Capacity;
+            if (QueryFullProcessImageName(h, 0, sb, ref size))
+            {
+                return sb.ToString();
+            }
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+        finally
+        {
+            CloseHandle(h);
+        }
+    }
+
+    #endregion
+
     private static async Task CheckActiveGamesAsync()
     {
         try
@@ -92,6 +133,39 @@ public static class ActiveGameTrackerService
             if (runningAppId > 0 && !SteamDetector.IsSteamRunning())
             {
                 runningAppId = 0;
+            }
+
+            if (runningAppId > 0)
+            {
+                // If we are already tracking this Steam app, check if its process is still alive!
+                if (_currentGame != null && _currentGame.AppId == runningAppId)
+                {
+                    bool isAlive = true;
+                    if (_currentGame.ProcessId > 0)
+                    {
+                        try
+                        {
+                            using var p = Process.GetProcessById(_currentGame.ProcessId);
+                            if (p.HasExited) isAlive = false;
+                        }
+                        catch
+                        {
+                            isAlive = false;
+                        }
+                    }
+
+                    if (!isAlive && !string.IsNullOrEmpty(_currentGame.ProcessName))
+                    {
+                        var procs = Process.GetProcessesByName(_currentGame.ProcessName);
+                        if (procs.Length > 0) isAlive = true;
+                    }
+
+                    if (!isAlive)
+                    {
+                        // The game process has exited; clear runningAppId to trigger immediate game exit handling below
+                        runningAppId = 0;
+                    }
+                }
             }
 
             if (runningAppId > 0)
@@ -142,12 +216,52 @@ public static class ActiveGameTrackerService
                             installDir = AppCloudConfig.FindGameInstallDir(steamPath, runningAppId);
                         }
 
+                        var installExeNames = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                        if (!string.IsNullOrEmpty(installDir) && Directory.Exists(installDir))
+                        {
+                            try
+                            {
+                                foreach (var exeFile in Directory.EnumerateFiles(installDir, "*.exe", SearchOption.AllDirectories))
+                                {
+                                    installExeNames.Add(Path.GetFileNameWithoutExtension(exeFile));
+                                }
+                            }
+                            catch { }
+                        }
+
+                        string normalizedGameName = !string.IsNullOrEmpty(name)
+                            ? name.Replace(" ", "").Replace(":", "").Replace("-", "")
+                            : string.Empty;
+
                         var procs = Process.GetProcesses();
                         foreach (var p in procs)
                         {
                             try
                             {
-                                if (!string.IsNullOrEmpty(installDir) && p.MainModule?.FileName.StartsWith(installDir, StringComparison.OrdinalIgnoreCase) == true)
+                                if (p.Id <= 4) continue;
+
+                                // 1. Check path using QueryFullProcessImageName (reliable across 32/64-bit and security contexts)
+                                if (!string.IsNullOrEmpty(installDir))
+                                {
+                                    string? exePath = GetProcessFilePath(p.Id);
+                                    if (!string.IsNullOrEmpty(exePath) && exePath.StartsWith(installDir, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        procName = p.ProcessName;
+                                        matchedGameProcess = p;
+                                        break;
+                                    }
+                                }
+
+                                // 2. Check if process name matches any exe inside the game's install folder
+                                if (installExeNames.Count > 0 && installExeNames.Contains(p.ProcessName))
+                                {
+                                    procName = p.ProcessName;
+                                    matchedGameProcess = p;
+                                    break;
+                                }
+
+                                // 3. Fallback: Check if process name matches game title (e.g. "Farm to Table" -> "FarmToTable")
+                                if (!string.IsNullOrEmpty(normalizedGameName) && p.ProcessName.Equals(normalizedGameName, StringComparison.OrdinalIgnoreCase))
                                 {
                                     procName = p.ProcessName;
                                     matchedGameProcess = p;

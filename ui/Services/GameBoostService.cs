@@ -244,6 +244,7 @@ public static class GameBoostService
                 _boostedGameName = null;
                 _boostedProcessId = 0;
                 OnBoostStateChanged?.Invoke(false, null);
+                GameBoostToastService.Dismiss();
             }
         }
     }

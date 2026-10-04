@@ -47,4 +47,26 @@ public static class GameBoostToastService
             }
         }));
     }
+
+    public static void Dismiss()
+    {
+        var app = Application.Current;
+        if (app == null) return;
+
+        app.Dispatcher?.BeginInvoke(new Action(() =>
+        {
+            lock (_lock)
+            {
+                try
+                {
+                    if (_activeToast != null)
+                    {
+                        _activeToast.Close();
+                        _activeToast = null;
+                    }
+                }
+                catch { }
+            }
+        }));
+    }
 }

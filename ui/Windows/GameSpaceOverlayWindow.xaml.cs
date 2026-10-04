@@ -504,9 +504,77 @@ public partial class GameSpaceOverlayWindow : Window
         try
         {
             int killed = 0;
-            if (!string.IsNullOrEmpty(game.ProcessName))
+            int targetPid = game.ProcessId;
+            string? targetProcName = game.ProcessName;
+
+            // If PID is 0 or ProcName is null, actively scan running processes to find the game
+            if (targetPid <= 0 || string.IsNullOrEmpty(targetProcName))
             {
-                var procs = Process.GetProcessesByName(game.ProcessName);
+                var steamPath = SteamDetector.FindSteamPath();
+                string? installDir = steamPath != null && game.AppId > 0 
+                    ? AppCloudConfig.FindGameInstallDir(steamPath, game.AppId) 
+                    : null;
+
+                string normalizedGameName = !string.IsNullOrEmpty(game.Name)
+                    ? game.Name.Replace(" ", "").Replace(":", "").Replace("-", "")
+                    : string.Empty;
+
+                foreach (var p in Process.GetProcesses())
+                {
+                    try
+                    {
+                        if (p.Id <= 4) continue;
+
+                        if (!string.IsNullOrEmpty(installDir))
+                        {
+                            var path = ActiveGameTrackerService.GetProcessFilePath(p.Id);
+                            if (!string.IsNullOrEmpty(path) && path.StartsWith(installDir, StringComparison.OrdinalIgnoreCase))
+                            {
+                                targetPid = p.Id;
+                                targetProcName = p.ProcessName;
+                                break;
+                            }
+                        }
+
+                        if (!string.IsNullOrEmpty(normalizedGameName) && p.ProcessName.Equals(normalizedGameName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            targetPid = p.Id;
+                            targetProcName = p.ProcessName;
+                            break;
+                        }
+                    }
+                    catch { }
+                }
+            }
+
+            // 1. Terminate by PID with full process tree kill
+            if (targetPid > 0)
+            {
+                try
+                {
+                    using var p = Process.GetProcessById(targetPid);
+                    p.Kill(true);
+                    killed++;
+                }
+                catch { }
+
+                try
+                {
+                    using var kp = Process.Start(new ProcessStartInfo("taskkill", $"/F /PID {targetPid} /T")
+                    {
+                        CreateNoWindow = true,
+                        UseShellExecute = false
+                    });
+                    kp?.WaitForExit(1500);
+                    killed++;
+                }
+                catch { }
+            }
+
+            // 2. Terminate by process name with full process tree kill
+            if (!string.IsNullOrEmpty(targetProcName))
+            {
+                var procs = Process.GetProcessesByName(targetProcName);
                 foreach (var p in procs)
                 {
                     try
@@ -516,25 +584,40 @@ public partial class GameSpaceOverlayWindow : Window
                     }
                     catch { }
                 }
-            }
 
-            if (game.ProcessId > 0 && killed == 0)
-            {
                 try
                 {
-                    using var p = Process.GetProcessById(game.ProcessId);
-                    p.Kill(true);
+                    using var kp = Process.Start(new ProcessStartInfo("taskkill", $"/F /IM \"{targetProcName}.exe\" /T")
+                    {
+                        CreateNoWindow = true,
+                        UseShellExecute = false
+                    });
+                    kp?.WaitForExit(1500);
                     killed++;
                 }
                 catch { }
             }
 
-            SteamToastService.ShowAuto(
-                "Game Force Killed ⚠️",
-                $"Terminated frozen process '{game.Name}'. System resources freed!");
+            if (killed > 0)
+            {
+                SteamToastService.ShowAuto(
+                    "Game Force Killed ⚠️",
+                    $"Terminated frozen process '{game.Name}'. System resources freed!");
+            }
+            else
+            {
+                SteamToastService.ShowAuto(
+                    "Kill Notice ⚠️",
+                    $"No active process found for '{game.Name}'.");
+            }
 
             ActiveGameTrackerService.ClearActiveGame();
             RefreshGameContext();
+
+            // Auto-close Game Space overlay and Game Booster
+            HideOverlay();
+            GameBoostToastService.Dismiss();
+            MiniBrowserWindow.CloseBrowser();
         }
         catch (Exception ex)
         {
