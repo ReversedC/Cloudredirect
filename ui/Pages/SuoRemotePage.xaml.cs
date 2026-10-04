@@ -109,6 +109,8 @@ public partial class SuoRemotePage : Page
 
         try
         {
+            WebView2Helper.EnsureLoaderConfigured();
+
             var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             var userDataFolder = Path.Combine(appData, "CloudRedirect", "webview2_profile");
             Directory.CreateDirectory(userDataFolder);

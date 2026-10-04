@@ -285,6 +285,7 @@ public partial class App : System.Windows.Application
                                          a.Equals("--minimized", StringComparison.OrdinalIgnoreCase));
 
         Services.LanguageService.ApplyLanguage(Services.LanguageService.ReadLanguagePreference(), save: false);
+        Services.WebView2Helper.EnsureLoaderConfigured();
         base.OnStartup(e);
         ApplicationThemeManager.Apply(ApplicationTheme.Dark);
         LogStartup("OnStartup completed. MainWindow: " + (MainWindow != null ? MainWindow.GetType().Name : "null"));

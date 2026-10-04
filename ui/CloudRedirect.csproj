@@ -17,6 +17,7 @@
          metadata after '+' is stripped for display. -->
     <InformationalVersion>$(ReleaseVersion)$(ReleasePrerelease)+win.$(WindowsRevision)+core.$(CoreGeneration)</InformationalVersion>
     <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <SelfContained>false</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <!-- Suppress nullable reference warnings (CS8600-CS8625) - cosmetic, not bugs -->
@@ -51,6 +52,7 @@
   <ItemGroup>
     <EmbeddedResource Include="Resources\cloud_redirect.dll" LogicalName="cloud_redirect.dll" Condition="Exists('Resources\cloud_redirect.dll')" />
     <EmbeddedResource Include="Resources\cloud_redirect_cli.exe" LogicalName="cloud_redirect_cli.exe" Condition="Exists('Resources\cloud_redirect_cli.exe')" />
+    <EmbeddedResource Include="Resources\WebView2Loader.dll" LogicalName="WebView2Loader.dll" Condition="Exists('Resources\WebView2Loader.dll')" />
     <EmbeddedResource Include="Resources\MillenniumPlugin\**\*" />
   </ItemGroup>
 

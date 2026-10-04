@@ -97,6 +97,9 @@ public partial class MiniBrowserWindow : Window
         {
             BrowserLoadingIndicator.Visibility = Visibility.Visible;
 
+            // Ensure native WebView2Loader.dll is deployed and registered for single-file runtime
+            WebView2Helper.EnsureLoaderConfigured();
+
             var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             var userDataFolder = Path.Combine(appData, "CloudRedirect", "gamespace_browser");
             Directory.CreateDirectory(userDataFolder);
@@ -140,34 +143,43 @@ public partial class MiniBrowserWindow : Window
                 BrowserUrlInput.Text = args.Uri;
             };
 
-            BrowserWebView.NavigationCompleted += (_, _) =>
+            BrowserWebView.NavigationCompleted += (_, args) =>
             {
                 BrowserLoadingIndicator.Visibility = Visibility.Collapsed;
+                if (!args.IsSuccess)
+                {
+                    App.LogStartup($"MiniBrowser navigation status: {args.WebErrorStatus}");
+                }
             };
 
             _isBrowserInitialized = true;
+            App.LogStartup($"MiniBrowser initialized successfully. Navigating to: {BrowserUrlInput.Text}");
             BrowserWebView.CoreWebView2.Navigate(BrowserUrlInput.Text);
         }
         catch (Exception ex)
         {
             BrowserLoadingIndicator.Visibility = Visibility.Collapsed;
-            App.LogStartup($"MiniBrowser init failed: {ex.Message}");
+            App.LogStartup($"MiniBrowser init failed: {ex}");
         }
     }
 
     private void CoreWebView2_WebResourceRequested(object? sender, CoreWebView2WebResourceRequestedEventArgs e)
     {
-        var uri = e.Request.Uri;
-        foreach (var domain in AdDomains)
+        try
         {
-            if (uri.Contains(domain, StringComparison.OrdinalIgnoreCase))
+            var uri = e.Request.Uri;
+            foreach (var domain in AdDomains)
             {
-                var response = BrowserWebView.CoreWebView2.Environment.CreateWebResourceResponse(
-                    Stream.Null, 204, "No Content", "Content-Type: text/plain");
-                e.Response = response;
-                return;
+                if (uri.Contains(domain, StringComparison.OrdinalIgnoreCase))
+                {
+                    var response = BrowserWebView.CoreWebView2.Environment.CreateWebResourceResponse(
+                        new MemoryStream(), 204, "No Content", "Content-Type: text/plain");
+                    e.Response = response;
+                    return;
+                }
             }
         }
+        catch { }
     }
 
     public void NavigateBrowser(string input)
