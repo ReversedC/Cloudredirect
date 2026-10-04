@@ -78,17 +78,106 @@
     flex-shrink: 0;
 }
 
-/* Action Group in Game Details ActionRow */
-.cr-action-group {
+/* Floating Action Bar (FAB) for Steam Library */
+.cr-fab-container {
+    position: fixed !important;
+    bottom: 54px !important;
+    right: 28px !important;
+    z-index: 99999 !important;
     display: inline-flex !important;
     align-items: center !important;
-    gap: 8px !important;
-    margin-left: 14px !important;
-    margin-right: auto !important;
-    height: 34px !important;
-    align-self: center !important;
-    z-index: 10 !important;
+    gap: 6px !important;
+    padding: 5px 12px 5px 8px !important;
+    background: rgba(16, 26, 37, 0.94) !important;
+    backdrop-filter: blur(14px) !important;
+    border: 1px solid #2f5073 !important;
+    border-radius: 24px !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.75), 0 0 16px rgba(102, 192, 244, 0.22) !important;
+    user-select: none !important;
+    font-family: "Motiva Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease !important;
+}
+
+.cr-fab-container:hover {
+    border-color: #66c0f4 !important;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.85), 0 0 22px rgba(102, 192, 244, 0.4) !important;
+    transform: translateY(-1px) !important;
+}
+
+.cr-fab-drag {
+    cursor: grab !important;
+    color: #557599 !important;
+    font-size: 13px !important;
+    line-height: 1 !important;
+    padding: 0 4px !important;
+    letter-spacing: -1px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: color 0.15s ease !important;
+}
+.cr-fab-drag:hover {
+    color: #66c0f4 !important;
+}
+.cr-fab-drag:active {
+    cursor: grabbing !important;
+}
+
+.cr-fab-item {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    height: 28px !important;
+    padding: 0 11px !important;
+    border-radius: 14px !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: #c6d4df !important;
+    cursor: pointer !important;
+    transition: all 0.18s ease !important;
+    box-sizing: border-box !important;
+    white-space: nowrap !important;
+}
+
+.cr-fab-cr {
+    background: rgba(22, 38, 54, 0.85) !important;
+    border: 1px solid #2d4c6b !important;
+}
+.cr-fab-cr:hover {
+    background: #233f5d !important;
+    border-color: #66c0f4 !important;
+    color: #ffffff !important;
+}
+
+.cr-fab-check {
+    color: #a4d007 !important;
+    font-weight: bold !important;
+    font-size: 12px !important;
+    line-height: 1 !important;
+}
+
+.cr-fab-divider {
+    width: 1px !important;
+    height: 16px !important;
+    background: rgba(255, 255, 255, 0.18) !important;
+    margin: 0 2px !important;
     flex-shrink: 0 !important;
+}
+
+.cr-fab-wiki {
+    background: linear-gradient(135deg, rgba(28, 56, 82, 0.95), rgba(16, 34, 52, 0.95)) !important;
+    border: 1px solid #3d6e99 !important;
+    color: #66c0f4 !important;
+}
+.cr-fab-wiki:hover {
+    background: linear-gradient(135deg, rgba(38, 76, 110, 1), rgba(24, 48, 72, 1)) !important;
+    border-color: #66c0f4 !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 10px rgba(102, 192, 244, 0.4) !important;
+}
+
+.cr-fab-label {
+    line-height: 1 !important;
 }
 
 /* Game Detail Page Badge */
