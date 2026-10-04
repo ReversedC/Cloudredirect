@@ -205,7 +205,10 @@ var PluginEntryPointMain = function () {
                     background: rgba(22, 34, 46, 0.85);
                     border: 1px solid #2d4c6b;
                     border-radius: 14px;
-                    padding: 4px 10px;
+                    padding: 0 10px;
+                    height: 28px !important;
+                    line-height: 28px !important;
+                    white-space: nowrap !important;
                     font-family: "Motiva Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
                     font-size: 11px;
                     font-weight: 600;
@@ -225,6 +228,8 @@ var PluginEntryPointMain = function () {
                 .cr-game-badge-check {
                     color: #a4d007;
                     font-weight: bold;
+                    font-size: 12px;
+                    line-height: 1;
                 }
 
                 /* Game Page Button: .cr-patchwiki-btn */
@@ -235,7 +240,10 @@ var PluginEntryPointMain = function () {
                     background: linear-gradient(135deg, rgba(28, 52, 75, 0.95), rgba(16, 32, 48, 0.95));
                     border: 1px solid #3d6e99;
                     border-radius: 14px;
-                    padding: 4px 10px;
+                    padding: 0 10px;
+                    height: 28px !important;
+                    line-height: 28px !important;
+                    white-space: nowrap !important;
                     font-family: "Motiva Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
                     font-size: 11px;
                     font-weight: 600;
@@ -270,6 +278,14 @@ var PluginEntryPointMain = function () {
                     border-radius: 8px;
                     letter-spacing: 0.5px;
                     margin-left: 2px;
+                }
+                .cr-patchwiki-pill.cr-pill-wiki {
+                    background: #a4d007;
+                    color: #0d141b;
+                }
+                .cr-patchwiki-pill.cr-pill-search {
+                    background: #3878b5;
+                    color: #ffffff;
                 }
 
                 /* In-Steam PatchWiki Mini Window Modal */
@@ -847,19 +863,26 @@ var PluginEntryPointMain = function () {
                     if (Array.isArray(list)) {
                         const map = {};
                         for (const item of list) {
-                            const appId = extractAppIdFromMetadata(item.id, item.title, item.game);
+                            const appId = item.appId || extractAppIdFromMetadata(item.id, item.title, item.game);
+                            const tObj = {
+                                id: item.id,
+                                title: item.title,
+                                game: item.game,
+                                desc: item.desc,
+                                tags: item.tags,
+                                author: item.author,
+                                date: item.date,
+                                appId: appId,
+                                url: `https://mirzaarsyad74-cmyk.github.io/patchwiki/?tutorial=${encodeURIComponent(item.id)}#read/${encodeURIComponent(item.id)}`
+                            };
                             if (appId) {
-                                map[appId.toString()] = {
-                                    id: item.id,
-                                    title: item.title,
-                                    game: item.game,
-                                    desc: item.desc,
-                                    tags: item.tags,
-                                    author: item.author,
-                                    date: item.date,
-                                    appId: appId,
-                                    url: `https://mirzaarsyad74-cmyk.github.io/patchwiki/?tutorial=${encodeURIComponent(item.id)}#read/${encodeURIComponent(item.id)}`
-                                };
+                                map[appId.toString()] = tObj;
+                            }
+                            if (item.game) {
+                                const norm = item.game.toLowerCase().replace(/[^a-z0-9]/g, '');
+                                if (norm.length >= 3) {
+                                    map['name:' + norm] = tObj;
+                                }
                             }
                         }
                         patchWikiCache = map;
@@ -954,6 +977,51 @@ var PluginEntryPointMain = function () {
                 }
             } catch (e) { }
 
+            return null;
+        }
+
+        function getCurrentGameTitle(doc, bar) {
+            // 1. React Fiber properties on bar or ancestors
+            if (bar) {
+                try {
+                    let curr = bar;
+                    let depth = 0;
+                    while (curr && depth < 12) {
+                        for (const k of Object.keys(curr)) {
+                            if (k.startsWith('__reactFiber$') || k.startsWith('__reactInternalInstance$')) {
+                                let fiber = curr[k];
+                                for (let i = 0; fiber && i < 20; i++) {
+                                    const p = fiber.memoizedProps;
+                                    if (p) {
+                                        const name = p.overview?.display_name || p.game?.name || p.app?.name || p.display_name || p.name;
+                                        if (typeof name === 'string' && name.trim().length > 0) return name.trim();
+                                    }
+                                    fiber = fiber.return;
+                                }
+                            }
+                        }
+                        curr = curr.parentElement;
+                        depth++;
+                    }
+                } catch (e) { }
+            }
+
+            // 2. DOM elements
+            if (doc) {
+                const titleEls = doc.querySelectorAll('div[class*="gameheader_"] div[class*="headercontent_"] div[class*="gametitle_"], div[class*="appdetails_"] [class*="HeaderContent"] [class*="GameTitle"], div[class*="appdetails_"] [class*="gametitle"], div[class*="playbar_"] [class*="gametitle"]');
+                for (const el of titleEls) {
+                    const text = el.innerText || el.textContent || '';
+                    if (text.trim().length > 0 && !text.includes('CloudRedirect')) return text.trim();
+                }
+
+                // 3. Document title
+                if (doc.title && typeof doc.title === 'string') {
+                    let clean = doc.title.replace(/^Steam\s*[-–]\s*/i, '').replace(/\s*[-–]\s*Steam$/i, '').trim();
+                    if (clean && clean.length > 0 && !clean.toLowerCase().includes('library') && !clean.toLowerCase().includes('steam')) {
+                        return clean;
+                    }
+                }
+            }
             return null;
         }
 
@@ -1108,9 +1176,13 @@ var PluginEntryPointMain = function () {
                 const deepLink = modal.querySelector('#cr-footer-deep-link');
                 if (deepLink) deepLink.textContent = tutorial.id;
 
-                const activeTab = modal.querySelector('.cr-tab-btn.cr-tab-active');
-                if (activeTab && activeTab.getAttribute('data-tab') === 'reader') {
-                    loadReaderContent(modal, tutorial);
+                if (tutorial.id && tutorial.id.startsWith('search-')) {
+                    modal.querySelector('.cr-tab-btn[data-tab="web"]')?.click();
+                } else {
+                    const activeTab = modal.querySelector('.cr-tab-btn.cr-tab-active');
+                    if (activeTab && activeTab.getAttribute('data-tab') === 'reader') {
+                        loadReaderContent(modal, tutorial);
+                    }
                 }
                 return;
             }
@@ -1267,30 +1339,45 @@ var PluginEntryPointMain = function () {
             doc.body.appendChild(modal);
         }
 
-        // Injects PatchWiki button into game action bar if AppID found in PatchWiki
+        // Injects PatchWiki button into game action bar (always shown on game details page)
         function injectPatchWikiButtonForBar(doc, bar) {
             if (!doc || !bar) return;
 
             const appId = getCurrentAppId(doc, bar);
-            if (!appId || !patchWikiCache) {
-                if (!patchWikiCache) {
-                    loadPatchWikiData().then(() => {
-                        if (doc && bar) injectPatchWikiButtonForBar(doc, bar);
-                    });
+            const gameTitle = getCurrentGameTitle(doc, bar);
+
+            // If we don't have an appId, we can't reliably target a game
+            if (!appId) return;
+
+            // Find matching tutorial if patchWikiCache is loaded
+            let tutorial = null;
+            if (patchWikiCache) {
+                tutorial = patchWikiCache[appId.toString()];
+                // Also fallback to match by clean game title if no direct AppID match
+                if (!tutorial && gameTitle) {
+                    const normTitle = gameTitle.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    if (normTitle.length >= 3) {
+                        for (const k of Object.keys(patchWikiCache)) {
+                            const item = patchWikiCache[k];
+                            const itemNorm = (item.game || item.title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                            if (itemNorm.includes(normTitle) || normTitle.includes(itemNorm)) {
+                                tutorial = item;
+                                break;
+                            }
+                        }
+                    }
                 }
-                return;
+            } else {
+                // If cache not loaded yet, initiate background load and re-inject once loaded
+                loadPatchWikiData().then(() => {
+                    if (doc && bar) injectPatchWikiButtonForBar(doc, bar);
+                }).catch(() => {});
             }
 
-            const tutorial = patchWikiCache[appId.toString()];
             const existingBtn = bar.querySelector('.cr-patchwiki-btn');
-
-            if (!tutorial) {
-                if (existingBtn) existingBtn.remove();
-                return;
-            }
-
             if (existingBtn) {
-                if (existingBtn.getAttribute('data-appid') === appId.toString()) {
+                if (existingBtn.getAttribute('data-appid') === appId.toString() &&
+                    existingBtn.getAttribute('data-has-tutorial') === (tutorial ? 'true' : 'false')) {
                     return;
                 }
                 existingBtn.remove();
@@ -1299,20 +1386,49 @@ var PluginEntryPointMain = function () {
             const pwBtn = doc.createElement('div');
             pwBtn.className = 'cr-patchwiki-btn';
             pwBtn.setAttribute('data-appid', appId.toString());
-            pwBtn.title = `Open PatchWiki Tutorial for ${tutorial.title || tutorial.game} (In-Steam Mini Window)`;
-            pwBtn.innerHTML = `
-                <svg class="cr-patchwiki-svg" viewBox="0 0 24 24">
-                    <path d="M19 2H6c-1.2 0-2 .9-2 2v16c0 1.1.9 2 2 2h13c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4zm13 16H6c-.55 0-1-.45-1-1V5.5c.31.29.7.5 1.17.5H19v14z"/>
-                </svg>
-                <span>PatchWiki Guide</span>
-                <span class="cr-patchwiki-pill">Wiki</span>
-            `;
+            pwBtn.setAttribute('data-has-tutorial', tutorial ? 'true' : 'false');
 
-            pwBtn.onclick = (e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                openSteamPatchWikiMiniWindow(tutorial, doc);
-            };
+            if (tutorial) {
+                pwBtn.title = `Open PatchWiki Tutorial for ${tutorial.title || tutorial.game} (In-Steam Mini Window)`;
+                pwBtn.innerHTML = `
+                    <svg class="cr-patchwiki-svg" viewBox="0 0 24 24">
+                        <path d="M19 2H6c-1.2 0-2 .9-2 2v16c0 1.1.9 2 2 2h13c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4zm13 16H6c-.55 0-1-.45-1-1V5.5c.31.29.7.5 1.17.5H19v14z"/>
+                    </svg>
+                    <span>PatchWiki Guide</span>
+                    <span class="cr-patchwiki-pill cr-pill-wiki">Wiki</span>
+                `;
+                pwBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    openSteamPatchWikiMiniWindow(tutorial, doc);
+                };
+            } else {
+                // No exact tutorial yet -> provide Search & Community Guide launcher
+                pwBtn.title = `Search PatchWiki Community Guides for ${gameTitle || ('App ' + appId)} (In-Steam Mini Window)`;
+                pwBtn.innerHTML = `
+                    <svg class="cr-patchwiki-svg" viewBox="0 0 24 24">
+                        <path d="M19 2H6c-1.2 0-2 .9-2 2v16c0 1.1.9 2 2 2h13c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4zm13 16H6c-.55 0-1-.45-1-1V5.5c.31.29.7.5 1.17.5H19v14z"/>
+                    </svg>
+                    <span>PatchWiki Guide</span>
+                    <span class="cr-patchwiki-pill cr-pill-search">Guide</span>
+                `;
+                pwBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    const searchObj = {
+                        id: 'search-' + appId,
+                        appId: appId,
+                        game: gameTitle || ('App ' + appId),
+                        title: gameTitle ? `${gameTitle} - Community Guides` : `App ${appId} - Community Guides`,
+                        url: `https://mirzaarsyad74-cmyk.github.io/patchwiki/?search=${encodeURIComponent(gameTitle || appId)}&appid=${appId}`,
+                        tags: ['guide'],
+                        author: 'Community',
+                        date: new Date().toISOString().split('T')[0],
+                        desc: `Search PatchWiki guides and tutorials for ${gameTitle || appId}`
+                    };
+                    openSteamPatchWikiMiniWindow(searchObj, doc);
+                };
+            }
 
             const badge = bar.querySelector('.cr-game-badge');
             if (badge && badge.nextSibling) {
@@ -1334,7 +1450,7 @@ var PluginEntryPointMain = function () {
                     badge.innerHTML = `
                         ${cloudSvg}
                         <span>CloudRedirect</span>
-                        <span class="cr-game-badge-check">✓</span>
+                        <span class="cr-game-badge-check">&#10003;</span>
                     `;
                     badge.onclick = (e) => {
                         e.stopPropagation();

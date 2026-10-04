@@ -115,7 +115,10 @@
     background: rgba(22, 34, 46, 0.85);
     border: 1px solid #2d4c6b;
     border-radius: 14px;
-    padding: 4px 10px;
+    padding: 0 10px;
+    height: 28px !important;
+    line-height: 28px !important;
+    white-space: nowrap !important;
     font-family: "Motiva Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     font-size: 11px;
     font-weight: 600;
@@ -137,6 +140,8 @@
 .cr-game-badge-check {
     color: #a4d007;
     font-weight: bold;
+    font-size: 12px;
+    line-height: 1;
 }
 
 /* Game Page Button: .cr-patchwiki-btn */
@@ -147,7 +152,10 @@
     background: linear-gradient(135deg, rgba(28, 52, 75, 0.95), rgba(16, 32, 48, 0.95));
     border: 1px solid #3d6e99;
     border-radius: 14px;
-    padding: 4px 10px;
+    padding: 0 10px;
+    height: 28px !important;
+    line-height: 28px !important;
+    white-space: nowrap !important;
     font-family: "Motiva Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     font-size: 11px;
     font-weight: 600;
@@ -185,6 +193,16 @@
     border-radius: 8px;
     letter-spacing: 0.5px;
     margin-left: 2px;
+}
+
+.cr-patchwiki-pill.cr-pill-wiki {
+    background: #a4d007;
+    color: #0d141b;
+}
+
+.cr-patchwiki-pill.cr-pill-search {
+    background: #3878b5;
+    color: #ffffff;
 }
 
 /* In-Steam PatchWiki Mini Window Modal */

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -200,9 +200,8 @@ public static class MillenniumPluginService
 
             // 4. Write index.js (root and .millennium/Dist)
             string rootJs = GetResourceContent("MillenniumPlugin.index.js", FrontendJsContent);
-            string distJs = GetResourceContent("Dist.index.js", rootJs);
             File.WriteAllText(Path.Combine(pluginDir, "index.js"), rootJs);
-            File.WriteAllText(Path.Combine(distDir, "index.js"), distJs);
+            File.WriteAllText(Path.Combine(distDir, "index.js"), rootJs);
 
             // 5. Update millennium/config/config.json enabledPlugins
             EnableInMillenniumConfig();
