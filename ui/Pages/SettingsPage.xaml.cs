@@ -88,6 +88,10 @@ public partial class SettingsPage : Page
             GlobalHotkeyToggle.IsChecked = AppSettings.GlobalHotkeyEnabled;
             PopulateHotkeyPresets();
             GameBoostToggle.IsChecked = AppSettings.GameBoostEnabled;
+            if (GameBoostGpuToggle != null) GameBoostGpuToggle.IsChecked = AppSettings.GameBoostHighPerformanceGpu;
+            if (GameBoostAutoFreezeToggle != null) GameBoostAutoFreezeToggle.IsChecked = AppSettings.GameBoostAutoFreezeBackground;
+            if (GameBoostPeriodicRamToggle != null) GameBoostPeriodicRamToggle.IsChecked = AppSettings.GameBoostPeriodicRamPurge;
+            if (GameBoostSubOptionsPanel != null) GameBoostSubOptionsPanel.IsEnabled = AppSettings.GameBoostEnabled;
             GameSpaceToggle.IsChecked = AppSettings.GameSpaceEnabled;
             AutoProtectNonCloudToggle.IsChecked = AppSettings.AutoProtectNonCloudGames;
             MillenniumPluginToggle.IsChecked = AppSettings.EnableMillenniumPlugin;
@@ -199,11 +203,22 @@ public partial class SettingsPage : Page
             bool prevBoost = AppSettings.GameBoostEnabled;
             bool newBoost = GameBoostToggle.IsChecked == true;
             AppSettings.GameBoostEnabled = newBoost;
+            if (GameBoostSubOptionsPanel != null)
+            {
+                GameBoostSubOptionsPanel.IsEnabled = newBoost;
+            }
             if (prevBoost && !newBoost && GameBoostService.IsBoostActive)
             {
                 GameBoostService.RevertBoost();
             }
         }
+
+        if (GameBoostGpuToggle != null)
+            AppSettings.GameBoostHighPerformanceGpu = GameBoostGpuToggle.IsChecked == true;
+        if (GameBoostAutoFreezeToggle != null)
+            AppSettings.GameBoostAutoFreezeBackground = GameBoostAutoFreezeToggle.IsChecked == true;
+        if (GameBoostPeriodicRamToggle != null)
+            AppSettings.GameBoostPeriodicRamPurge = GameBoostPeriodicRamToggle.IsChecked == true;
 
         if (GameSpaceToggle != null)
         {

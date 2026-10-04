@@ -357,10 +357,11 @@ public static class ActiveGameTrackerService
                     _ = GameBoostService.ApplyBoostAsync(matchedGameProcess, name, headerUrl, procName, installDir);
                 }
 
-                // Periodic Mid-Game Checkpoint for active Steam game
+                // Periodic Mid-Game Checkpoint for active Steam game & Smart RAM Purge
                 if (_currentGame != null)
                 {
                     CheckMidGameCheckpoint(_currentGame);
+                    GameBoostService.CheckPeriodicSmartRam(_currentGame.ProcessId);
                 }
                 return;
             }
@@ -419,8 +420,9 @@ public static class ActiveGameTrackerService
                             _ = GameBoostService.ApplyBoostAsync(matchedProc, profile.GameName, null, targetProcName, null);
                         }
 
-                        // Periodic Mid-Game Checkpoint (Disaster Insurance)
+                        // Periodic Mid-Game Checkpoint (Disaster Insurance) & Smart RAM Purge
                         CheckMidGameCheckpoint(_currentGame);
+                        GameBoostService.CheckPeriodicSmartRam(_currentGame.ProcessId);
                         return;
                     }
                 }

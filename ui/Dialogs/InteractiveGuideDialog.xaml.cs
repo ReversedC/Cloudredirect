@@ -374,6 +374,48 @@ public partial class InteractiveGuideDialog : FluentWindow
                 HowItWorks = "By relying entirely on Windows ReadDirectoryChangesW notifications and process exit events, game binaries remain 100% unmodified.",
                 ProTip = "Look for the green 'Anti-Cheat Safe 🛡️' filter badge on Universal Saves to see all games protected under Safe Mode.",
                 TargetPageType = typeof(UniversalSavesPage)
+            },
+            new()
+            {
+                Id = "gameboost",
+                Symbol = SymbolRegular.Flash24,
+                IconColor = new SolidColorBrush(Color.FromRgb(0x00, 0xD2, 0xFF)),
+                Title = "Game Boost Engine",
+                Subtitle = "CPU, GPU & Memory Optimization",
+                Badge = "PERFORMANCE",
+                Description = "Game Boost maximizes hardware performance when a game launches by prioritizing CPU and I/O threads, switching Windows to High Performance power plan, auto-assigning dedicated GPUs for laptops, auto-freezing background applications, and periodically purging standby RAM.",
+                Highlights = new()
+                {
+                    "High CPU & I/O Priority: Elevates game process execution priority so Windows allocates maximum CPU cycles and minimizes input lag.",
+                    "Dedicated GPU Auto-Assignment: Automatically configures Windows DirectX preferences to run the game on the discrete high-performance graphics card (vital for gaming laptops).",
+                    "Auto-Freeze Background Apps: Deprioritizes resource hogs (Chrome, Edge, Discord, extra launchers) to Idle priority and flushes their RAM on launch, restoring them on game exit.",
+                    "Periodic Smart RAM Purge: Automatically purges leaked standby memory every 10 minutes during long gaming sessions whenever system RAM load exceeds 80%.",
+                    "Animated Toast Overlay: Displays a sleek, Steam-styled notification overlay showing freed memory and active booster status on launch."
+                },
+                HowItWorks = "Interacts directly with Windows powrprof.dll to engage high-performance power schemes, Windows Registry (DirectX UserGpuPreferences) to lock the discrete GPU, and EmptyWorkingSet APIs to trim background memory.",
+                ProTip = "Customize individual Game Boost toggles (Dedicated GPU, Background Auto-Freeze, Smart RAM Purge) under Settings to fit your setup!",
+                TargetPageType = typeof(SettingsPage)
+            },
+            new()
+            {
+                Id = "gamespace",
+                Symbol = SymbolRegular.Games24,
+                IconColor = new SolidColorBrush(Color.FromRgb(0x66, 0xC0, 0xF4)),
+                Title = "Game Space Overlay",
+                Subtitle = "Android-style in-game slide-out drawer (Ctrl+Space)",
+                Badge = "IN-GAME OVERLAY",
+                Description = "Game Space is an authentic Steam-styled, non-intrusive companion overlay inspired by mobile gaming docks. Press Ctrl+Space inside any game to slide out live system hardware telemetry, quick RAM purges, disaster insurance checkpoints, in-game scratchpad notes, and a draggable mini web browser.",
+                Highlights = new()
+                {
+                    "Live Hardware Telemetry: Instant glance at CPU & GPU utilization, temperatures, and RAM consumption formatted with responsive auto-fit badges.",
+                    "Disaster Insurance Checkpoints: Create named, timestamped save checkpoints before major boss fights or branching choices with one click.",
+                    "Draggable Mini Web Browser: Look up game wikis, maps, and walkthroughs without minimizing your game or triggering full-screen alt-tab stutters.",
+                    "Emergency Game Kill: Force-terminate frozen or unresponsive game processes instantly from the overlay.",
+                    "Auto-Safe Protection: Automatically disabled for genuine owned games and anti-cheat titles to ensure 100% account safety."
+                },
+                HowItWorks = "Runs as a hardware-accelerated WPF window positioned flush against the left screen edge. Listens to a global low-level Windows keyboard hook for Ctrl+Space, smoothly animating open and closing.",
+                ProTip = "Click 'Preview Game Space' in Settings to test and customize the overlay without needing to start a game first!",
+                TargetPageType = typeof(SettingsPage)
             }
         };
     }
@@ -597,6 +639,48 @@ public partial class InteractiveGuideDialog : FluentWindow
                 HowItWorks = "Windows의 ReadDirectoryChangesW 알림과 프로세스 종료 이벤트만을 활용하여 게임 프로세스와 완전히 격리된 상태로 동작합니다.",
                 ProTip = "유니버설 세이브 목록에서 'Anti-Cheat Safe 🛡️' 필터를 선택하면 안전 모드로 보호 중인 게임만 모아볼 수 있습니다.",
                 TargetPageType = typeof(UniversalSavesPage)
+            },
+            new()
+            {
+                Id = "gameboost",
+                Symbol = SymbolRegular.Flash24,
+                IconColor = new SolidColorBrush(Color.FromRgb(0x00, 0xD2, 0xFF)),
+                Title = "게임 부스트 엔진",
+                Subtitle = "CPU, GPU 및 메모리 성능 극대화",
+                Badge = "성능 최적화",
+                Description = "게임 실행 시 CPU 및 I/O 우선순위를 높이고, Windows 전원 옵션을 고성능으로 전환하며, 노트북 외장 GPU 자동 할당, 백그라운드 앱 자동 동결 및 장시간 게임 시 스마트 RAM 자동 정리를 수행합니다.",
+                Highlights = new()
+                {
+                    "CPU 및 I/O 우선순위 상승: 게임 프로세스에 높은 실행 우선순위를 부여하여 프레임 드랍과 입력 지연(인풋랙)을 최소화합니다.",
+                    "외장 고성능 GPU 자동 할당: 듀얼 GPU 노트북에서 게임이 내장 그래픽 대신 외장 고성능 그래픽 카드로 실행되도록 Windows DirectX 설정을 자동 구성합니다.",
+                    "백그라운드 앱 자동 동결: 게임 시작 시 Chrome, Edge, Discord, 런처 등을 유휴(Idle) 상태로 낮추고 RAM을 비우며, 게임 종료 시 원래대로 복구합니다.",
+                    "주기적 스마트 RAM 자동 정리: 장시간 플레이 시 시스템 RAM 사용량이 80%를 초과하면 대기 메모리를 자동으로 안전하게 정리합니다.",
+                    "Steam 스타일 토스트 알림: 부스트 활성화 시 최적화된 메모리 용량과 상태를 세련된 오버레이로 즉시 표시합니다."
+                },
+                HowItWorks = "Windows powrprof.dll을 통한 전원 관리 전환, DirectX UserGpuPreferences 레지스트리를 통한 외장 GPU 잠금, EmptyWorkingSet API를 활용하여 시스템 자원을 게임에 집중시킵니다.",
+                ProTip = "설정 페이지에서 외장 GPU 강제 할당, 백그라운드 앱 자동 동결, 주기적 RAM 정리 옵션을 개별적으로 켜거나 끌 수 있습니다!",
+                TargetPageType = typeof(SettingsPage)
+            },
+            new()
+            {
+                Id = "gamespace",
+                Symbol = SymbolRegular.Games24,
+                IconColor = new SolidColorBrush(Color.FromRgb(0x66, 0xC0, 0xF4)),
+                Title = "게임 스페이스 오버레이",
+                Subtitle = "안드로이드 스타일 인게임 슬라이드 서랍 (Ctrl+Space)",
+                Badge = "인게임 오버레이",
+                Description = "게임 스페이스는 게이밍 스마트폰의 게임 독에서 영감을 얻은 세련된 Steam 스타일 인게임 오버레이입니다. 게임 중 Ctrl+Space를 누르면 게임을 최소화하지 않고도 실시간 시스템 모니터링, 즉각적인 RAM 정리, 수동 세이브 체크포인트, 메모장, 드래그 가능한 미니 웹 브라우저를 바로 불러올 수 있습니다.",
+                Highlights = new()
+                {
+                    "실시간 하드웨어 텔레메트리: CPU, GPU 사용률, 온도 및 RAM 상태를 깔끔한 배지로 실시간 표시합니다.",
+                    "재해 방지 세이브 체크포인트: 보스전이나 중요한 선택 직전에 한 번의 클릭으로 이름을 지정한 세이브 백업을 즉시 생성합니다.",
+                    "이동 가능한 미니 웹 브라우저: Alt+Tab 전체화면 전환 없이 게임 내에서 공략, 지도, 위키를 바로 검색하고 크기를 조절할 수 있습니다.",
+                    "비상 게임 종료: 게임이 멈추거나 튕겼을 때 오버레이에서 즉시 강제 종료할 수 있습니다.",
+                    "안티치트 안전 가드: 정품 소유 게임 및 안티치트가 포함된 게임에서는 자동으로 비활성화되어 계정 제재 위험을 100% 차단합니다."
+                },
+                HowItWorks = "화면 좌측에 최상위 투명 레이어로 대기하다가 Ctrl+Space 단축키를 감지하면 부드러운 애니메이션과 함께 나타납니다.",
+                ProTip = "설정에서 'Preview Game Space' 버튼을 누르면 게임을 켜지 않고도 오버레이를 미리 체험하고 설정을 조정할 수 있습니다!",
+                TargetPageType = typeof(SettingsPage)
             }
         };
     }
@@ -820,6 +904,48 @@ public partial class InteractiveGuideDialog : FluentWindow
                 HowItWorks = "完全基于 Windows 标准的 ReadDirectoryChangesW 文件变动通知及进程退出事件驱动，与游戏内存彻底隔离。",
                 ProTip = "在通用存档界面勾选“Anti-Cheat Safe 🛡️”筛选标签，即可快速查看所有处于安全模式保护下的游戏。",
                 TargetPageType = typeof(UniversalSavesPage)
+            },
+            new()
+            {
+                Id = "gameboost",
+                Symbol = SymbolRegular.Flash24,
+                IconColor = new SolidColorBrush(Color.FromRgb(0x00, 0xD2, 0xFF)),
+                Title = "游戏加速引擎 (Game Boost)",
+                Subtitle = "CPU、GPU 与内存全方位性能优化",
+                Badge = "性能加速",
+                Description = "当游戏启动时，自动提升 CPU 与 I/O 优先级，切换 Windows 高性能电源计划，为笔记本自动分配独立独显，自动冻结后台冗余进程，并在长时间游戏时周期性智能清理内存。",
+                Highlights = new()
+                {
+                    "高 CPU 与 I/O 优先级：为游戏进程分配最高的系统调度权重，显著降低掉帧与操作输入延迟。",
+                    "自动分配高性能独显：专为双显卡笔记本优化，自动在 Windows DirectX 中绑定高性能独立显卡，避免误用集显导致卡顿。",
+                    "启动时自动冻结后台应用：游戏启动时将 Chrome、Edge、Discord、各类启动器降为低空闲优先级并释放内存，退出游戏后自动复原。",
+                    "长游戏周期智能 RAM 清理：监测长时间游玩过程，当系统 RAM 占用超过 80% 时自动清理备用待机内存，杜绝微卡顿。",
+                    "动态 Steam 风格弹出提示：启动游戏时弹出精致的游戏加速悬浮窗，展示释放的内存与就绪状态。"
+                },
+                HowItWorks = "通过调用 Windows powrprof.dll 切换极致电源模式，配置注册表 DirectX UserGpuPreferences 绑定独显，并调用 EmptyWorkingSet 释放后台无用工作集。",
+                ProTip = "您可以在“设置”页面中分别开启或关闭独显分配、后台自动冻结以及周期性智能内存清理！",
+                TargetPageType = typeof(SettingsPage)
+            },
+            new()
+            {
+                Id = "gamespace",
+                Symbol = SymbolRegular.Games24,
+                IconColor = new SolidColorBrush(Color.FromRgb(0x66, 0xC0, 0xF4)),
+                Title = "游戏空间悬浮窗 (Game Space)",
+                Subtitle = "安卓游戏手机风格侧滑栏 (Ctrl+Space)",
+                Badge = "游戏内悬浮窗",
+                Description = "Game Space 是灵感来源于电竞手机游戏助手的 Steam 质感侧滑栏。在游戏中按下 Ctrl+Space 即可瞬间滑出，无需最小化游戏即可查看硬件状态、一键清理内存、创建命名存档备份、使用游戏便签或开启微型网页浏览器。",
+                Highlights = new()
+                {
+                    "实时硬件状态监控：以原生 Steam 徽章风格实时展示 CPU、GPU 占用率、温度及 RAM 消耗。",
+                    "灾难备份存档点：在迎战强力 Boss 或做出关键剧情抉择前，一键生成带时间戳的命名存档快照。",
+                    "可拖拽移动的微型浏览器：无需切出游戏（Alt+Tab），直接在悬浮窗内浏览攻略、地图与维基。",
+                    "一键强退卡死游戏：游戏失去响应或卡死时，可在侧滑栏中一键结束游戏进程。",
+                    "反作弊安全防护：对官方正版和带有反作弊模块的游戏自动禁用，确保 100% 账号安全。"
+                },
+                HowItWorks = "采用全局底层键盘钩子监听 Ctrl+Space，借助硬件加速的 WPF 置顶透明窗口实现无缝平滑滑出动画。",
+                ProTip = "可在设置页面点击“Preview Game Space”预览悬浮窗并调整自适应布局，无需先启动游戏！",
+                TargetPageType = typeof(SettingsPage)
             }
         };
     }
@@ -1043,6 +1169,48 @@ public partial class InteractiveGuideDialog : FluentWindow
                 HowItWorks = "Utiliza las notificaciones de ReadDirectoryChangesW de Windows y eventos de finalización de procesos sin tocar la memoria del juego.",
                 ProTip = "Selecciona el filtro 'Anti-Cheat Safe 🛡️' en Guardados Universales para ver todos los juegos bajo protección en Modo Seguro.",
                 TargetPageType = typeof(UniversalSavesPage)
+            },
+            new()
+            {
+                Id = "gameboost",
+                Symbol = SymbolRegular.Flash24,
+                IconColor = new SolidColorBrush(Color.FromRgb(0x00, 0xD2, 0xFF)),
+                Title = "Motor Game Boost",
+                Subtitle = "Optimización de CPU, GPU y memoria",
+                Badge = "RENDIMIENTO",
+                Description = "Game Boost maximiza el rendimiento al iniciar un juego: eleva la prioridad de CPU e I/O, activa el plan de energía de alto rendimiento de Windows, asigna la GPU dedicada en portátiles, congela apps en segundo plano y purga memoria RAM periódicamente.",
+                Highlights = new()
+                {
+                    "Prioridad alta de CPU e I/O: Otorga al juego máxima prioridad en el programador de Windows, reduciendo el retardo de entrada.",
+                    "Asignación automática de GPU dedicada: Configura las preferencias de DirectX en Windows para forzar la gráfica dedicada (esencial en portátiles).",
+                    "Congelación automática en segundo plano: Reduce navegadores (Chrome, Edge), Discord y lanzadores a prioridad Idle y vacía su RAM al jugar, restaurándolos al salir.",
+                    "Autopurga inteligente periódica de RAM: En sesiones largas de juego, si el uso de RAM supera el 80%, limpia la memoria en espera de forma segura.",
+                    "Notificación animada estilo Steam: Muestra un aviso elegante al arrancar el juego indicando los megabytes de RAM optimizados."
+                },
+                HowItWorks = "Utiliza powrprof.dll para planes de energía, el registro DirectX UserGpuPreferences para forzar la GPU dedicada y EmptyWorkingSet para liberar memoria.",
+                ProTip = "¡Puedes activar o desactivar cada ajuste de Game Boost (GPU dedicada, congelación de apps, purga de RAM) en la página de Ajustes!",
+                TargetPageType = typeof(SettingsPage)
+            },
+            new()
+            {
+                Id = "gamespace",
+                Symbol = SymbolRegular.Games24,
+                IconColor = new SolidColorBrush(Color.FromRgb(0x66, 0xC0, 0xF4)),
+                Title = "Superposición Game Space",
+                Subtitle = "Cajón deslizante estilo Android en el juego (Ctrl+Espacio)",
+                Badge = "SUPERPOSICIÓN",
+                Description = "Game Space es una barra lateral complementaria no intrusiva inspirada en los móviles gaming con la estética de Steam. Pulsa Ctrl+Espacio en cualquier juego para desplegar telemetría en tiempo real, liberar RAM al instante, crear puntos de guardado nombrados, usar un bloc de notas y abrir un mininavegador web arrastrable.",
+                Highlights = new()
+                {
+                    "Telemetría de hardware en vivo: Visualiza uso de CPU, GPU, temperaturas y consumo de RAM con indicadores adaptables.",
+                    "Puntos de guardado de emergencia: Crea copias de seguridad de tus partidas antes de un combate difícil con un solo clic.",
+                    "Mininavegador web redimensionable y arrastrable: Consulta guías, mapas y wikis sin minimizar el juego ni sufrir tirones de pantalla completa.",
+                    "Cierre forzado de emergencia: Cierra juegos congelados o bloqueados de inmediato desde el panel lateral.",
+                    "Protección antitrampas automática: Se desactiva automáticamente en juegos legítimos o con sistemas antitrampas para máxima seguridad."
+                },
+                HowItWorks = "Se ejecuta como una ventana flotante acelerada por GPU fijada al borde izquierdo, detectando la combinación global Ctrl+Espacio.",
+                ProTip = "¡Haz clic en 'Preview Game Space' en Ajustes para probar y personalizar el panel antes de entrar al juego!",
+                TargetPageType = typeof(SettingsPage)
             }
         };
     }
@@ -1266,6 +1434,48 @@ public partial class InteractiveGuideDialog : FluentWindow
                 HowItWorks = "Baseia-se unicamente nas notificações ReadDirectoryChangesW do Windows e no evento de encerramento do processo do jogo.",
                 ProTip = "Selecione o filtro 'Anti-Cheat Safe 🛡️' na página de Salvamentos Universais para listar apenas os jogos protegidos no Modo Seguro.",
                 TargetPageType = typeof(UniversalSavesPage)
+            },
+            new()
+            {
+                Id = "gameboost",
+                Symbol = SymbolRegular.Flash24,
+                IconColor = new SolidColorBrush(Color.FromRgb(0x00, 0xD2, 0xFF)),
+                Title = "Motor Game Boost",
+                Subtitle = "Otimização de CPU, GPU e memória",
+                Badge = "DESEMPENHO",
+                Description = "O Game Boost maximiza o desempenho ao iniciar um jogo: eleva a prioridade de CPU e E/S, ativa o plano de energia de alto desempenho do Windows, atribui a GPU dedicada em notebooks, congela aplicativos em segundo plano e realiza purga periódica de RAM.",
+                Highlights = new()
+                {
+                    "Prioridade alta de CPU e E/S: Garante ciclos máximos de processamento para o jogo, reduzindo a latência de comandos.",
+                    "Atribuição de GPU dedicada: Configura as preferências do DirectX no Windows para rodar o jogo na placa de vídeo dedicada (ideal para notebooks com GPU dupla).",
+                    "Congelamento automático de apps: Reduz navegadores (Chrome, Edge), Discord e inicializadores para prioridade Idle e libera a RAM enquanto você joga, restaurando ao sair.",
+                    "Purga inteligente periódica de RAM: Durante sessões longas, limpa automaticamente a memória em espera se o consumo total ultrapassar 80%.",
+                    "Notificação animada estilo Steam: Exibe um aviso moderno ao iniciar o jogo mostrando a quantidade de memória liberada."
+                },
+                HowItWorks = "Interage com a biblioteca powrprof.dll para alternar planos de energia, grava no registro DirectX UserGpuPreferences para fixar a GPU dedicada e usa a API EmptyWorkingSet para limpar a RAM.",
+                ProTip = "Personalize as opções do Game Boost (GPU dedicada, congelamento automático, purga de RAM) na tela de Configurações!",
+                TargetPageType = typeof(SettingsPage)
+            },
+            new()
+            {
+                Id = "gamespace",
+                Symbol = SymbolRegular.Games24,
+                IconColor = new SolidColorBrush(Color.FromRgb(0x66, 0xC0, 0xF4)),
+                Title = "Sobreposição Game Space",
+                Subtitle = "Gaveta deslizante no jogo estilo Android (Ctrl+Espaço)",
+                Badge = "HUD NO JOGO",
+                Description = "O Game Space é uma sobreposição não invasiva no estilo Steam inspirada nos menus de jogos de smartphones. Pressione Ctrl+Espaço durante qualquer jogo para acessar telemetria em tempo real, liberar RAM com um toque, criar pontos de restauração salvos, fazer anotações e navegar na web com uma mini janela arrastável.",
+                Highlights = new()
+                {
+                    "Telemetria de hardware ao vivo: Monitore uso de CPU, GPU, temperaturas e consumo de RAM com visualização adaptável.",
+                    "Pontos de salvamento personalizados: Crie pontos de restauração com nome e horário antes de momentos decisivos no jogo.",
+                    "Mini navegador web arrastável: Consulte tutoriais, mapas e detonados sem minimizar o jogo nem causar travamentos de tela cheia.",
+                    "Encerramento forçado de emergência: Feche jogos travados ou sem resposta diretamente pela sobreposição.",
+                    "Proteção antitrapaça automática: É desativado automaticamente em jogos originais ou com anti-cheat para garantir total segurança da sua conta."
+                },
+                HowItWorks = "Funciona como uma janela acelerada por hardware fixada na borda esquerda que responde ao atalho global Ctrl+Espaço com animação suave.",
+                ProTip = "Clique em 'Preview Game Space' nas Configurações para testar e ajustar o painel antes de começar a jogar!",
+                TargetPageType = typeof(SettingsPage)
             }
         };
     }
@@ -1489,6 +1699,48 @@ public partial class InteractiveGuideDialog : FluentWindow
                 HowItWorks = "Bergantung sepenuhnya pada pemberitahuan ReadDirectoryChangesW Windows dan peristiwa penamatan proses permainan.",
                 ProTip = "Pilih penapis 'Anti-Cheat Safe 🛡️' pada halaman Simpanan Universal untuk melihat semua permainan yang dilindungi di bawah Mod Selamat.",
                 TargetPageType = typeof(UniversalSavesPage)
+            },
+            new()
+            {
+                Id = "gameboost",
+                Symbol = SymbolRegular.Flash24,
+                IconColor = new SolidColorBrush(Color.FromRgb(0x00, 0xD2, 0xFF)),
+                Title = "Enjin Game Boost",
+                Subtitle = "Pengoptimuman CPU, GPU & Memori",
+                Badge = "PRESTASI",
+                Description = "Game Boost memaksimumkan prestasi perkakasan semasa pelancaran permainan: meningkatkan keutamaan CPU dan I/O, menukar pelan kuasa Windows ke Prestasi Tinggi, menetapkan GPU khusus untuk komputer riba, membekukan aplikasi latar belakang secara automatik dan membersihkan RAM secara berkala.",
+                Highlights = new()
+                {
+                    "Keutamaan Tinggi CPU & I/O: Memberikan keutamaan pemprosesan maksimum kepada permainan bagi mengurangkan kelengahan input.",
+                    "Penetapan GPU Khusus Automatik: Mengkonfigurasi keutamaan Windows DirectX untuk memastikan permainan berjalan pada kad grafik khusus berprestasi tinggi (penting untuk komputer riba).",
+                    "Pembekuan Automatik Aplikasi Latar Belakang: Menurunkan keutamaan pelayar (Chrome, Edge), Discord dan pelancar lain ke Idle serta mengosongkan RAM semasa bermain, memulihkannya semula selepas keluar.",
+                    "Pembersihan RAM Pintar Berkala: Memantau penggunaan memori semasa sesi permainan yang panjang; membersihkan memori siap sedia secara automatik jika beban RAM melebihi 80%.",
+                    "Pemberitahuan Animasi Gaya Steam: Memaparkan pemberitahuan elegan semasa permainan dilancarkan yang menunjukkan jumlah RAM yang dioptimumkan."
+                },
+                HowItWorks = "Menggunakan powrprof.dll untuk mod kuasa tinggi, pendaftaran Windows DirectX UserGpuPreferences untuk mengunci GPU khusus, dan API EmptyWorkingSet untuk mengosongkan memori latar belakang.",
+                ProTip = "Anda boleh menyesuaikan pilihan Game Boost (GPU Khusus, Pembekuan Aplikasi, Pembersihan RAM) dalam halaman Tetapan!",
+                TargetPageType = typeof(SettingsPage)
+            },
+            new()
+            {
+                Id = "gamespace",
+                Symbol = SymbolRegular.Games24,
+                IconColor = new SolidColorBrush(Color.FromRgb(0x66, 0xC0, 0xF4)),
+                Title = "Hamparan Game Space",
+                Subtitle = "Laci luncur dalam permainan gaya Android (Ctrl+Space)",
+                Badge = "HAMPARAN PERMAINAN",
+                Description = "Game Space ialah hamparan teman bergaya Steam yang diilhamkan daripada dermaga telefon pintar permainan. Tekan Ctrl+Space dalam mana-mana permainan untuk meluncurkan telemetri perkakasan secara langsung, pembersihan RAM segera, penciptaan titik semak simpanan tersuai, pad nota dan pelayar web mini yang boleh dialihkan.",
+                Highlights = new()
+                {
+                    "Telemetri Perkakasan Langsung: Lihat penggunaan CPU & GPU, suhu, dan penggunaan RAM dengan lencana paparan pintar.",
+                    "Titik Semak Simpanan Bencana: Cipta titik semak simpanan bernama dan bertarikh dengan satu klik sebelum pertempuran bos utama.",
+                    "Pelayar Web Mini Boleh Dialih: Cari panduan permainan, peta dan wiki tanpa perlu meminimumkan permainan atau mengalami gangguan skrin penuh.",
+                    "Penamatan Kecemasan Permainan: Tamatkan proses permainan yang beku atau tidak bertindak balas serta-merta dari hamparan.",
+                    "Perlindungan Keselamatan Anti-Cheat: Dinyahaktifkan secara automatik pada permainan tulen dan permainan dengan sistem anti-cheat bagi menjamin keselamatan akaun 100%."
+                },
+                HowItWorks = "Beroperasi sebagai tetingkap WPF yang dipasang di tepi kiri skrin dan mendengar pintasan papan kekunci global Ctrl+Space untuk meluncur masuk dengan lancar.",
+                ProTip = "Klik 'Preview Game Space' dalam Tetapan untuk menguji dan menyesuaikan hamparan sebelum anda mula bermain!",
+                TargetPageType = typeof(SettingsPage)
             }
         };
     }

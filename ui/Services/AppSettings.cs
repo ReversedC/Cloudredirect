@@ -156,6 +156,24 @@ public static class AppSettings
         set => WriteBool("game_boost_show_toast", value);
     }
 
+    public static bool GameBoostHighPerformanceGpu
+    {
+        get => ReadBool("game_boost_high_perf_gpu", true);
+        set => WriteBool("game_boost_high_perf_gpu", value);
+    }
+
+    public static bool GameBoostAutoFreezeBackground
+    {
+        get => ReadBool("game_boost_auto_freeze_bg", true);
+        set => WriteBool("game_boost_auto_freeze_bg", value);
+    }
+
+    public static bool GameBoostPeriodicRamPurge
+    {
+        get => ReadBool("game_boost_periodic_ram_purge", true);
+        set => WriteBool("game_boost_periodic_ram_purge", value);
+    }
+
     public static bool GameSpaceEnabled
     {
         get => ReadBool("game_space_enabled", true);

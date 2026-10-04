@@ -294,6 +294,81 @@
                                 </StackPanel>
                             </ui:CardControl>
 
+                            <!-- Game Boost Sub-Options (Dedicated GPU, Background Freeze, Smart RAM Purge) -->
+                            <StackPanel Margin="16,4,0,0" x:Name="GameBoostSubOptionsPanel">
+                                <!-- Auto-Assign High-Performance Dedicated GPU -->
+                                <ui:CardControl Margin="0,4,0,0">
+                                    <ui:CardControl.Header>
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <TextBlock Text="⚡ Auto-Assign High-Performance Dedicated GPU"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                <Border Background="#1A2D1B" BorderBrush="#5BA32B" BorderThickness="1"
+                                                        CornerRadius="4" Padding="6,1" Margin="8,0,0,0">
+                                                    <TextBlock Text="TOP PICK FOR LAPTOPS" FontSize="10" FontWeight="Bold" Foreground="#A4D007" />
+                                                </Border>
+                                            </StackPanel>
+                                            <TextBlock Text="Forces Windows DirectX graphics settings to run games on the discrete high-performance GPU, preventing accidental lag on integrated graphics."
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                       FontSize="12"
+                                                       TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </ui:CardControl.Header>
+                                    <ui:ToggleSwitch x:Name="GameBoostGpuToggle"
+                                                     Checked="AppSettingsToggle_Changed"
+                                                     Unchecked="AppSettingsToggle_Changed" />
+                                </ui:CardControl>
+
+                                <!-- Auto-Freeze Background Apps on Launch -->
+                                <ui:CardControl Margin="0,4,0,0">
+                                    <ui:CardControl.Header>
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <TextBlock Text="❄️ Auto-Freeze Background Apps on Launch"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                <Border Background="#162B3D" BorderBrush="#00D2FF" BorderThickness="1"
+                                                        CornerRadius="4" Padding="6,1" Margin="8,0,0,0">
+                                                    <TextBlock Text="AUTOMATIC MODE" FontSize="10" FontWeight="Bold" Foreground="#66C0F4" />
+                                                </Border>
+                                            </StackPanel>
+                                            <TextBlock Text="Silences background browsers (Chrome, Edge), Discord, and game launchers to Idle priority and flushes their RAM while in-game, automatically restoring them on exit."
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                       FontSize="12"
+                                                       TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </ui:CardControl.Header>
+                                    <ui:ToggleSwitch x:Name="GameBoostAutoFreezeToggle"
+                                                     Checked="AppSettingsToggle_Changed"
+                                                     Unchecked="AppSettingsToggle_Changed" />
+                                </ui:CardControl>
+
+                                <!-- Periodic Smart RAM Auto-Purge -->
+                                <ui:CardControl Margin="0,4,0,0">
+                                    <ui:CardControl.Header>
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <TextBlock Text="🧹 Periodic Smart RAM Auto-Purge"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                <Border Background="#2B2114" BorderBrush="#D1892B" BorderThickness="1"
+                                                        CornerRadius="4" Padding="6,1" Margin="8,0,0,0">
+                                                    <TextBlock Text="FOR LONG GAMING SESSIONS" FontSize="10" FontWeight="Bold" Foreground="#FFA500" />
+                                                </Border>
+                                            </StackPanel>
+                                            <TextBlock Text="Monitors memory load during long sessions; automatically flushes background standby RAM if total system memory usage exceeds 80% to eliminate micro-stutters."
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                       FontSize="12"
+                                                       TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </ui:CardControl.Header>
+                                    <ui:ToggleSwitch x:Name="GameBoostPeriodicRamToggle"
+                                                     Checked="AppSettingsToggle_Changed"
+                                                     Unchecked="AppSettingsToggle_Changed" />
+                                </ui:CardControl>
+                            </StackPanel>
+
                             <!-- Game Space In-Game Overlay (Android-Style Companion) -->
                             <ui:CardControl Margin="0,8,0,0">
                                 <ui:CardControl.Header>

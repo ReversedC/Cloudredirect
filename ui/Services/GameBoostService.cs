@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using Microsoft.Win32;
 
 namespace CloudRedirect.Services;
 
@@ -97,13 +98,57 @@ public static class GameBoostService
                     }
                 }
 
-                // 1. Switch Windows Power Scheme IMMEDIATELY
+                // Helper to resolve executable path for GPU preference assignment
+                string? ResolveExePath(Process? proc)
+                {
+                    if (proc != null && !proc.HasExited)
+                    {
+                        string? p = ActiveGameTrackerService.GetProcessFilePath(proc.Id);
+                        if (!string.IsNullOrEmpty(p) && File.Exists(p)) return p;
+                        try
+                        {
+                            if (!string.IsNullOrEmpty(proc.MainModule?.FileName) && File.Exists(proc.MainModule.FileName))
+                                return proc.MainModule.FileName;
+                        }
+                        catch { }
+                    }
+
+                    if (!string.IsNullOrEmpty(installDir) && Directory.Exists(installDir))
+                    {
+                        if (!string.IsNullOrEmpty(procName))
+                        {
+                            string candidate = Path.Combine(installDir, procName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? procName : procName + ".exe");
+                            if (File.Exists(candidate)) return candidate;
+                        }
+                        try
+                        {
+                            var files = Directory.GetFiles(installDir, "*.exe", SearchOption.AllDirectories);
+                            var best = files.FirstOrDefault(f => !f.Contains("crash", StringComparison.OrdinalIgnoreCase) && !f.Contains("setup", StringComparison.OrdinalIgnoreCase) && !f.Contains("unitycrash", StringComparison.OrdinalIgnoreCase));
+                            if (!string.IsNullOrEmpty(best)) return best;
+                        }
+                        catch { }
+                    }
+
+                    return null;
+                }
+
+                // 1. Auto-Assign High-Performance Dedicated GPU (Laptops / Dual GPU)
+                if (AppSettings.GameBoostHighPerformanceGpu)
+                {
+                    string? targetExe = ResolveExePath(gameProcess);
+                    if (!string.IsNullOrEmpty(targetExe))
+                    {
+                        AssignHighPerformanceGpu(targetExe);
+                    }
+                }
+
+                // 2. Switch Windows Power Scheme IMMEDIATELY
                 if (AppSettings.GameBoostPowerPlan)
                 {
                     SwitchToHighPerformancePowerScheme();
                 }
 
-                // 2. Trim Standby RAM / Working Sets IMMEDIATELY
+                // 3. Trim Standby RAM / Working Sets IMMEDIATELY
                 long freedBytes = 0;
                 if (AppSettings.GameBoostRamTrim)
                 {
@@ -111,7 +156,24 @@ public static class GameBoostService
                     LastFreedRamBytes = freedBytes;
                 }
 
-                // 3. Fire Toast Notification & Events IMMEDIATELY
+                // 4. Auto-Freeze Background Apps (Automatic Mode)
+                if (AppSettings.GameBoostAutoFreezeBackground)
+                {
+                    try
+                    {
+                        var (frozenCount, reclaimedMb) = BackgroundAppFreezer.FreezeBackgroundApps();
+                        if (frozenCount > 0)
+                        {
+                            Debug.WriteLine($"[GameBoost] Auto-froze {frozenCount} background apps, reclaimed ~{reclaimedMb} MB RAM");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"[GameBoost] Auto-freeze error: {ex.Message}");
+                    }
+                }
+
+                // 5. Fire Toast Notification & Events IMMEDIATELY
                 string ramText = freedBytes > 10 * 1024 * 1024
                     ? $"⚡ {freedBytes / (1024 * 1024):N0} MB Standby RAM Optimized"
                     : "High CPU Priority & Max Power Active";
@@ -123,13 +185,13 @@ public static class GameBoostService
 
                 OnBoostStateChanged?.Invoke(true, gameName);
 
-                // 4. Optionally throttle non-essential background processes
+                // 6. Optionally throttle non-essential background processes
                 if (AppSettings.GameBoostThrottleBackground)
                 {
                     ThrottleBackgroundProcesses(gameProcess?.Id ?? 0);
                 }
 
-                // 5. Elevate Game CPU & I/O Priority (dynamically resolve process if still starting)
+                // 7. Elevate Game CPU & I/O Priority (dynamically resolve process if still starting)
                 if (AppSettings.GameBoostHighPriority)
                 {
                     if (gameProcess == null || gameProcess.HasExited)
@@ -168,6 +230,16 @@ public static class GameBoostService
                         lock (_lock)
                         {
                             _boostedProcessId = gameProcess.Id;
+                        }
+
+                        // Ensure GPU preference is registered now that process is resolved
+                        if (AppSettings.GameBoostHighPerformanceGpu)
+                        {
+                            string? targetExe = ResolveExePath(gameProcess);
+                            if (!string.IsNullOrEmpty(targetExe))
+                            {
+                                AssignHighPerformanceGpu(targetExe);
+                            }
                         }
 
                         try
@@ -233,6 +305,17 @@ public static class GameBoostService
                     catch { }
                 }
                 _throttledProcesses.Clear();
+
+                // 3. Restore/Thaw Auto-Frozen Background Processes
+                if (BackgroundAppFreezer.IsFrozen)
+                {
+                    try
+                    {
+                        int thawed = BackgroundAppFreezer.ThawBackgroundApps();
+                        Debug.WriteLine($"[GameBoost] Thawed {thawed} frozen background processes on game exit.");
+                    }
+                    catch { }
+                }
             }
             catch (Exception ex)
             {
@@ -243,6 +326,7 @@ public static class GameBoostService
                 _isBoostActive = false;
                 _boostedGameName = null;
                 _boostedProcessId = 0;
+                _lastSmartRamPurgeTime = DateTime.MinValue;
                 OnBoostStateChanged?.Invoke(false, null);
                 GameBoostToastService.Dismiss();
             }
@@ -368,5 +452,97 @@ public static class GameBoostService
             }
         }
         catch { }
+    }
+
+    private static DateTime _lastSmartRamPurgeTime = DateTime.MinValue;
+    private static readonly TimeSpan MinSmartRamInterval = TimeSpan.FromMinutes(10);
+    private const double SmartRamThresholdPercent = 80.0;
+
+    /// <summary>
+    /// Checks memory load during an active game session and triggers a smart RAM purge if RAM load >= 80%
+    /// and at least 10 minutes have elapsed since the last purge.
+    /// </summary>
+    public static void CheckPeriodicSmartRam(int gamePid)
+    {
+        if (!AppSettings.GameBoostEnabled || !AppSettings.GameBoostPeriodicRamPurge)
+            return;
+
+        if (!_isBoostActive)
+            return;
+
+        var now = DateTime.Now;
+        if (now - _lastSmartRamPurgeTime < MinSmartRamInterval)
+            return;
+
+        try
+        {
+            var telemetry = SystemTelemetryService.ReadTelemetry();
+            if (telemetry.RamPercent >= SmartRamThresholdPercent)
+            {
+                _lastSmartRamPurgeTime = now;
+                long freed = PurgeMemory(gamePid);
+                LastFreedRamBytes = freed;
+                Debug.WriteLine($"[GameBoost] Periodic Smart RAM Purge triggered: RAM load was {telemetry.RamPercent:F0}%. Freed {freed / (1024 * 1024)} MB.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[GameBoost] Periodic Smart RAM check failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Forces Windows DirectX graphics preference to use the High-Performance discrete GPU (e.g. NVIDIA/AMD)
+    /// instead of the integrated GPU. Especially critical for gaming laptops with dual graphics.
+    /// Writes to HKCU\Software\Microsoft\DirectX\UserGpuPreferences: "GpuPreference=2;".
+    /// </summary>
+    public static void AssignHighPerformanceGpu(string? exePath)
+    {
+        if (string.IsNullOrWhiteSpace(exePath))
+            return;
+
+        try
+        {
+            if (!File.Exists(exePath))
+                return;
+
+            string fullPath = Path.GetFullPath(exePath);
+            using var key = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\DirectX\UserGpuPreferences", true);
+            if (key == null) return;
+
+            object? existingVal = key.GetValue(fullPath);
+            string currentStr = existingVal as string ?? "";
+
+            // Check if GpuPreference is already set to 2 (High Performance)
+            if (currentStr.Contains("GpuPreference=2", StringComparison.OrdinalIgnoreCase))
+            {
+                return; // Already configured for High Performance GPU
+            }
+
+            string newVal;
+            if (string.IsNullOrEmpty(currentStr))
+            {
+                newVal = "GpuPreference=2;";
+            }
+            else if (currentStr.Contains("GpuPreference=0", StringComparison.OrdinalIgnoreCase))
+            {
+                newVal = currentStr.Replace("GpuPreference=0", "GpuPreference=2");
+            }
+            else if (currentStr.Contains("GpuPreference=1", StringComparison.OrdinalIgnoreCase))
+            {
+                newVal = currentStr.Replace("GpuPreference=1", "GpuPreference=2");
+            }
+            else
+            {
+                newVal = currentStr.TrimEnd(';') + ";GpuPreference=2;";
+            }
+
+            key.SetValue(fullPath, newVal, RegistryValueKind.String);
+            Debug.WriteLine($"[GameBoost] Configured High-Performance Dedicated GPU for: {fullPath} ({newVal})");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[GameBoost] Could not set GPU preference for {exePath}: {ex.Message}");
+        }
     }
 }
