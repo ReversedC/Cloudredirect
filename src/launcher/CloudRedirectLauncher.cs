@@ -13,8 +13,8 @@ using Microsoft.Win32;
 [assembly: AssemblyTitle("CloudRedirect")]
 [assembly: AssemblyDescription("CloudRedirect Steam Cloud Synchronization & Save Redirection Companion")]
 [assembly: AssemblyProduct("CloudRedirect")]
-[assembly: AssemblyVersion("2.9.14.0")]
-[assembly: AssemblyFileVersion("2.9.14.0")]
+[assembly: AssemblyVersion("2.9.89.0")]
+[assembly: AssemblyFileVersion("2.9.89.0")]
 
 namespace CloudRedirectLauncher
 {
@@ -22,6 +22,55 @@ namespace CloudRedirectLauncher
     {
         [DllImport("user32.dll")]
         private static extern bool SetProcessDPIAware();
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool AllowSetForegroundWindow(int dwProcessId);
+        private const int ASFW_ANY = -1;
+
+        private const string ShowWindowEventName = @"Local\CloudRedirect_ShowMainWindow_Event_99214";
+        private const string GlobalShowWindowEventName = @"Global\CloudRedirect_ShowMainWindow_Event_99214";
+
+        private static bool TrySignalRunningInstance(string[] args)
+        {
+            try
+            {
+                if (args != null)
+                {
+                    for (int i = 0; i < args.Length; i++)
+                    {
+                        string a = args[i];
+                        if (!string.IsNullOrEmpty(a) && a.StartsWith("cloudredirect://", StringComparison.OrdinalIgnoreCase))
+                        {
+                            try
+                            {
+                                string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CloudRedirect");
+                                if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+                                File.WriteAllText(Path.Combine(dir, "ipc_command.txt"), a);
+                            }
+                            catch { }
+                            break;
+                        }
+                    }
+                }
+
+                EventWaitHandle ewh = null;
+                if (!EventWaitHandle.TryOpenExisting(GlobalShowWindowEventName, out ewh))
+                {
+                    EventWaitHandle.TryOpenExisting(ShowWindowEventName, out ewh);
+                }
+
+                if (ewh != null)
+                {
+                    ewh.Set();
+                    ewh.Close();
+                    try { AllowSetForegroundWindow(ASFW_ANY); } catch { }
+                    return true;
+                }
+            }
+            catch { }
+            return false;
+        }
 
         private static string[] _savedArgs;
 
@@ -41,17 +90,52 @@ namespace CloudRedirectLauncher
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
+            int updateFromPid = 0;
             bool forceSetup = false;
             if (args != null)
             {
-                foreach (var a in args)
+                for (int i = 0; i < args.Length; i++)
                 {
-                    if (string.Equals(a, "--test-setup", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(a, "-setup", StringComparison.OrdinalIgnoreCase))
+                    string a = args[i];
+                    if (string.IsNullOrEmpty(a)) continue;
+
+                    if (string.Equals(a, "--update-from-pid", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+                    {
+                        int.TryParse(args[i + 1], out updateFromPid);
+                    }
+                    else if (a.StartsWith("--update-from-pid=", StringComparison.OrdinalIgnoreCase))
+                    {
+                        int.TryParse(a.Substring("--update-from-pid=".Length), out updateFromPid);
+                    }
+                    else if (string.Equals(a, "--test-setup", StringComparison.OrdinalIgnoreCase) ||
+                             string.Equals(a, "-setup", StringComparison.OrdinalIgnoreCase))
                     {
                         forceSetup = true;
-                        break;
                     }
+                }
+            }
+
+            // 1. If this is an Auto-Update launch, wait for the old PID to completely exit
+            if (updateFromPid > 0)
+            {
+                try
+                {
+                    Process oldProc = Process.GetProcessById(updateFromPid);
+                    if (!oldProc.WaitForExit(4000))
+                    {
+                        try { oldProc.Kill(); oldProc.WaitForExit(1000); } catch { }
+                    }
+                }
+                catch { }
+                Thread.Sleep(100);
+            }
+            else
+            {
+                // 2. Ultra-Fast Single-Instance Check (<5ms):
+                // If CloudRedirect is already running, signal it to restore/show its window and exit immediately!
+                if (TrySignalRunningInstance(args))
+                {
+                    return;
                 }
             }
 

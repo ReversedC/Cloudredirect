@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -14,11 +15,56 @@ namespace CloudRedirect;
 public partial class App : System.Windows.Application
 {
     private const string SingleInstanceMutexName = @"Local\CloudRedirect_SingleInstance_Mutex_99214";
+    private const string GlobalSingleInstanceMutexName = @"Global\CloudRedirect_SingleInstance_Mutex_99214";
     private const string ShowWindowEventName = @"Local\CloudRedirect_ShowMainWindow_Event_99214";
+    private const string GlobalShowWindowEventName = @"Global\CloudRedirect_ShowMainWindow_Event_99214";
 
-    private static Mutex? _singleInstanceMutex;
-    private static EventWaitHandle? _showWindowEvent;
+    private static IntPtr _singleInstanceMutexHandle = IntPtr.Zero;
+    private static IntPtr _showWindowEventHandle = IntPtr.Zero;
     private static Thread? _eventWaitThread;
+
+    [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool ConvertStringSecurityDescriptorToSecurityDescriptor(
+        string StringSecurityDescriptor,
+        uint StringSDRevision,
+        out IntPtr SecurityDescriptor,
+        IntPtr SecurityDescriptorSize);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct SECURITY_ATTRIBUTES
+    {
+        public int nLength;
+        public IntPtr lpSecurityDescriptor;
+        [MarshalAs(UnmanagedType.Bool)]
+        public bool bInheritHandle;
+    }
+
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+    private static extern IntPtr CreateEvent(
+        ref SECURITY_ATTRIBUTES lpEventAttributes,
+        bool bManualReset,
+        bool bInitialState,
+        string lpName);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern uint WaitForSingleObject(IntPtr hHandle, uint dwMilliseconds);
+    private const uint INFINITE = 0xFFFFFFFF;
+    private const uint WAIT_OBJECT_0 = 0x00000000;
+
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+    private static extern IntPtr CreateMutex(
+        ref SECURITY_ATTRIBUTES lpMutexAttributes,
+        bool bInitialOwner,
+        string lpName);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool ReleaseMutex(IntPtr hMutex);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool CloseHandle(IntPtr hObject);
 
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -149,13 +195,69 @@ public partial class App : System.Windows.Application
             args.Handled = true;
         };
 
-        bool isNewInstance;
+        // 1. If launched via Auto-Update, wait for the previous instance PID to finish terminating
+        int updateFromPid = 0;
+        foreach (var arg in e.Args)
+        {
+            if (arg.StartsWith("--update-from-pid=", StringComparison.OrdinalIgnoreCase))
+            {
+                int.TryParse(arg.Substring("--update-from-pid=".Length), out updateFromPid);
+            }
+            else if (arg.Equals("--update-from-pid", StringComparison.OrdinalIgnoreCase))
+            {
+                int idx = Array.IndexOf(e.Args, arg);
+                if (idx >= 0 && idx + 1 < e.Args.Length)
+                {
+                    int.TryParse(e.Args[idx + 1], out updateFromPid);
+                }
+            }
+        }
+
+        if (updateFromPid > 0)
+        {
+            LogStartup($"Launched from Auto-Update. Waiting for previous instance PID {updateFromPid} to exit...");
+            try
+            {
+                var oldProc = Process.GetProcessById(updateFromPid);
+                if (!oldProc.WaitForExit(4000))
+                {
+                    try { oldProc.Kill(); oldProc.WaitForExit(1000); } catch { }
+                }
+            }
+            catch { }
+            Thread.Sleep(100);
+        }
+
+        // 2. 100% Admin/User Cross-Compatible Single-Instance Mutex (World DACL)
+        bool isNewInstance = true;
         try
         {
-            _singleInstanceMutex = new Mutex(true, SingleInstanceMutexName, out isNewInstance);
+            var sa = new SECURITY_ATTRIBUTES();
+            sa.nLength = Marshal.SizeOf(typeof(SECURITY_ATTRIBUTES));
+            sa.bInheritHandle = false;
+
+            if (ConvertStringSecurityDescriptorToSecurityDescriptor("D:(A;;GA;;;WD)", 1, out IntPtr pSec, IntPtr.Zero))
+            {
+                sa.lpSecurityDescriptor = pSec;
+            }
+
+            IntPtr hMutex = CreateMutex(ref sa, true, GlobalSingleInstanceMutexName);
+            int lastErr = Marshal.GetLastWin32Error();
+            if (hMutex == IntPtr.Zero)
+            {
+                hMutex = CreateMutex(ref sa, true, SingleInstanceMutexName);
+                lastErr = Marshal.GetLastWin32Error();
+            }
+
+            if (hMutex != IntPtr.Zero)
+            {
+                _singleInstanceMutexHandle = hMutex;
+                isNewInstance = (lastErr != 183); // ERROR_ALREADY_EXISTS = 183
+            }
         }
-        catch
+        catch (Exception ex)
         {
+            LogStartup("SingleInstanceMutex error: " + ex.Message);
             isNewInstance = true;
         }
 
@@ -181,7 +283,8 @@ public partial class App : System.Windows.Application
             bool signaled = false;
             try
             {
-                if (EventWaitHandle.TryOpenExisting(ShowWindowEventName, out var showEvent))
+                if (EventWaitHandle.TryOpenExisting(GlobalShowWindowEventName, out var showEvent) ||
+                    EventWaitHandle.TryOpenExisting(ShowWindowEventName, out showEvent))
                 {
                     showEvent.Set();
                     showEvent.Dispose();
@@ -205,65 +308,83 @@ public partial class App : System.Windows.Application
             // Continue starting up as the active instance!
         }
 
-        // We are the primary instance. Create the event wait handle for secondary instance signals
+        // We are the primary instance. Create the event wait handle for secondary instance signals with World DACL
         try
         {
-            _showWindowEvent = new EventWaitHandle(false, EventResetMode.AutoReset, ShowWindowEventName);
-            _eventWaitThread = new Thread(() =>
+            SECURITY_ATTRIBUTES sa = new SECURITY_ATTRIBUTES();
+            sa.nLength = Marshal.SizeOf(sa);
+            sa.bInheritHandle = false;
+            IntPtr pSd = IntPtr.Zero;
+            if (ConvertStringSecurityDescriptorToSecurityDescriptor("D:(A;;GA;;;WD)", 1, out pSd, IntPtr.Zero))
             {
-                while (true)
+                sa.lpSecurityDescriptor = pSd;
+            }
+
+            _showWindowEventHandle = CreateEvent(ref sa, false, false, GlobalShowWindowEventName);
+            if (_showWindowEventHandle == IntPtr.Zero)
+            {
+                _showWindowEventHandle = CreateEvent(ref sa, false, false, ShowWindowEventName);
+            }
+
+            if (_showWindowEventHandle != IntPtr.Zero)
+            {
+                _eventWaitThread = new Thread(() =>
                 {
-                    try
+                    while (true)
                     {
-                        if (_showWindowEvent.WaitOne())
+                        try
                         {
-                            Current?.Dispatcher.BeginInvoke(new Action(() =>
+                            uint res = WaitForSingleObject(_showWindowEventHandle, INFINITE);
+                            if (res == WAIT_OBJECT_0)
                             {
-                                try
+                                Current?.Dispatcher.BeginInvoke(new Action(() =>
                                 {
-                                    var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CloudRedirect");
-                                    var ipcFile = Path.Combine(dir, "ipc_command.txt");
-                                    if (File.Exists(ipcFile))
+                                    try
                                     {
-                                        var cmd = File.ReadAllText(ipcFile).Trim();
-                                        File.Delete(ipcFile);
-                                        if (cmd.Contains("backup", StringComparison.OrdinalIgnoreCase))
+                                        var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CloudRedirect");
+                                        var ipcFile = Path.Combine(dir, "ipc_command.txt");
+                                        if (File.Exists(ipcFile))
                                         {
-                                            _ = Services.UniversalCloudSyncService.SyncAllProfilesAsync();
-                                        }
-                                        else if (cmd.Contains("saves", StringComparison.OrdinalIgnoreCase))
-                                        {
-                                            if (Current.MainWindow is MainWindow mw)
+                                            var cmd = File.ReadAllText(ipcFile).Trim();
+                                            File.Delete(ipcFile);
+                                            if (cmd.Contains("backup", StringComparison.OrdinalIgnoreCase))
                                             {
-                                                mw.NavigateTo(typeof(Pages.UniversalSavesPage));
+                                                _ = Services.UniversalCloudSyncService.SyncAllProfilesAsync();
+                                            }
+                                            else if (cmd.Contains("saves", StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                if (Current.MainWindow is MainWindow mw)
+                                                {
+                                                    mw.NavigateTo(typeof(Pages.UniversalSavesPage));
+                                                }
                                             }
                                         }
                                     }
-                                }
-                                catch { }
-                                BringToForeground();
-                            }));
+                                    catch { }
+                                    BringToForeground();
+                                }));
+                            }
+                            else
+                            {
+                                break;
+                            }
+                        }
+                        catch (ThreadAbortException)
+                        {
+                            break;
+                        }
+                        catch
+                        {
+                            Thread.Sleep(200);
                         }
                     }
-                    catch (ThreadAbortException)
-                    {
-                        break;
-                    }
-                    catch (ObjectDisposedException)
-                    {
-                        break;
-                    }
-                    catch
-                    {
-                        Thread.Sleep(200);
-                    }
-                }
-            })
-            {
-                IsBackground = true,
-                Name = "CloudRedirect_SingleInstance_Listener"
-            };
-            _eventWaitThread.Start();
+                })
+                {
+                    IsBackground = true,
+                    Name = "CloudRedirect_SingleInstance_Listener"
+                };
+                _eventWaitThread.Start();
+            }
         }
         catch { }
 
@@ -361,11 +482,16 @@ public partial class App : System.Windows.Application
 
         try
         {
-            _showWindowEvent?.Dispose();
-            if (_singleInstanceMutex != null)
+            if (_showWindowEventHandle != IntPtr.Zero)
             {
-                _singleInstanceMutex.ReleaseMutex();
-                _singleInstanceMutex.Dispose();
+                CloseHandle(_showWindowEventHandle);
+                _showWindowEventHandle = IntPtr.Zero;
+            }
+            if (_singleInstanceMutexHandle != IntPtr.Zero)
+            {
+                ReleaseMutex(_singleInstanceMutexHandle);
+                CloseHandle(_singleInstanceMutexHandle);
+                _singleInstanceMutexHandle = IntPtr.Zero;
             }
         }
         catch { }

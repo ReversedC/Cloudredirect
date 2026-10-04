@@ -493,16 +493,19 @@ internal static class AppUpdater
             targetLauncher = Path.Combine(Path.GetDirectoryName(targetLauncher) ?? AppContext.BaseDirectory, "CloudRedirect.exe");
         }
 
+        int currentPid = Environment.ProcessId;
+        string relaunchArgs = $"--update-from-pid {currentPid}";
+
         try
         {
             if (File.Exists(targetLauncher))
             {
-                Process.Start(new ProcessStartInfo(targetLauncher) { UseShellExecute = true });
+                Process.Start(new ProcessStartInfo(targetLauncher, relaunchArgs) { UseShellExecute = true });
             }
             else
             {
                 var current = Environment.ProcessPath ?? Path.Combine(AppContext.BaseDirectory, "CloudRedirect.exe");
-                Process.Start(new ProcessStartInfo(current) { UseShellExecute = true });
+                Process.Start(new ProcessStartInfo(current, relaunchArgs) { UseShellExecute = true });
             }
         }
         catch (Exception ex)
@@ -568,11 +571,13 @@ internal static class AppUpdater
                 }
             }
 
+            int currentPid = Environment.ProcessId;
+
             if (!updated)
             {
                 // Fallback: spawn external updater batch to swap after this process terminates
                 var updaterCmd = Path.Combine(Path.GetTempPath(), "cloudredirect_update.cmd");
-                var batchContent = $"@echo off\r\ntimeout /t 1 /nobreak >nul\r\ncopy /y \"{stagedExePath}\" \"{targetLauncher}\" >nul\r\ndel /f /q \"{stagedExePath}\" >nul\r\nstart \"\" \"{targetLauncher}\"\r\ndel /f /q \"%~f0\"\r\n";
+                var batchContent = $"@echo off\r\ntimeout /t 1 /nobreak >nul\r\ncopy /y \"{stagedExePath}\" \"{targetLauncher}\" >nul\r\ndel /f /q \"{stagedExePath}\" >nul\r\nstart \"\" \"{targetLauncher}\" --update-from-pid {currentPid}\r\ndel /f /q \"%~f0\"\r\n";
                 File.WriteAllText(updaterCmd, batchContent);
                 Process.Start(new ProcessStartInfo
                 {
@@ -585,9 +590,9 @@ internal static class AppUpdater
                 return null;
             }
 
-            // Relaunch the launcher (CloudRedirect.exe).
+            // Relaunch the launcher (CloudRedirect.exe) passing --update-from-pid so it waits for us to cleanly exit.
             // It will unpack the updated CloudRedirect.Core.exe and start it cleanly.
-            Process.Start(new ProcessStartInfo(targetLauncher) { UseShellExecute = true });
+            Process.Start(new ProcessStartInfo(targetLauncher, $"--update-from-pid {currentPid}") { UseShellExecute = true });
             Environment.Exit(0);
             return null;
         }
