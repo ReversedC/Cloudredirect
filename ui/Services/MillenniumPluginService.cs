@@ -851,6 +851,104 @@ var PluginEntryPointMain = function () {
             return null;
         }
 
+        function showSuperNavMenu(e, doc) {
+            const oldMenu = doc.getElementById('cr-supernav-dropdown');
+            if (oldMenu) oldMenu.remove();
+
+            const menu = doc.createElement('div');
+            menu.id = 'cr-supernav-dropdown';
+            menu.style.position = 'fixed';
+            menu.style.left = `${Math.min(e.clientX, (doc.defaultView?.innerWidth || 1200) - 230)}px`;
+            menu.style.top = `${e.clientY + 8}px`;
+            menu.style.background = '#1b2838';
+            menu.style.border = '1px solid #3d4450';
+            menu.style.borderRadius = '4px';
+            menu.style.boxShadow = '0 8px 16px rgba(0, 0, 0, 0.6)';
+            menu.style.zIndex = '999999';
+            menu.style.minWidth = '210px';
+            menu.style.padding = '6px 0';
+            menu.style.color = '#c6d4df';
+            menu.style.fontFamily = '""Motiva Sans"", sans-serif';
+            menu.style.fontSize = '13px';
+
+            const items = [
+                {
+                    label: '🚀 Open CloudRedirect App',
+                    action: () => launchApp(doc)
+                },
+                {
+                    label: '💾 Trigger Cloud Backup Now',
+                    action: () => {
+                        __call_server_method__(""trigger_backup"", {});
+                        try {
+                            const link = doc.createElement('a');
+                            link.href = 'cloudredirect://backup';
+                            doc.body.appendChild(link);
+                            link.click();
+                            link.remove();
+                        } catch (err) { }
+                    }
+                },
+                { separator: true },
+                {
+                    label: '🔃 Fast Reload Steam UI',
+                    action: () => {
+                        if (doc.defaultView) doc.defaultView.location.reload();
+                        else window.location.reload();
+                    }
+                },
+                {
+                    label: '🔄 Quick Restart Steam',
+                    action: () => {
+                        try {
+                            if (window.SteamClient?.User?.StartRestart) {
+                                window.SteamClient.User.StartRestart(true);
+                                return;
+                            }
+                        } catch (err) { }
+                        window.location.reload();
+                    }
+                }
+            ];
+
+            items.forEach(item => {
+                if (item.separator) {
+                    const sep = doc.createElement('div');
+                    sep.style.height = '1px';
+                    sep.style.background = '#2a3f5a';
+                    sep.style.margin = '4px 0';
+                    menu.appendChild(sep);
+                    return;
+                }
+                const btn = doc.createElement('div');
+                btn.textContent = item.label;
+                btn.style.padding = '8px 16px';
+                btn.style.cursor = 'pointer';
+                btn.style.transition = 'background 0.15s, color 0.15s';
+                btn.onmouseenter = () => {
+                    btn.style.background = '#2a475e';
+                    btn.style.color = '#ffffff';
+                };
+                btn.onmouseleave = () => {
+                    btn.style.background = 'transparent';
+                    btn.style.color = '#c6d4df';
+                };
+                btn.onclick = (ev) => {
+                    ev.stopPropagation();
+                    menu.remove();
+                    item.action();
+                };
+                menu.appendChild(btn);
+            });
+
+            const closeHandler = () => {
+                menu.remove();
+                doc.removeEventListener('click', closeHandler);
+            };
+            setTimeout(() => doc.addEventListener('click', closeHandler), 10);
+            doc.body.appendChild(menu);
+        }
+
         // Injects tab right into STORE / LIBRARY / COMMUNITY / USER / CLOUDREDIRECT row
         function injectSuperNavTab(doc) {
             if (!doc || !doc.body) return;
@@ -872,7 +970,7 @@ var PluginEntryPointMain = function () {
             navItem.className = (sampleTab.className || '').replace(/\bactive\b/gi, '').trim() + ' cr-supernav-menu';
             navItem.setAttribute('role', 'button');
             navItem.setAttribute('tabindex', '0');
-            navItem.title = 'CloudRedirect v2.9.74 (Save Protection Active - Click to Open App)';
+            navItem.title = 'CloudRedirect (Left click: Open | Right click: Menu / Reload / Restart)';
 
             // Find child button / inner element if present in sampleTab
             const sampleInner = sampleTab.querySelector('div, a, span') || sampleTab;
@@ -908,11 +1006,17 @@ var PluginEntryPointMain = function () {
 
             navItem.appendChild(innerBtn);
 
-            // Directly launch CloudRedirect application when tab is clicked
+            // Directly launch CloudRedirect application when tab is left-clicked
             navItem.onclick = (e) => {
                 e.stopPropagation();
                 e.preventDefault();
                 launchApp(doc);
+            };
+            // Right-click opens context menu with Fast Reload & Quick Restart
+            navItem.oncontextmenu = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                showSuperNavMenu(e, doc);
             };
             navItem.onkeydown = (e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
@@ -1091,9 +1195,36 @@ var PluginEntryPointMain = function () {
                 runInjections();
             }, 800);
 
+            function hookSteamRootMenu(popup) {
+                try {
+                    const r = popup?.m_popup?.document || popup?.document || popup?.window?.document;
+                    if (!r) return;
+                    setTimeout(() => {
+                        if (r.getElementById('cr-root-menu-item')) return;
+                        const menuItems = r.querySelectorAll('div#popup_target div[role=""menuitem""]');
+                        if (menuItems.length === 0) return;
+                        const lastItem = menuItems[menuItems.length - 1];
+                        const parent = lastItem?.parentNode;
+                        if (!parent) return;
+
+                        const crItem = lastItem.cloneNode(true);
+                        crItem.id = 'cr-root-menu-item';
+                        crItem.textContent = 'CloudRedirect';
+                        crItem.onclick = (ev) => {
+                            ev.stopPropagation();
+                            launchApp(r);
+                        };
+                        parent.insertBefore(crItem, lastItem);
+                    }, 50);
+                } catch (e) { }
+            }
+
             try {
                 if (typeof Millennium !== 'undefined' && typeof Millennium.AddWindowCreateHook === 'function') {
                     Millennium.AddWindowCreateHook((popup) => {
+                        if (popup && (popup.m_strTitle === 'Steam Root Menu' || popup.title === 'Steam Root Menu')) {
+                            hookSteamRootMenu(popup);
+                        }
                         setTimeout(() => runInjections(), 300);
                         setTimeout(() => runInjections(), 1500);
                     });
