@@ -47,44 +47,10 @@ public partial class NewsPage : Page
 
         try
         {
-            var steamRunning = await Task.Run(() =>
-            {
-                var procs = Process.GetProcessesByName("steam");
-                bool running = procs.Length > 0;
-                foreach (var p in procs) p.Dispose();
-                return running;
-            });
-
+            var steamRunning = Services.SteamDetector.IsSteamRunning();
             if (steamRunning)
             {
-                await Task.Run(() =>
-                {
-                    var steamExe = Path.Combine(_steamPath, "steam.exe");
-                    if (File.Exists(steamExe))
-                    {
-                        Process.Start(new ProcessStartInfo
-                        {
-                            FileName = steamExe,
-                            Arguments = "-shutdown",
-                            UseShellExecute = true
-                        })?.Dispose();
-                    }
-
-                    for (int i = 0; i < 30; i++)
-                    {
-                        System.Threading.Thread.Sleep(500);
-                        var check = Process.GetProcessesByName("steam");
-                        bool any = check.Length > 0;
-                        foreach (var p in check) p.Dispose();
-                        if (!any) return;
-                    }
-
-                    foreach (var p in Process.GetProcessesByName("steam"))
-                    {
-                        try { p.Kill(); } catch { }
-                        finally { p.Dispose(); }
-                    }
-                });
+                await Services.SteamDetector.StopSteamAsync(_steamPath, timeoutSeconds: 6);
             }
 
             var destPath = Path.Combine(_steamPath, "cloud_redirect.dll");
@@ -105,11 +71,7 @@ public partial class NewsPage : Page
                         S.Get("Dashboard_DllUpdatedRestartPrompt"));
                     if (restart)
                     {
-                        Process.Start(new ProcessStartInfo
-                        {
-                            FileName = Path.Combine(_steamPath, "steam.exe"),
-                            UseShellExecute = true
-                        })?.Dispose();
+                        Services.SteamDetector.StartSteam(_steamPath);
                     }
                 }
             }

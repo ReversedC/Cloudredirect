@@ -128,36 +128,7 @@ public partial class SetupPage : Page
         if (!running) return;
 
         Log("Steam is running - shutting it down...");
-
-        await Task.Run(() =>
-        {
-            var steamExe = Path.Combine(_steamPath ?? "", "steam.exe");
-            if (File.Exists(steamExe))
-            {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                {
-                    FileName = steamExe,
-                    Arguments = "-shutdown",
-                    UseShellExecute = true
-                })?.Dispose();
-            }
-
-            for (int i = 0; i < 30; i++) // 15s
-            {
-                System.Threading.Thread.Sleep(500);
-                var check = System.Diagnostics.Process.GetProcessesByName("steam");
-                bool any = check.Length > 0;
-                foreach (var p in check) p.Dispose();
-                if (!any) return;
-            }
-
-            foreach (var p in System.Diagnostics.Process.GetProcessesByName("steam"))
-            {
-                try { p.Kill(); } catch { }
-                finally { p.Dispose(); }
-            }
-        });
-
+        await Services.SteamDetector.StopSteamAsync(_steamPath, timeoutSeconds: 6);
         Log("Steam closed.");
     }
 
