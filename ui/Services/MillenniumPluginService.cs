@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -389,6 +389,26 @@ function get_status()
     return { isRunning = true, status = ""active"", message = ""CloudRedirect Active"" }
 end
 
+function open_minibrowser(kwargs)
+    local url = kwargs and kwargs.url or """"
+    log_info(""open_minibrowser invoked from Steam WebUI: "" .. tostring(url))
+    local res = os.execute('start """" ""cloudredirect://minibrowser?url=' .. tostring(url) .. '""')
+    return { success = true, result = res }
+end
+
+function get_patchwiki_tutorials()
+    local appdata = os.getenv(""APPDATA"")
+    if not appdata then return { success = false } end
+    local file = appdata .. ""\\CloudRedirect\\steam_plugin_patchwiki.json""
+    local f = io.open(file, ""r"")
+    if f then
+        local content = f:read(""""*a"""")
+        f:close()
+        return { success = true, data = content }
+    end
+    return { success = false }
+end
+
 local function on_frontend_loaded()
     log_info(""Frontend UI loaded into Steam CEF successfully"")
 end
@@ -411,7 +431,9 @@ return {
     launch_cloudredirect = launch_cloudredirect,
     trigger_backup = trigger_backup,
     open_saves = open_saves,
-    get_status = get_status
+    get_status = get_status,
+    open_minibrowser = open_minibrowser,
+    get_patchwiki_tutorials = get_patchwiki_tutorials
 }";
 
     private const string StyleCssContent = @"/* CloudRedirect Native Millennium Plugin Styles */
@@ -554,6 +576,449 @@ return {
     color: #a4d007;
     font-weight: bold;
 }
+
+/* Game Page Button: .cr-patchwiki-btn */
+.cr-patchwiki-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, rgba(28, 52, 75, 0.95), rgba(16, 32, 48, 0.95));
+    border: 1px solid #3d6e99;
+    border-radius: 14px;
+    padding: 4px 10px;
+    font-family: ""Motiva Sans"", -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: #66c0f4;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+    margin-left: 8px;
+    vertical-align: middle;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+}
+
+.cr-patchwiki-btn:hover {
+    background: linear-gradient(135deg, rgba(38, 72, 104, 1), rgba(24, 46, 68, 1));
+    border-color: #66c0f4;
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(102, 192, 244, 0.5);
+    transform: translateY(-1px);
+}
+
+.cr-patchwiki-svg {
+    width: 14px;
+    height: 14px;
+    fill: currentColor;
+    flex-shrink: 0;
+}
+
+.cr-patchwiki-pill {
+    background: #a4d007;
+    color: #0d141b;
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    padding: 1px 5px;
+    border-radius: 8px;
+    letter-spacing: 0.5px;
+    margin-left: 2px;
+}
+
+/* In-Steam PatchWiki Mini Window Modal */
+.cr-patchwiki-window {
+    position: fixed;
+    top: 80px;
+    right: 40px;
+    width: 820px;
+    height: 620px;
+    min-width: 440px;
+    min-height: 340px;
+    max-width: 95vw;
+    max-height: 92vh;
+    background: #101822;
+    border: 1px solid #2a475e;
+    border-radius: 8px;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(102, 192, 244, 0.2);
+    z-index: 9999999;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    resize: both;
+    font-family: ""Motiva Sans"", ""Twemoji"", ""Noto Sans"", Helvetica, sans-serif;
+    color: #c6d4df;
+    animation: crFadeIn 0.18s ease-out;
+}
+
+@keyframes crFadeIn {
+    from { opacity: 0; transform: scale(0.97); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.cr-patchwiki-window.cr-modal-maximized {
+    top: 20px !important;
+    left: 20px !important;
+    right: 20px !important;
+    bottom: 20px !important;
+    width: auto !important;
+    height: auto !important;
+    max-width: none !important;
+    max-height: none !important;
+    resize: none !important;
+}
+
+/* Modal Titlebar / Drag Handle */
+.cr-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 42px;
+    background: linear-gradient(to right, #1b2838, #172432);
+    border-bottom: 1px solid #24384a;
+    padding: 0 12px;
+    user-select: none;
+    cursor: move;
+    flex-shrink: 0;
+}
+
+.cr-modal-title-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    margin-right: 12px;
+}
+
+.cr-modal-icon {
+    font-size: 15px;
+    flex-shrink: 0;
+}
+
+.cr-modal-title-text {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cr-modal-app-name {
+    font-weight: 700;
+    font-size: 13px;
+    color: #ffffff;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cr-modal-guide-badge {
+    background: rgba(102, 192, 244, 0.2);
+    border: 1px solid #66c0f4;
+    color: #66c0f4;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 1px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+}
+
+.cr-modal-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+/* Tab buttons inside titlebar */
+.cr-modal-tabs {
+    display: flex;
+    background: #0d141b;
+    border: 1px solid #233748;
+    border-radius: 4px;
+    padding: 2px;
+    margin-right: 6px;
+}
+
+.cr-tab-btn {
+    background: transparent;
+    border: none;
+    color: #8f98a0;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.cr-tab-btn:hover {
+    color: #ffffff;
+}
+
+.cr-tab-btn.cr-tab-active {
+    background: #2a475e;
+    color: #66c0f4;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+/* Control buttons (External, Maximize, Close) */
+.cr-modal-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: #8f98a0;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.15s ease;
+}
+
+.cr-modal-btn:hover {
+    background: #243b4f;
+    color: #ffffff;
+    border-color: #3d5f7d;
+}
+
+.cr-modal-btn.cr-btn-close:hover {
+    background: #c93838;
+    border-color: #e85555;
+    color: #ffffff;
+}
+
+/* Modal Body */
+.cr-modal-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    background: #0b1016;
+}
+
+.cr-tab-pane {
+    display: none;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.cr-tab-pane.cr-pane-active {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Web View Iframe */
+.cr-patchwiki-frame {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: #0f1722;
+}
+
+/* Reader Mode View */
+.cr-reader-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 28px;
+    line-height: 1.6;
+    color: #dcdedf;
+}
+
+.cr-reader-summary-card {
+    background: #141f2c;
+    border: 1px solid #233749;
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+}
+
+.cr-reader-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    font-size: 12px;
+    color: #8f98a0;
+    margin-bottom: 8px;
+}
+
+.cr-reader-tags-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.cr-reader-tag {
+    background: rgba(102, 192, 244, 0.15);
+    border: 1px solid rgba(102, 192, 244, 0.4);
+    color: #66c0f4;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.cr-reader-desc-text {
+    font-size: 13px;
+    color: #c6d4df;
+    margin: 0;
+}
+
+.cr-reader-body-markdown h1,
+.cr-reader-body-markdown h2,
+.cr-reader-body-markdown h3 {
+    color: #ffffff;
+    margin-top: 18px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #243547;
+    padding-bottom: 4px;
+}
+
+.cr-reader-body-markdown h1 { font-size: 18px; }
+.cr-reader-body-markdown h2 { font-size: 15px; color: #66c0f4; }
+.cr-reader-body-markdown h3 { font-size: 13px; color: #a4d007; }
+
+.cr-reader-body-markdown p {
+    margin: 8px 0;
+    font-size: 13px;
+}
+
+.cr-reader-body-markdown ul,
+.cr-reader-body-markdown ol {
+    margin: 8px 0 8px 24px;
+    padding: 0;
+    font-size: 13px;
+}
+
+.cr-reader-body-markdown li {
+    margin: 4px 0;
+}
+
+.cr-code-block {
+    background: #070b0f;
+    border: 1px solid #1f2f3e;
+    border-radius: 6px;
+    margin: 12px 0;
+    overflow: hidden;
+}
+
+.cr-code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #111a24;
+    padding: 4px 10px;
+    font-size: 11px;
+    color: #8f98a0;
+    border-bottom: 1px solid #1f2f3e;
+}
+
+.cr-code-copy-btn {
+    background: #1c2b3a;
+    border: 1px solid #2f4961;
+    color: #66c0f4;
+    border-radius: 3px;
+    padding: 2px 8px;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.cr-code-copy-btn:hover {
+    background: #273d52;
+    color: #ffffff;
+}
+
+.cr-code-block pre {
+    margin: 0;
+    padding: 10px 14px;
+    overflow-x: auto;
+    font-family: Consolas, ""Courier New"", monospace;
+    font-size: 12px;
+    color: #9cdcfe;
+}
+
+.cr-inline-code {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid #233446;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: Consolas, ""Courier New"", monospace;
+    font-size: 12px;
+    color: #e5c07b;
+}
+
+.cr-guide-link {
+    color: #66c0f4;
+    text-decoration: underline;
+}
+
+.cr-guide-link:hover {
+    color: #ffffff;
+}
+
+.cr-reader-loading {
+    padding: 24px 0;
+    color: #8f98a0;
+    font-size: 13px;
+}
+
+.cr-reader-fallback-box {
+    padding: 20px;
+    background: #141f2c;
+    border: 1px solid #233749;
+    border-radius: 6px;
+    margin-top: 14px;
+    text-align: center;
+}
+
+.cr-switch-to-web-btn {
+    background: linear-gradient(to right, #47bfff, #1a9fff);
+    border: none;
+    border-radius: 4px;
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 12px;
+    padding: 6px 16px;
+    cursor: pointer;
+    margin-top: 8px;
+}
+
+.cr-switch-to-web-btn:hover {
+    background: linear-gradient(to right, #6cd0ff, #38afff);
+}
+
+/* Modal Footer */
+.cr-modal-footer {
+    height: 26px;
+    background: #0d141b;
+    border-top: 1px solid #1c2834;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    font-size: 11px;
+    color: #67727e;
+    flex-shrink: 0;
+}
+
+.cr-footer-status {
+    color: #8f98a0;
+}
+
+.cr-footer-link {
+    font-family: Consolas, monospace;
+    color: #536473;
+}
+
 ";
 
     private const string FrontendJsContent = @"const MILLENNIUM_IS_CLIENT_MODULE = true;
@@ -784,24 +1249,370 @@ var PluginEntryPointMain = function () {
                     color: #a4d007;
                     font-weight: bold;
                 }
+
+                /* Game Page Button: .cr-patchwiki-btn */
+                .cr-patchwiki-btn {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    background: linear-gradient(135deg, rgba(28, 52, 75, 0.95), rgba(16, 32, 48, 0.95));
+                    border: 1px solid #3d6e99;
+                    border-radius: 14px;
+                    padding: 4px 10px;
+                    font-family: ""Motiva Sans"", -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, sans-serif;
+                    font-size: 11px;
+                    font-weight: 600;
+                    color: #66c0f4;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    user-select: none;
+                    margin-left: 8px;
+                    vertical-align: middle;
+                    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+                }
+                .cr-patchwiki-btn:hover {
+                    background: linear-gradient(135deg, rgba(38, 72, 104, 1), rgba(24, 46, 68, 1));
+                    border-color: #66c0f4;
+                    color: #ffffff;
+                    box-shadow: 0 0 12px rgba(102, 192, 244, 0.5);
+                    transform: translateY(-1px);
+                }
+                .cr-patchwiki-svg {
+                    width: 14px;
+                    height: 14px;
+                    fill: currentColor;
+                    flex-shrink: 0;
+                }
+                .cr-patchwiki-pill {
+                    background: #a4d007;
+                    color: #0d141b;
+                    font-size: 9px;
+                    font-weight: 800;
+                    text-transform: uppercase;
+                    padding: 1px 5px;
+                    border-radius: 8px;
+                    letter-spacing: 0.5px;
+                    margin-left: 2px;
+                }
+
+                /* In-Steam PatchWiki Mini Window Modal */
+                .cr-patchwiki-window {
+                    position: fixed;
+                    top: 80px;
+                    right: 40px;
+                    width: 820px;
+                    height: 620px;
+                    min-width: 440px;
+                    min-height: 340px;
+                    max-width: 95vw;
+                    max-height: 92vh;
+                    background: #101822;
+                    border: 1px solid #2a475e;
+                    border-radius: 8px;
+                    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(102, 192, 244, 0.2);
+                    z-index: 9999999;
+                    display: flex;
+                    flex-direction: column;
+                    overflow: hidden;
+                    resize: both;
+                    font-family: ""Motiva Sans"", ""Twemoji"", ""Noto Sans"", Helvetica, sans-serif;
+                    color: #c6d4df;
+                    animation: crFadeIn 0.18s ease-out;
+                }
+                @keyframes crFadeIn {
+                    from { opacity: 0; transform: scale(0.97); }
+                    to { opacity: 1; transform: scale(1); }
+                }
+                .cr-patchwiki-window.cr-modal-maximized {
+                    top: 20px !important;
+                    left: 20px !important;
+                    right: 20px !important;
+                    bottom: 20px !important;
+                    width: auto !important;
+                    height: auto !important;
+                    max-width: none !important;
+                    max-height: none !important;
+                    resize: none !important;
+                }
+                .cr-modal-header {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    height: 42px;
+                    background: linear-gradient(to right, #1b2838, #172432);
+                    border-bottom: 1px solid #24384a;
+                    padding: 0 12px;
+                    user-select: none;
+                    cursor: move;
+                    flex-shrink: 0;
+                }
+                .cr-modal-title-left {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    overflow: hidden;
+                    white-space: nowrap;
+                    text-overflow: ellipsis;
+                    margin-right: 12px;
+                }
+                .cr-modal-icon { font-size: 15px; flex-shrink: 0; }
+                .cr-modal-title-text {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+                .cr-modal-app-name {
+                    font-weight: 700;
+                    font-size: 13px;
+                    color: #ffffff;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+                .cr-modal-guide-badge {
+                    background: rgba(102, 192, 244, 0.2);
+                    border: 1px solid #66c0f4;
+                    color: #66c0f4;
+                    font-size: 10px;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    padding: 1px 6px;
+                    border-radius: 4px;
+                    letter-spacing: 0.5px;
+                }
+                .cr-modal-actions {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    flex-shrink: 0;
+                }
+                .cr-modal-tabs {
+                    display: flex;
+                    background: #0d141b;
+                    border: 1px solid #233748;
+                    border-radius: 4px;
+                    padding: 2px;
+                    margin-right: 6px;
+                }
+                .cr-tab-btn {
+                    background: transparent;
+                    border: none;
+                    color: #8f98a0;
+                    font-size: 11px;
+                    font-weight: 600;
+                    padding: 3px 10px;
+                    border-radius: 3px;
+                    cursor: pointer;
+                    transition: all 0.15s ease;
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                }
+                .cr-tab-btn:hover { color: #ffffff; }
+                .cr-tab-btn.cr-tab-active {
+                    background: #2a475e;
+                    color: #66c0f4;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+                }
+                .cr-modal-btn {
+                    width: 28px;
+                    height: 28px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: transparent;
+                    border: 1px solid transparent;
+                    border-radius: 4px;
+                    color: #8f98a0;
+                    cursor: pointer;
+                    font-size: 13px;
+                    transition: all 0.15s ease;
+                }
+                .cr-modal-btn:hover {
+                    background: #243b4f;
+                    color: #ffffff;
+                    border-color: #3d5f7d;
+                }
+                .cr-modal-btn.cr-btn-close:hover {
+                    background: #c93838;
+                    border-color: #e85555;
+                    color: #ffffff;
+                }
+                .cr-modal-body {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    overflow: hidden;
+                    position: relative;
+                    background: #0b1016;
+                }
+                .cr-tab-pane {
+                    display: none;
+                    width: 100%;
+                    height: 100%;
+                    overflow: hidden;
+                }
+                .cr-tab-pane.cr-pane-active {
+                    display: flex;
+                    flex-direction: column;
+                }
+                .cr-patchwiki-frame {
+                    width: 100%;
+                    height: 100%;
+                    border: none;
+                    background: #0f1722;
+                }
+                .cr-reader-container {
+                    flex: 1;
+                    overflow-y: auto;
+                    padding: 20px 28px;
+                    line-height: 1.6;
+                    color: #dcdedf;
+                }
+                .cr-reader-summary-card {
+                    background: #141f2c;
+                    border: 1px solid #233749;
+                    border-radius: 6px;
+                    padding: 14px 18px;
+                    margin-bottom: 20px;
+                }
+                .cr-reader-meta-row {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 16px;
+                    font-size: 12px;
+                    color: #8f98a0;
+                    margin-bottom: 8px;
+                }
+                .cr-reader-tags-row {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 6px;
+                    margin-bottom: 8px;
+                }
+                .cr-reader-tag {
+                    background: rgba(102, 192, 244, 0.15);
+                    border: 1px solid rgba(102, 192, 244, 0.4);
+                    color: #66c0f4;
+                    padding: 2px 8px;
+                    border-radius: 12px;
+                    font-size: 11px;
+                    font-weight: 600;
+                }
+                .cr-reader-desc-text {
+                    font-size: 13px;
+                    color: #c6d4df;
+                    margin: 0;
+                }
+                .cr-reader-body-markdown h1,
+                .cr-reader-body-markdown h2,
+                .cr-reader-body-markdown h3 {
+                    color: #ffffff;
+                    margin-top: 18px;
+                    margin-bottom: 8px;
+                    border-bottom: 1px solid #243547;
+                    padding-bottom: 4px;
+                }
+                .cr-reader-body-markdown h1 { font-size: 18px; }
+                .cr-reader-body-markdown h2 { font-size: 15px; color: #66c0f4; }
+                .cr-reader-body-markdown h3 { font-size: 13px; color: #a4d007; }
+                .cr-reader-body-markdown p { margin: 8px 0; font-size: 13px; }
+                .cr-reader-body-markdown ul,
+                .cr-reader-body-markdown ol { margin: 8px 0 8px 24px; padding: 0; font-size: 13px; }
+                .cr-reader-body-markdown li { margin: 4px 0; }
+                .cr-code-block {
+                    background: #070b0f;
+                    border: 1px solid #1f2f3e;
+                    border-radius: 6px;
+                    margin: 12px 0;
+                    overflow: hidden;
+                }
+                .cr-code-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    background: #111a24;
+                    padding: 4px 10px;
+                    font-size: 11px;
+                    color: #8f98a0;
+                    border-bottom: 1px solid #1f2f3e;
+                }
+                .cr-code-copy-btn {
+                    background: #1c2b3a;
+                    border: 1px solid #2f4961;
+                    color: #66c0f4;
+                    border-radius: 3px;
+                    padding: 2px 8px;
+                    font-size: 11px;
+                    cursor: pointer;
+                }
+                .cr-code-copy-btn:hover { background: #273d52; color: #ffffff; }
+                .cr-code-block pre {
+                    margin: 0;
+                    padding: 10px 14px;
+                    overflow-x: auto;
+                    font-family: Consolas, ""Courier New"", monospace;
+                    font-size: 12px;
+                    color: #9cdcfe;
+                }
+                .cr-inline-code {
+                    background: rgba(0, 0, 0, 0.4);
+                    border: 1px solid #233446;
+                    padding: 1px 5px;
+                    border-radius: 3px;
+                    font-family: Consolas, ""Courier New"", monospace;
+                    font-size: 12px;
+                    color: #e5c07b;
+                }
+                .cr-guide-link { color: #66c0f4; text-decoration: underline; }
+                .cr-guide-link:hover { color: #ffffff; }
+                .cr-reader-loading { padding: 24px 0; color: #8f98a0; font-size: 13px; }
+                .cr-reader-fallback-box {
+                    padding: 20px;
+                    background: #141f2c;
+                    border: 1px solid #233749;
+                    border-radius: 6px;
+                    margin-top: 14px;
+                    text-align: center;
+                }
+                .cr-switch-to-web-btn {
+                    background: linear-gradient(to right, #47bfff, #1a9fff);
+                    border: none;
+                    border-radius: 4px;
+                    color: #ffffff;
+                    font-weight: 600;
+                    font-size: 12px;
+                    padding: 6px 16px;
+                    cursor: pointer;
+                    margin-top: 8px;
+                }
+                .cr-switch-to-web-btn:hover { background: linear-gradient(to right, #6cd0ff, #38afff); }
+                .cr-modal-footer {
+                    height: 26px;
+                    background: #0d141b;
+                    border-top: 1px solid #1c2834;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    padding: 0 12px;
+                    font-size: 11px;
+                    color: #67727e;
+                    flex-shrink: 0;
+                }
+                .cr-footer-status { color: #8f98a0; }
+                .cr-footer-link { font-family: Consolas, monospace; color: #536473; }
             `;
             doc.head.appendChild(style);
         }
 
-        // Helper to locate the exact SuperNav tab bar container in doc (Multi-language & URL resilient)
+        // Helper to locate the exact SuperNav tab bar container in doc
         function findSuperNavInfo(doc) {
-            const allEls = doc.querySelectorAll('a, div, span, button');
+            const allEls = doc.querySelectorAll('div, a, span, button');
 
             for (const el of allEls) {
-                const href = (el.getAttribute && el.getAttribute('href')) || '';
-                const isNavUrl = href.includes('store.steampowered.com') || href.includes('steamcommunity.com');
                 const t = (el.textContent || '').trim().toUpperCase();
-                const isNavText = t === 'COMMUNITY' || t === 'STORE' || t === 'LIBRARY' ||
-                                  t === 'TOKO' || t === 'KOMUNITAS' || t === 'PERPUSTAKAAN' ||
-                                  t === 'KEDAI' || t === 'KOMUNITI' ||
-                                  t === 'TIENDA' || t === 'COMUNIDAD' || t === 'BIBLIOTECA';
-
-                if (isNavUrl || isNavText) {
+                if (t === 'COMMUNITY' || t === 'STORE' || t === 'LIBRARY') {
                     // Traverse up within 5 levels to locate the SuperNav container
                     let curr = el;
                     let depth = 0;
@@ -809,26 +1620,27 @@ var PluginEntryPointMain = function () {
                         const parent = curr.parentElement;
                         if (!parent) break;
                         const pText = (parent.textContent || '').toUpperCase();
-                        const hasStore = (parent.querySelector && parent.querySelector('a[href*=""store.steampowered.com""]')) ||
-                                         pText.includes('STORE') || pText.includes('TOKO') || pText.includes('KEDAI') || pText.includes('TIENDA');
-                        const hasCommunity = (parent.querySelector && parent.querySelector('a[href*=""steamcommunity.com""]')) ||
-                                             pText.includes('COMMUNITY') || pText.includes('KOMUNITAS') || pText.includes('KOMUNITI') || pText.includes('COMUNIDAD');
-
-                        if (hasStore && hasCommunity) {
+                        if (pText.includes('STORE') && pText.includes('LIBRARY') && pText.includes('COMMUNITY')) {
                             const children = Array.from(parent.children);
                             let sampleTab = null;
                             let lastNavTab = null;
+                            let passedCommunity = false;
 
                             for (const child of children) {
                                 const cText = (child.textContent || '').trim().toUpperCase();
-                                const cTag = child.tagName;
-                                // Ignore search inputs, window control buttons, or hidden spacers
-                                if (child.querySelector && (child.querySelector('input') || child.querySelector('svg[class*=""close""]'))) {
-                                    continue;
-                                }
-                                if (cText.length > 0 && !cText.includes('HTTP') && !cText.includes('🔍') && !cText.includes('SEARCH') && !cText.includes('✕')) {
-                                    if (!sampleTab) sampleTab = child;
+                                if (cText.includes('COMMUNITY')) {
+                                    sampleTab = child;
                                     lastNavTab = child;
+                                    passedCommunity = true;
+                                } else if (cText.includes('STORE') || cText.includes('LIBRARY')) {
+                                    if (!sampleTab) sampleTab = child;
+                                    if (!passedCommunity) lastNavTab = child;
+                                } else if (passedCommunity) {
+                                    if (cText.length > 0 && !cText.includes('HTTP') && !cText.includes('ðŸ”') && !cText.includes('SEARCH') && !cText.includes('âœ•')) {
+                                        lastNavTab = child;
+                                        sampleTab = child;
+                                    }
+                                    break;
                                 }
                             }
 
@@ -849,104 +1661,6 @@ var PluginEntryPointMain = function () {
             }
 
             return null;
-        }
-
-        function showSuperNavMenu(e, doc) {
-            const oldMenu = doc.getElementById('cr-supernav-dropdown');
-            if (oldMenu) oldMenu.remove();
-
-            const menu = doc.createElement('div');
-            menu.id = 'cr-supernav-dropdown';
-            menu.style.position = 'fixed';
-            menu.style.left = `${Math.min(e.clientX, (doc.defaultView?.innerWidth || 1200) - 230)}px`;
-            menu.style.top = `${e.clientY + 8}px`;
-            menu.style.background = '#1b2838';
-            menu.style.border = '1px solid #3d4450';
-            menu.style.borderRadius = '4px';
-            menu.style.boxShadow = '0 8px 16px rgba(0, 0, 0, 0.6)';
-            menu.style.zIndex = '999999';
-            menu.style.minWidth = '210px';
-            menu.style.padding = '6px 0';
-            menu.style.color = '#c6d4df';
-            menu.style.fontFamily = '""Motiva Sans"", sans-serif';
-            menu.style.fontSize = '13px';
-
-            const items = [
-                {
-                    label: '🚀 Open CloudRedirect App',
-                    action: () => launchApp(doc)
-                },
-                {
-                    label: '💾 Trigger Cloud Backup Now',
-                    action: () => {
-                        __call_server_method__(""trigger_backup"", {});
-                        try {
-                            const link = doc.createElement('a');
-                            link.href = 'cloudredirect://backup';
-                            doc.body.appendChild(link);
-                            link.click();
-                            link.remove();
-                        } catch (err) { }
-                    }
-                },
-                { separator: true },
-                {
-                    label: '🔃 Fast Reload Steam UI',
-                    action: () => {
-                        if (doc.defaultView) doc.defaultView.location.reload();
-                        else window.location.reload();
-                    }
-                },
-                {
-                    label: '🔄 Quick Restart Steam',
-                    action: () => {
-                        try {
-                            if (window.SteamClient?.User?.StartRestart) {
-                                window.SteamClient.User.StartRestart(true);
-                                return;
-                            }
-                        } catch (err) { }
-                        window.location.reload();
-                    }
-                }
-            ];
-
-            items.forEach(item => {
-                if (item.separator) {
-                    const sep = doc.createElement('div');
-                    sep.style.height = '1px';
-                    sep.style.background = '#2a3f5a';
-                    sep.style.margin = '4px 0';
-                    menu.appendChild(sep);
-                    return;
-                }
-                const btn = doc.createElement('div');
-                btn.textContent = item.label;
-                btn.style.padding = '8px 16px';
-                btn.style.cursor = 'pointer';
-                btn.style.transition = 'background 0.15s, color 0.15s';
-                btn.onmouseenter = () => {
-                    btn.style.background = '#2a475e';
-                    btn.style.color = '#ffffff';
-                };
-                btn.onmouseleave = () => {
-                    btn.style.background = 'transparent';
-                    btn.style.color = '#c6d4df';
-                };
-                btn.onclick = (ev) => {
-                    ev.stopPropagation();
-                    menu.remove();
-                    item.action();
-                };
-                menu.appendChild(btn);
-            });
-
-            const closeHandler = () => {
-                menu.remove();
-                doc.removeEventListener('click', closeHandler);
-            };
-            setTimeout(() => doc.addEventListener('click', closeHandler), 10);
-            doc.body.appendChild(menu);
         }
 
         // Injects tab right into STORE / LIBRARY / COMMUNITY / USER / CLOUDREDIRECT row
@@ -970,7 +1684,7 @@ var PluginEntryPointMain = function () {
             navItem.className = (sampleTab.className || '').replace(/\bactive\b/gi, '').trim() + ' cr-supernav-menu';
             navItem.setAttribute('role', 'button');
             navItem.setAttribute('tabindex', '0');
-            navItem.title = 'CloudRedirect (Left click: Open | Right click: Menu / Reload / Restart)';
+            navItem.title = 'CloudRedirect v2.9.74 (Save Protection Active - Click to Open App)';
 
             // Find child button / inner element if present in sampleTab
             const sampleInner = sampleTab.querySelector('div, a, span') || sampleTab;
@@ -1006,17 +1720,11 @@ var PluginEntryPointMain = function () {
 
             navItem.appendChild(innerBtn);
 
-            // Directly launch CloudRedirect application when tab is left-clicked
+            // Directly launch CloudRedirect application when tab is clicked
             navItem.onclick = (e) => {
                 e.stopPropagation();
                 e.preventDefault();
                 launchApp(doc);
-            };
-            // Right-click opens context menu with Fast Reload & Quick Restart
-            navItem.oncontextmenu = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                showSuperNavMenu(e, doc);
             };
             navItem.onkeydown = (e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
@@ -1108,28 +1816,559 @@ var PluginEntryPointMain = function () {
             }
         }
 
-        // 2. Inject Game Details Page Badge
+        // PatchWiki Cache and Manifest
+        let patchWikiCache = null;
+        let manifestCache = null;
+        let isFetchingPatchWiki = false;
+        let currentModalTutorial = null;
+
+        function extractAppIdFromMetadata(id, title, game) {
+            if (id) {
+                id = id.trim();
+                if (/^\d{3,9}$/.test(id)) return parseInt(id, 10);
+                const mSuff = id.match(/-(\d{3,9})$/);
+                if (mSuff) return parseInt(mSuff[1], 10);
+            }
+            if (title) {
+                const mTitle = title.match(/\b(\d{3,9})\b/);
+                if (mTitle) return parseInt(mTitle[1], 10);
+            }
+            if (game) {
+                const mGame = game.match(/\b(\d{3,9})\b/);
+                if (mGame) return parseInt(mGame[1], 10);
+            }
+            if (id) {
+                const mAny = id.match(/(\d{3,9})/);
+                if (mAny) return parseInt(mAny[1], 10);
+            }
+            return null;
+        }
+
+        async function loadPatchWikiData() {
+            if (patchWikiCache && Object.keys(patchWikiCache).length > 0) return patchWikiCache;
+            if (isFetchingPatchWiki) return null;
+            isFetchingPatchWiki = true;
+
+            // 1. Try Backend Lua get_patchwiki_tutorials()
+            try {
+                const res = await __call_server_method__(""get_patchwiki_tutorials"", {});
+                if (res && res.success && res.data) {
+                    const parsed = JSON.parse(res.data);
+                    if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
+                        patchWikiCache = parsed;
+                        isFetchingPatchWiki = false;
+                        return patchWikiCache;
+                    }
+                }
+            } catch (e) { }
+
+            // 2. Fetch directly from GitHub Pages index.json
+            try {
+                const resp = await fetch(""https://mirzaarsyad74-cmyk.github.io/patchwiki/index.json"", { cache: ""force-cache"" });
+                if (resp.ok) {
+                    const list = await resp.json();
+                    if (Array.isArray(list)) {
+                        const map = {};
+                        for (const item of list) {
+                            const appId = extractAppIdFromMetadata(item.id, item.title, item.game);
+                            if (appId) {
+                                map[appId.toString()] = {
+                                    id: item.id,
+                                    title: item.title,
+                                    game: item.game,
+                                    desc: item.desc,
+                                    tags: item.tags,
+                                    author: item.author,
+                                    date: item.date,
+                                    appId: appId,
+                                    url: `https://mirzaarsyad74-cmyk.github.io/patchwiki/?tutorial=${encodeURIComponent(item.id)}#read/${encodeURIComponent(item.id)}`
+                                };
+                            }
+                        }
+                        patchWikiCache = map;
+                        isFetchingPatchWiki = false;
+                        return patchWikiCache;
+                    }
+                }
+            } catch (e) {
+                console.warn('[CloudRedirect] PatchWiki web fetch error:', e);
+            }
+
+            isFetchingPatchWiki = false;
+            return patchWikiCache || {};
+        }
+
+        function getCurrentAppId(doc, bar) {
+            // 1. Check bar and ancestors for data-appid
+            if (bar) {
+                const withData = bar.closest('[data-appid]') || bar.closest('[data-app-id]') || bar.closest('[data-gameid]');
+                if (withData) {
+                    const val = withData.getAttribute('data-appid') || withData.getAttribute('data-app-id') || withData.getAttribute('data-gameid');
+                    const num = parseInt(val, 10);
+                    if (num > 0) return num;
+                }
+            }
+
+            // 2. Check doc elements with data-appid
+            if (doc) {
+                const appDetailsEl = doc.querySelector('div[class*=""appdetails_""][data-appid], div[class*=""gameheader_""][data-appid], div[class*=""appdetailssection_""][data-appid], [class*=""AppDetails""][data-appid]');
+                if (appDetailsEl) {
+                    const val = appDetailsEl.getAttribute('data-appid');
+                    const num = parseInt(val, 10);
+                    if (num > 0) return num;
+                }
+                const anyAppIdEl = doc.querySelector('div[class*=""appdetails""] [data-appid], div[class*=""playbar""] [data-appid]');
+                if (anyAppIdEl) {
+                    const val = anyAppIdEl.getAttribute('data-appid');
+                    const num = parseInt(val, 10);
+                    if (num > 0) return num;
+                }
+            }
+
+            // 3. Search links in bar or doc
+            const searchContainers = [bar, doc].filter(Boolean);
+            for (const c of searchContainers) {
+                const links = c.querySelectorAll('a[href*=""/app/""], a[href*=""steam://nav/games/details/""], a[href*=""rungameid/""], a[href*=""appid=""]');
+                for (const a of links) {
+                    const href = a.getAttribute('href') || '';
+                    const m = href.match(/(?:app\/|details\/|rungameid\/|appid=)(\d{3,9})/i);
+                    if (m) {
+                        const num = parseInt(m[1], 10);
+                        if (num > 0) return num;
+                    }
+                }
+            }
+
+            // 4. React Fiber properties
+            if (bar) {
+                try {
+                    let curr = bar;
+                    let depth = 0;
+                    while (curr && depth < 12) {
+                        for (const k of Object.keys(curr)) {
+                            if (k.startsWith('__reactFiber$') || k.startsWith('__reactInternalInstance$')) {
+                                let fiber = curr[k];
+                                for (let i = 0; fiber && i < 20; i++) {
+                                    const p = fiber.memoizedProps;
+                                    if (p) {
+                                        if (typeof p.appid === 'number' && p.appid > 0) return p.appid;
+                                        if (typeof p.appId === 'number' && p.appId > 0) return p.appId;
+                                        if (p.overview && typeof p.overview.appid === 'number' && p.overview.appid > 0) return p.overview.appid;
+                                        if (p.game && typeof p.game.appid === 'number' && p.game.appid > 0) return p.game.appid;
+                                        if (p.app && typeof p.app.appid === 'number' && p.app.appid > 0) return p.app.appid;
+                                    }
+                                    fiber = fiber.return;
+                                }
+                            }
+                        }
+                        curr = curr.parentElement;
+                        depth++;
+                    }
+                } catch (e) { }
+            }
+
+            // 5. URL or Hash
+            try {
+                const loc = doc?.location?.href || window.location.href || '';
+                const m = loc.match(/(?:app|details|games\/details)\/(\d{3,9})/i);
+                if (m) {
+                    const num = parseInt(m[1], 10);
+                    if (num > 0) return num;
+                }
+            } catch (e) { }
+
+            return null;
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/""/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function renderMarkdown(md) {
+            if (!md) return '';
+            let html = escapeHtml(md);
+
+            // Code blocks
+            html = html.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (match, lang, code) => {
+                return `<div class=""cr-code-block""><div class=""cr-code-header""><span>${lang || 'Code'}</span><button class=""cr-code-copy-btn"">Copy</button></div><pre><code>${code}</code></pre></div>`;
+            });
+
+            // Inline code
+            html = html.replace(/`([^`]+)`/g, '<code class=""cr-inline-code"">$1</code>');
+
+            // Headers
+            html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+            html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+            html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+
+            // Bold
+            html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+
+            // Links
+            html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href=""$2"" target=""_blank"" class=""cr-guide-link"">$1</a>');
+
+            // Blockquotes
+            html = html.replace(/^> (.*$)/gim, '<blockquote>$1</blockquote>');
+
+            // Unordered lists
+            html = html.replace(/^\s*[-*]\s+(.*$)/gim, '<li>$1</li>');
+            html = html.replace(/(<li>.*<\/li>)/gms, '<ul>$1</ul>');
+
+            // Line breaks
+            html = html.replace(/\n\n+/g, '</p><p>').replace(/\n/g, '<br>');
+            return `<p>${html}</p>`;
+        }
+
+        async function loadReaderContent(modal, tutorial) {
+            const container = modal.querySelector('#cr-reader-content-area');
+            if (!container) return;
+
+            const tagsHtml = (tutorial.tags && Array.isArray(tutorial.tags))
+                ? tutorial.tags.map(t => `<span class=""cr-reader-tag"">#${escapeHtml(t)}</span>`).join(' ')
+                : '';
+
+            container.innerHTML = `
+                <div class=""cr-reader-summary-card"">
+                    <div class=""cr-reader-meta-row"">
+                        ${tutorial.author ? `<span class=""cr-meta-item"">ðŸ‘¤ <b>Author:</b> ${escapeHtml(tutorial.author)}</span>` : ''}
+                        ${tutorial.date ? `<span class=""cr-meta-item"">ðŸ“… <b>Updated:</b> ${escapeHtml(tutorial.date)}</span>` : ''}
+                        ${tutorial.appId ? `<span class=""cr-meta-item"">ðŸ†” <b>AppID:</b> ${escapeHtml(tutorial.appId.toString())}</span>` : ''}
+                    </div>
+                    ${tagsHtml ? `<div class=""cr-reader-tags-row"">${tagsHtml}</div>` : ''}
+                    ${tutorial.desc ? `<p class=""cr-reader-desc-text"">${escapeHtml(tutorial.desc)}</p>` : ''}
+                </div>
+                <div class=""cr-reader-body-markdown"">
+                    <div class=""cr-reader-loading"">â³ Loading full tutorial guide content...</div>
+                </div>
+            `;
+
+            const bodyArea = container.querySelector('.cr-reader-body-markdown');
+
+            try {
+                let chunkFile = null;
+                if (manifestCache && manifestCache[tutorial.id]) {
+                    chunkFile = manifestCache[tutorial.id];
+                } else {
+                    const mfResp = await fetch(""https://mirzaarsyad74-cmyk.github.io/patchwiki/manifest.json"");
+                    if (mfResp.ok) {
+                        manifestCache = await mfResp.json();
+                        chunkFile = manifestCache[tutorial.id];
+                    }
+                }
+
+                if (chunkFile) {
+                    const chunkResp = await fetch(""https://mirzaarsyad74-cmyk.github.io/patchwiki/"" + chunkFile);
+                    if (chunkResp.ok) {
+                        const chunkData = await chunkResp.json();
+                        let guide = null;
+                        if (Array.isArray(chunkData)) {
+                            guide = chunkData.find(x => x.id === tutorial.id);
+                        } else if (chunkData && typeof chunkData === 'object') {
+                            guide = chunkData[tutorial.id] || chunkData;
+                        }
+
+                        if (guide && guide.content) {
+                            bodyArea.innerHTML = renderMarkdown(guide.content);
+                            bodyArea.querySelectorAll('.cr-code-copy-btn').forEach(btn => {
+                                btn.onclick = () => {
+                                    const code = btn.closest('.cr-code-block')?.querySelector('code')?.innerText || '';
+                                    if (navigator.clipboard) {
+                                        navigator.clipboard.writeText(code);
+                                        const orig = btn.textContent;
+                                        btn.textContent = 'âœ“ Copied!';
+                                        setTimeout(() => btn.textContent = orig, 2000);
+                                    }
+                                };
+                            });
+                            return;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('[CloudRedirect] Error fetching tutorial chunk:', e);
+            }
+
+            bodyArea.innerHTML = `
+                <div class=""cr-reader-fallback-box"">
+                    <p>Full interactive guide available in Web View.</p>
+                    <button class=""cr-switch-to-web-btn"">Switch to ðŸŒ Web View</button>
+                </div>
+            `;
+            bodyArea.querySelector('.cr-switch-to-web-btn')?.addEventListener('click', () => {
+                modal.querySelector('.cr-tab-btn[data-tab=""web""]')?.click();
+            });
+        }
+
+        // Opens the in-Steam CEF Mini Window Modal
+        function openSteamPatchWikiMiniWindow(tutorial, doc) {
+            if (!doc || !doc.body) doc = document;
+            currentModalTutorial = tutorial;
+
+            let modal = doc.getElementById('cr-patchwiki-modal');
+            if (modal) {
+                modal.style.display = 'flex';
+                modal.style.zIndex = '9999999';
+
+                const titleEl = modal.querySelector('.cr-modal-app-name');
+                if (titleEl) titleEl.textContent = tutorial.game || tutorial.title;
+                const textEl = modal.querySelector('.cr-modal-title-text');
+                if (textEl) textEl.title = tutorial.title;
+
+                const iframe = modal.querySelector('.cr-patchwiki-frame');
+                if (iframe && iframe.src !== tutorial.url) {
+                    iframe.src = tutorial.url;
+                }
+
+                const extBtn = modal.querySelector('#cr-modal-open-external');
+                if (extBtn) extBtn.onclick = () => window.open(tutorial.url, '_blank');
+
+                const deepLink = modal.querySelector('#cr-footer-deep-link');
+                if (deepLink) deepLink.textContent = tutorial.id;
+
+                const activeTab = modal.querySelector('.cr-tab-btn.cr-tab-active');
+                if (activeTab && activeTab.getAttribute('data-tab') === 'reader') {
+                    loadReaderContent(modal, tutorial);
+                }
+                return;
+            }
+
+            modal = doc.createElement('div');
+            modal.id = 'cr-patchwiki-modal';
+            modal.className = 'cr-patchwiki-window';
+            modal.innerHTML = `
+                <div class=""cr-modal-header"" id=""cr-modal-drag-handle"">
+                    <div class=""cr-modal-title-left"">
+                        <span class=""cr-modal-icon"">ðŸ› ï¸</span>
+                        <div class=""cr-modal-title-text"" title=""${escapeHtml(tutorial.title)}"">
+                            <span class=""cr-modal-app-name"">${escapeHtml(tutorial.game || tutorial.title)}</span>
+                            <span class=""cr-modal-guide-badge"">PatchWiki</span>
+                        </div>
+                    </div>
+
+                    <div class=""cr-modal-actions"">
+                        <div class=""cr-modal-tabs"">
+                            <button class=""cr-tab-btn cr-tab-active"" data-tab=""web"" title=""Interactive Web View"">ðŸŒ Web</button>
+                            <button class=""cr-tab-btn"" data-tab=""reader"" title=""Fast Offline Reader"">ðŸ“– Reader</button>
+                        </div>
+
+                        <button class=""cr-modal-btn cr-btn-external"" title=""Open in External Browser / Steam Overlay"" id=""cr-modal-open-external"">
+                            <svg viewBox=""0 0 24 24"" width=""14"" height=""14"" fill=""currentColor"">
+                                <path d=""M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z""/>
+                            </svg>
+                        </button>
+
+                        <button class=""cr-modal-btn cr-btn-maximize"" title=""Maximize / Restore"" id=""cr-modal-toggle-maximize"">
+                            <svg viewBox=""0 0 24 24"" width=""13"" height=""13"" fill=""currentColor"">
+                                <path d=""M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z""/>
+                            </svg>
+                        </button>
+
+                        <button class=""cr-modal-btn cr-btn-close"" title=""Close"" id=""cr-modal-close-btn"">âœ•</button>
+                    </div>
+                </div>
+
+                <div class=""cr-modal-body"">
+                    <div class=""cr-tab-pane cr-pane-web cr-pane-active"">
+                        <iframe class=""cr-patchwiki-frame"" src=""${tutorial.url}"" allow=""clipboard-read; clipboard-write; fullscreen""></iframe>
+                    </div>
+
+                    <div class=""cr-tab-pane cr-pane-reader"">
+                        <div class=""cr-reader-container"">
+                            <div id=""cr-reader-content-area""></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class=""cr-modal-footer"">
+                    <span class=""cr-footer-status"">âœ“ Steam CEF In-Client Mini Window â€¢ PatchWiki Community</span>
+                    <span class=""cr-footer-link"" id=""cr-footer-deep-link"">${escapeHtml(tutorial.id)}</span>
+                </div>
+            `;
+
+            // 1. Draggable logic
+            const header = modal.querySelector('#cr-modal-drag-handle');
+            let isDragging = false;
+            let dragStartX = 0;
+            let dragStartY = 0;
+            let initialLeft = 0;
+            let initialTop = 0;
+
+            header.onmousedown = (e) => {
+                if (e.target.closest('button') || e.target.closest('.cr-modal-tabs') || e.target.closest('a')) {
+                    return;
+                }
+                if (modal.classList.contains('cr-modal-maximized')) return;
+
+                isDragging = true;
+                const rect = modal.getBoundingClientRect();
+                dragStartX = e.clientX;
+                dragStartY = e.clientY;
+                initialLeft = rect.left;
+                initialTop = rect.top;
+
+                modal.style.left = initialLeft + 'px';
+                modal.style.top = initialTop + 'px';
+                modal.style.right = 'auto';
+                modal.style.bottom = 'auto';
+
+                function onMouseMove(moveEvent) {
+                    if (!isDragging) return;
+                    const deltaX = moveEvent.clientX - dragStartX;
+                    const deltaY = moveEvent.clientY - dragStartY;
+
+                    let newLeft = initialLeft + deltaX;
+                    let newTop = initialTop + deltaY;
+
+                    const maxLeft = (doc.defaultView?.innerWidth || window.innerWidth || 1200) - 100;
+                    const maxTop = (doc.defaultView?.innerHeight || window.innerHeight || 800) - 50;
+
+                    if (newLeft < 10) newLeft = 10;
+                    if (newLeft > maxLeft) newLeft = maxLeft;
+                    if (newTop < 10) newTop = 10;
+                    if (newTop > maxTop) newTop = maxTop;
+
+                    modal.style.left = newLeft + 'px';
+                    modal.style.top = newTop + 'px';
+                }
+
+                function onMouseUp() {
+                    isDragging = false;
+                    doc.removeEventListener('mousemove', onMouseMove);
+                    doc.removeEventListener('mouseup', onMouseUp);
+                }
+
+                doc.addEventListener('mousemove', onMouseMove);
+                doc.addEventListener('mouseup', onMouseUp);
+                e.preventDefault();
+            };
+
+            // 2. Tab switching
+            const tabBtns = modal.querySelectorAll('.cr-tab-btn');
+            tabBtns.forEach(btn => {
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    const tab = btn.getAttribute('data-tab');
+                    modal.querySelectorAll('.cr-tab-btn').forEach(b => b.classList.remove('cr-tab-active'));
+                    btn.classList.add('cr-tab-active');
+
+                    modal.querySelectorAll('.cr-tab-pane').forEach(p => p.classList.remove('cr-pane-active'));
+                    const pane = modal.querySelector(`.cr-pane-${tab}`);
+                    if (pane) pane.classList.add('cr-pane-active');
+
+                    if (tab === 'reader') {
+                        loadReaderContent(modal, currentModalTutorial);
+                    }
+                };
+            });
+
+            // 3. Control buttons
+            modal.querySelector('#cr-modal-open-external').onclick = (e) => {
+                e.stopPropagation();
+                try { window.open(currentModalTutorial.url, '_blank'); } catch (err) { }
+            };
+
+            modal.querySelector('#cr-modal-toggle-maximize').onclick = (e) => {
+                e.stopPropagation();
+                modal.classList.toggle('cr-modal-maximized');
+            };
+
+            modal.querySelector('#cr-modal-close-btn').onclick = (e) => {
+                e.stopPropagation();
+                modal.style.display = 'none';
+            };
+
+            modal.onmousedown = () => {
+                modal.style.zIndex = '9999999';
+            };
+
+            doc.body.appendChild(modal);
+        }
+
+        // Injects PatchWiki button into game action bar if AppID found in PatchWiki
+        function injectPatchWikiButtonForBar(doc, bar) {
+            if (!doc || !bar) return;
+
+            const appId = getCurrentAppId(doc, bar);
+            if (!appId || !patchWikiCache) {
+                if (!patchWikiCache) {
+                    loadPatchWikiData().then(() => {
+                        if (doc && bar) injectPatchWikiButtonForBar(doc, bar);
+                    });
+                }
+                return;
+            }
+
+            const tutorial = patchWikiCache[appId.toString()];
+            const existingBtn = bar.querySelector('.cr-patchwiki-btn');
+
+            if (!tutorial) {
+                if (existingBtn) existingBtn.remove();
+                return;
+            }
+
+            if (existingBtn) {
+                if (existingBtn.getAttribute('data-appid') === appId.toString()) {
+                    return;
+                }
+                existingBtn.remove();
+            }
+
+            const pwBtn = doc.createElement('div');
+            pwBtn.className = 'cr-patchwiki-btn';
+            pwBtn.setAttribute('data-appid', appId.toString());
+            pwBtn.title = `Open PatchWiki Tutorial for ${tutorial.title || tutorial.game} (In-Steam Mini Window)`;
+            pwBtn.innerHTML = `
+                <svg class=""cr-patchwiki-svg"" viewBox=""0 0 24 24"">
+                    <path d=""M19 2H6c-1.2 0-2 .9-2 2v16c0 1.1.9 2 2 2h13c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4zm13 16H6c-.55 0-1-.45-1-1V5.5c.31.29.7.5 1.17.5H19v14z""/>
+                </svg>
+                <span>PatchWiki Guide</span>
+                <span class=""cr-patchwiki-pill"">Wiki</span>
+            `;
+
+            pwBtn.onclick = (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                openSteamPatchWikiMiniWindow(tutorial, doc);
+            };
+
+            const badge = bar.querySelector('.cr-game-badge');
+            if (badge && badge.nextSibling) {
+                bar.insertBefore(pwBtn, badge.nextSibling);
+            } else {
+                bar.appendChild(pwBtn);
+            }
+        }
+
+        // 2. Inject Game Details Page Badge and PatchWiki Button
         function injectGameBadge(doc) {
             if (!doc || !doc.body) return;
-            const gameActionBars = doc.querySelectorAll('div[class*=""playbar_""], div[class*=""appactionandstats_""], div[class*=""appdetailsheader_""]');
+            const gameActionBars = doc.querySelectorAll('div[class*=""playbar_""], div[class*=""appactionandstats_""], div[class*=""appdetailsheader_""], div[class*=""gameheader_""], div[class*=""headerbuttons_""]');
             gameActionBars.forEach(bar => {
-                if (bar.querySelector('.cr-game-badge')) return;
+                if (!bar.querySelector('.cr-game-badge')) {
+                    const badge = doc.createElement('div');
+                    badge.className = 'cr-game-badge';
+                    badge.title = 'Game save files are actively redirected and backed up by CloudRedirect (Click to Open)';
+                    badge.innerHTML = `
+                        ${cloudSvg}
+                        <span>CloudRedirect</span>
+                        <span class=""cr-game-badge-check"">âœ“</span>
+                    `;
+                    badge.onclick = (e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        launchApp(doc);
+                    };
 
-                const badge = doc.createElement('div');
-                badge.className = 'cr-game-badge';
-                badge.title = 'Game save files are actively redirected and backed up by CloudRedirect (Click to Open)';
-                badge.innerHTML = `
-                    ${cloudSvg}
-                    <span>CloudRedirect</span>
-                    <span class=""cr-game-badge-check"">✓</span>
-                `;
-                badge.onclick = (e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    launchApp(doc);
-                };
+                    bar.appendChild(badge);
+                }
 
-                bar.appendChild(badge);
+                injectPatchWikiButtonForBar(doc, bar);
             });
         }
 
@@ -1195,36 +2434,9 @@ var PluginEntryPointMain = function () {
                 runInjections();
             }, 800);
 
-            function hookSteamRootMenu(popup) {
-                try {
-                    const r = popup?.m_popup?.document || popup?.document || popup?.window?.document;
-                    if (!r) return;
-                    setTimeout(() => {
-                        if (r.getElementById('cr-root-menu-item')) return;
-                        const menuItems = r.querySelectorAll('div#popup_target div[role=""menuitem""]');
-                        if (menuItems.length === 0) return;
-                        const lastItem = menuItems[menuItems.length - 1];
-                        const parent = lastItem?.parentNode;
-                        if (!parent) return;
-
-                        const crItem = lastItem.cloneNode(true);
-                        crItem.id = 'cr-root-menu-item';
-                        crItem.textContent = 'CloudRedirect';
-                        crItem.onclick = (ev) => {
-                            ev.stopPropagation();
-                            launchApp(r);
-                        };
-                        parent.insertBefore(crItem, lastItem);
-                    }, 50);
-                } catch (e) { }
-            }
-
             try {
                 if (typeof Millennium !== 'undefined' && typeof Millennium.AddWindowCreateHook === 'function') {
                     Millennium.AddWindowCreateHook((popup) => {
-                        if (popup && (popup.m_strTitle === 'Steam Root Menu' || popup.title === 'Steam Root Menu')) {
-                            hookSteamRootMenu(popup);
-                        }
                         setTimeout(() => runInjections(), 300);
                         setTimeout(() => runInjections(), 1500);
                     });
@@ -1238,6 +2450,7 @@ var PluginEntryPointMain = function () {
 
         const index = async function PluginMain() {
             setupObserver();
+            loadPatchWikiData().catch(() => {});
 
             try {
                 if (typeof MILLENNIUM_BACKEND_IPC !== 'undefined' && MILLENNIUM_BACKEND_IPC.postMessage) {
@@ -1262,6 +2475,9 @@ var PluginEntryPointMain = function () {
                     const docs = getAllSteamDocuments();
                     for (const d of docs) {
                         try {
+                            const modal = d.getElementById('cr-patchwiki-modal');
+                            if (modal) modal.remove();
+                            d.querySelectorAll('.cr-patchwiki-btn').forEach(el => el.remove());
                             const superTab = d.getElementById('cloudredirect-supernav-item');
                             if (superTab) superTab.remove();
                             const topBtn = d.getElementById('cloudredirect-header-btn');

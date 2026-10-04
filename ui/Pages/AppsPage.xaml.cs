@@ -11,6 +11,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using CloudRedirect.Resources;
 using CloudRedirect.Services;
+using CloudRedirect.Windows;
 
 namespace CloudRedirect.Pages;
 
@@ -36,11 +37,62 @@ public partial class AppsPage : Page
             AppVersionText.Text = $"v{Services.AppUpdater.GetCurrentVersionString()}";
         }
 
+        PatchWikiService.Instance.TutorialsUpdated += OnPatchWikiTutorialsUpdated;
+        Unloaded += (_, _) => PatchWikiService.Instance.TutorialsUpdated -= OnPatchWikiTutorialsUpdated;
+
         Loaded += async (_, _) =>
         {
             try { await LoadAppsAsync(); }
             catch { }
         };
+    }
+
+    private void OnPatchWikiTutorialsUpdated()
+    {
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            PopulatePatchWikiGuides(_allApps);
+        }));
+    }
+
+    private void PopulatePatchWikiGuides(IEnumerable<AppInfo>? apps)
+    {
+        if (apps == null) return;
+        foreach (var app in apps)
+        {
+            if (uint.TryParse(app.AppId, out var id) && id > 0)
+            {
+                var tutorial = PatchWikiService.Instance.GetTutorial(id);
+                if (tutorial != null)
+                {
+                    app.HasPatchWikiGuide = true;
+                    app.PatchWikiUrl = tutorial.TutorialUrl;
+                    app.PatchWikiTitle = tutorial.Title;
+                }
+                else
+                {
+                    app.HasPatchWikiGuide = false;
+                    app.PatchWikiUrl = null;
+                    app.PatchWikiTitle = null;
+                }
+            }
+        }
+    }
+
+    private void PatchWikiGuide_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: AppInfo app } && !string.IsNullOrEmpty(app.PatchWikiUrl))
+        {
+            MiniBrowserWindow.Open(app.PatchWikiUrl);
+        }
+    }
+
+    private void OpenPatchWikiGuide_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: AppInfo app } && !string.IsNullOrEmpty(app.PatchWikiUrl))
+        {
+            MiniBrowserWindow.Open(app.PatchWikiUrl);
+        }
     }
 
     private void RestoreSavesButton_Click(object sender, RoutedEventArgs e)
@@ -148,6 +200,7 @@ public partial class AppsPage : Page
         }
 
         // Show the list immediately with app IDs while we fetch names
+        PopulatePatchWikiGuides(apps);
         _allApps = apps;
         _appsView = null;            // rebind view to the freshly loaded source
         ApplyAppFilter();
@@ -1171,6 +1224,27 @@ public class AppInfo : System.ComponentModel.INotifyPropertyChanged
     {
         get => _headerUrl;
         set { _headerUrl = value; Notify(nameof(HeaderUrl)); }
+    }
+
+    private bool _hasPatchWikiGuide;
+    public bool HasPatchWikiGuide
+    {
+        get => _hasPatchWikiGuide;
+        set { _hasPatchWikiGuide = value; Notify(nameof(HasPatchWikiGuide)); }
+    }
+
+    private string? _patchWikiUrl;
+    public string? PatchWikiUrl
+    {
+        get => _patchWikiUrl;
+        set { _patchWikiUrl = value; Notify(nameof(PatchWikiUrl)); }
+    }
+
+    private string? _patchWikiTitle;
+    public string? PatchWikiTitle
+    {
+        get => _patchWikiTitle;
+        set { _patchWikiTitle = value; Notify(nameof(PatchWikiTitle)); }
     }
 
     /// <summary>True if the last scan completed and returned orphans.</summary>

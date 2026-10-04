@@ -432,6 +432,9 @@
 
                                 <!-- Direct Bookmark Quick Launchers -->
                                 <WrapPanel>
+                                    <Button Click="BookmarkPatchWiki_Click" Style="{StaticResource SteamButtonStyle}" Padding="6,3" Margin="0,0,4,4" ToolTip="Open Patch &amp; Bypass Guides on PatchWiki">
+                                        <TextBlock Text="🛠️ PatchWiki ↗" FontSize="10" Foreground="#A4D007" FontWeight="Bold" />
+                                    </Button>
                                     <Button Click="BookmarkMapGenie_Click" Style="{StaticResource SteamButtonStyle}" Padding="6,3" Margin="0,0,4,4">
                                         <TextBlock Text="🗺️ MapGenie ↗" FontSize="10" />
                                     </Button>

@@ -138,3 +138,446 @@
     color: #a4d007;
     font-weight: bold;
 }
+
+/* Game Page Button: .cr-patchwiki-btn */
+.cr-patchwiki-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, rgba(28, 52, 75, 0.95), rgba(16, 32, 48, 0.95));
+    border: 1px solid #3d6e99;
+    border-radius: 14px;
+    padding: 4px 10px;
+    font-family: "Motiva Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: #66c0f4;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+    margin-left: 8px;
+    vertical-align: middle;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+}
+
+.cr-patchwiki-btn:hover {
+    background: linear-gradient(135deg, rgba(38, 72, 104, 1), rgba(24, 46, 68, 1));
+    border-color: #66c0f4;
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(102, 192, 244, 0.5);
+    transform: translateY(-1px);
+}
+
+.cr-patchwiki-svg {
+    width: 14px;
+    height: 14px;
+    fill: currentColor;
+    flex-shrink: 0;
+}
+
+.cr-patchwiki-pill {
+    background: #a4d007;
+    color: #0d141b;
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    padding: 1px 5px;
+    border-radius: 8px;
+    letter-spacing: 0.5px;
+    margin-left: 2px;
+}
+
+/* In-Steam PatchWiki Mini Window Modal */
+.cr-patchwiki-window {
+    position: fixed;
+    top: 80px;
+    right: 40px;
+    width: 820px;
+    height: 620px;
+    min-width: 440px;
+    min-height: 340px;
+    max-width: 95vw;
+    max-height: 92vh;
+    background: #101822;
+    border: 1px solid #2a475e;
+    border-radius: 8px;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(102, 192, 244, 0.2);
+    z-index: 9999999;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    resize: both;
+    font-family: "Motiva Sans", "Twemoji", "Noto Sans", Helvetica, sans-serif;
+    color: #c6d4df;
+    animation: crFadeIn 0.18s ease-out;
+}
+
+@keyframes crFadeIn {
+    from { opacity: 0; transform: scale(0.97); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.cr-patchwiki-window.cr-modal-maximized {
+    top: 20px !important;
+    left: 20px !important;
+    right: 20px !important;
+    bottom: 20px !important;
+    width: auto !important;
+    height: auto !important;
+    max-width: none !important;
+    max-height: none !important;
+    resize: none !important;
+}
+
+/* Modal Titlebar / Drag Handle */
+.cr-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 42px;
+    background: linear-gradient(to right, #1b2838, #172432);
+    border-bottom: 1px solid #24384a;
+    padding: 0 12px;
+    user-select: none;
+    cursor: move;
+    flex-shrink: 0;
+}
+
+.cr-modal-title-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    margin-right: 12px;
+}
+
+.cr-modal-icon {
+    font-size: 15px;
+    flex-shrink: 0;
+}
+
+.cr-modal-title-text {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cr-modal-app-name {
+    font-weight: 700;
+    font-size: 13px;
+    color: #ffffff;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cr-modal-guide-badge {
+    background: rgba(102, 192, 244, 0.2);
+    border: 1px solid #66c0f4;
+    color: #66c0f4;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 1px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+}
+
+.cr-modal-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+/* Tab buttons inside titlebar */
+.cr-modal-tabs {
+    display: flex;
+    background: #0d141b;
+    border: 1px solid #233748;
+    border-radius: 4px;
+    padding: 2px;
+    margin-right: 6px;
+}
+
+.cr-tab-btn {
+    background: transparent;
+    border: none;
+    color: #8f98a0;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.cr-tab-btn:hover {
+    color: #ffffff;
+}
+
+.cr-tab-btn.cr-tab-active {
+    background: #2a475e;
+    color: #66c0f4;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+/* Control buttons (External, Maximize, Close) */
+.cr-modal-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: #8f98a0;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.15s ease;
+}
+
+.cr-modal-btn:hover {
+    background: #243b4f;
+    color: #ffffff;
+    border-color: #3d5f7d;
+}
+
+.cr-modal-btn.cr-btn-close:hover {
+    background: #c93838;
+    border-color: #e85555;
+    color: #ffffff;
+}
+
+/* Modal Body */
+.cr-modal-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    background: #0b1016;
+}
+
+.cr-tab-pane {
+    display: none;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.cr-tab-pane.cr-pane-active {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Web View Iframe */
+.cr-patchwiki-frame {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: #0f1722;
+}
+
+/* Reader Mode View */
+.cr-reader-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 28px;
+    line-height: 1.6;
+    color: #dcdedf;
+}
+
+.cr-reader-summary-card {
+    background: #141f2c;
+    border: 1px solid #233749;
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+}
+
+.cr-reader-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    font-size: 12px;
+    color: #8f98a0;
+    margin-bottom: 8px;
+}
+
+.cr-reader-tags-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.cr-reader-tag {
+    background: rgba(102, 192, 244, 0.15);
+    border: 1px solid rgba(102, 192, 244, 0.4);
+    color: #66c0f4;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.cr-reader-desc-text {
+    font-size: 13px;
+    color: #c6d4df;
+    margin: 0;
+}
+
+.cr-reader-body-markdown h1,
+.cr-reader-body-markdown h2,
+.cr-reader-body-markdown h3 {
+    color: #ffffff;
+    margin-top: 18px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #243547;
+    padding-bottom: 4px;
+}
+
+.cr-reader-body-markdown h1 { font-size: 18px; }
+.cr-reader-body-markdown h2 { font-size: 15px; color: #66c0f4; }
+.cr-reader-body-markdown h3 { font-size: 13px; color: #a4d007; }
+
+.cr-reader-body-markdown p {
+    margin: 8px 0;
+    font-size: 13px;
+}
+
+.cr-reader-body-markdown ul,
+.cr-reader-body-markdown ol {
+    margin: 8px 0 8px 24px;
+    padding: 0;
+    font-size: 13px;
+}
+
+.cr-reader-body-markdown li {
+    margin: 4px 0;
+}
+
+.cr-code-block {
+    background: #070b0f;
+    border: 1px solid #1f2f3e;
+    border-radius: 6px;
+    margin: 12px 0;
+    overflow: hidden;
+}
+
+.cr-code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #111a24;
+    padding: 4px 10px;
+    font-size: 11px;
+    color: #8f98a0;
+    border-bottom: 1px solid #1f2f3e;
+}
+
+.cr-code-copy-btn {
+    background: #1c2b3a;
+    border: 1px solid #2f4961;
+    color: #66c0f4;
+    border-radius: 3px;
+    padding: 2px 8px;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.cr-code-copy-btn:hover {
+    background: #273d52;
+    color: #ffffff;
+}
+
+.cr-code-block pre {
+    margin: 0;
+    padding: 10px 14px;
+    overflow-x: auto;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12px;
+    color: #9cdcfe;
+}
+
+.cr-inline-code {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid #233446;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12px;
+    color: #e5c07b;
+}
+
+.cr-guide-link {
+    color: #66c0f4;
+    text-decoration: underline;
+}
+
+.cr-guide-link:hover {
+    color: #ffffff;
+}
+
+.cr-reader-loading {
+    padding: 24px 0;
+    color: #8f98a0;
+    font-size: 13px;
+}
+
+.cr-reader-fallback-box {
+    padding: 20px;
+    background: #141f2c;
+    border: 1px solid #233749;
+    border-radius: 6px;
+    margin-top: 14px;
+    text-align: center;
+}
+
+.cr-switch-to-web-btn {
+    background: linear-gradient(to right, #47bfff, #1a9fff);
+    border: none;
+    border-radius: 4px;
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 12px;
+    padding: 6px 16px;
+    cursor: pointer;
+    margin-top: 8px;
+}
+
+.cr-switch-to-web-btn:hover {
+    background: linear-gradient(to right, #6cd0ff, #38afff);
+}
+
+/* Modal Footer */
+.cr-modal-footer {
+    height: 26px;
+    background: #0d141b;
+    border-top: 1px solid #1c2834;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    font-size: 11px;
+    color: #67727e;
+    flex-shrink: 0;
+}
+
+.cr-footer-status {
+    color: #8f98a0;
+}
+
+.cr-footer-link {
+    font-family: Consolas, monospace;
+    color: #536473;
+}
+

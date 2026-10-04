@@ -155,6 +155,52 @@ public partial class MiniBrowserWindow : Window
                 })();
             ");
 
+            // 3. PatchWiki Deep-Link Auto-Navigator
+            await BrowserWebView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(@"
+                (function() {
+                    function getTargetTutorialId() {
+                        try {
+                            const params = new URLSearchParams(window.location.search);
+                            let targetId = params.get('tutorial') || params.get('id') || params.get('guide');
+                            const appid = params.get('appid');
+
+                            if (!targetId && appid && Array.isArray(window.tutorials)) {
+                                const found = window.tutorials.find(t => 
+                                    (t.id && t.id.includes(appid)) || 
+                                    (t.title && t.title.includes(appid)) || 
+                                    (t.game && t.game.includes(appid))
+                                );
+                                if (found) targetId = found.id;
+                            }
+
+                            if (!targetId && window.location.hash) {
+                                targetId = window.location.hash.replace(/^#\/?(read\/)?/, '');
+                            }
+                            return targetId;
+                        } catch(e) { return null; }
+                    }
+
+                    let navigated = false;
+                    function checkAndNavigate() {
+                        if (navigated) return;
+                        const targetId = getTargetTutorialId();
+                        if (targetId && typeof window.navigate === 'function' && Array.isArray(window.tutorials) && window.tutorials.length > 0) {
+                            navigated = true;
+                            window.navigate('read', targetId);
+                        }
+                    }
+
+                    let attempts = 0;
+                    const timer = setInterval(() => {
+                        attempts++;
+                        checkAndNavigate();
+                        if (navigated || attempts > 60) clearInterval(timer);
+                    }, 120);
+
+                    window.addEventListener('load', checkAndNavigate);
+                })();
+            ");
+
             BrowserWebView.NavigationStarting += (_, args) =>
             {
                 BrowserLoadingIndicator.Visibility = Visibility.Visible;
@@ -259,6 +305,27 @@ public partial class MiniBrowserWindow : Window
         if (e.Key == Key.Enter)
         {
             NavigateBrowser(BrowserUrlInput.Text);
+        }
+    }
+
+    public static void OpenForApp(uint appId)
+    {
+        var tutorial = PatchWikiService.Instance.GetTutorial(appId);
+        string url = tutorial?.TutorialUrl ?? $"{PatchWikiService.PatchWikiHomeUrl}?appid={appId}";
+        Open(url);
+    }
+
+    private void BookmarkPatchWiki_Click(object sender, RoutedEventArgs e)
+    {
+        var game = ActiveGameTrackerService.CurrentGame;
+        if (game != null && game.AppId > 0 && PatchWikiService.Instance.HasTutorial(game.AppId))
+        {
+            var url = PatchWikiService.Instance.GetTutorialUrl(game.AppId);
+            NavigateBrowser(url ?? PatchWikiService.PatchWikiHomeUrl);
+        }
+        else
+        {
+            NavigateBrowser(PatchWikiService.PatchWikiHomeUrl);
         }
     }
 

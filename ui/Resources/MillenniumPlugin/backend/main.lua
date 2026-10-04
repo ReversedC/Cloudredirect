@@ -56,6 +56,28 @@ function get_status()
     return { isRunning = true, status = "active", message = "CloudRedirect Active" }
 end
 
+-- Opens CloudRedirect Mini Browser Window
+function open_minibrowser(kwargs)
+    local url = kwargs and kwargs.url or ""
+    log_info("open_minibrowser invoked from Steam WebUI: " .. tostring(url))
+    local res = os.execute('start "" "cloudredirect://minibrowser?url=' .. tostring(url) .. '"')
+    return { success = true, result = res }
+end
+
+-- Get cached PatchWiki tutorials
+function get_patchwiki_tutorials()
+    local appdata = os.getenv("APPDATA")
+    if not appdata then return { success = false } end
+    local file = appdata .. "\\CloudRedirect\\steam_plugin_patchwiki.json"
+    local f = io.open(file, "r")
+    if f then
+        local content = f:read("*a")
+        f:close()
+        return { success = true, data = content }
+    end
+    return { success = false }
+end
+
 -- Millennium Lifecycle Hooks
 local function on_frontend_loaded()
     log_info("Frontend UI loaded into Steam CEF successfully")
@@ -79,5 +101,7 @@ return {
     launch_cloudredirect = launch_cloudredirect,
     trigger_backup = trigger_backup,
     open_saves = open_saves,
-    get_status = get_status
+    get_status = get_status,
+    open_minibrowser = open_minibrowser,
+    get_patchwiki_tutorials = get_patchwiki_tutorials
 }

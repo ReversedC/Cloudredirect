@@ -164,6 +164,12 @@
                                                     <ui:SymbolIcon Symbol="Cloud20" Foreground="#66C0F4" />
                                                 </MenuItem.Icon>
                                             </MenuItem>
+                                            <MenuItem Header="Open PatchWiki Tutorial Guide" Click="OpenPatchWikiGuide_Click"
+                                                      Visibility="{Binding HasPatchWikiGuide, Converter={StaticResource BoolToVis}}">
+                                                <MenuItem.Icon>
+                                                    <ui:SymbolIcon Symbol="BookOpen20" Foreground="#A4D007" />
+                                                </MenuItem.Icon>
+                                            </MenuItem>
                                             <MenuItem Header="Open Local Storage Folder" Click="OpenLocalStorage_Click">
                                                 <MenuItem.Icon>
                                                     <ui:SymbolIcon Symbol="FolderOpen20" Foreground="#A4D007" />
@@ -328,6 +334,18 @@
                                                            Click="OrphansToggle_Click"
                                                            Visibility="{Binding HasOrphans, Converter={StaticResource BoolToVis}}"
                                                            Margin="0,0,6,0" />
+                                                <ui:Button Appearance="Secondary"
+                                                           VerticalAlignment="Center"
+                                                           Click="PatchWikiGuide_Click"
+                                                           ToolTip="{Binding PatchWikiTitle, FallbackValue='Open PatchWiki Tutorial Guide in Mini Window'}"
+                                                           Visibility="{Binding HasPatchWikiGuide, Converter={StaticResource BoolToVis}}"
+                                                           Margin="0,0,6,0"
+                                                           Padding="8,5">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <ui:SymbolIcon Symbol="BookOpen24" FontSize="14" Margin="0,0,4,0" Foreground="#A4D007" />
+                                                        <TextBlock Text="Guide" FontSize="11" Foreground="#A4D007" FontWeight="SemiBold" />
+                                                    </StackPanel>
+                                                </ui:Button>
                                                 <ui:Button Appearance="Secondary"
                                                            VerticalAlignment="Center"
                                                            Click="OpenCloudLocation_Click"

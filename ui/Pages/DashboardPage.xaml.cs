@@ -32,6 +32,7 @@ public partial class DashboardPage : Page
             Services.SaveUploadWatcherService.OnSaveActivity += HandleSaveActivity;
             Services.ActiveGameTrackerService.OnActiveGameChanged += HandleActiveGameChanged;
             Services.GameBoostService.OnBoostStateChanged += HandleBoostStateChanged;
+            Services.PatchWikiService.Instance.TutorialsUpdated += HandlePatchWikiTutorialsUpdated;
             HandleActiveGameChanged(Services.ActiveGameTrackerService.CurrentGame);
 
             try { await LoadStatusAsync(); }
@@ -54,6 +55,7 @@ public partial class DashboardPage : Page
             Services.SaveUploadWatcherService.OnSaveActivity -= HandleSaveActivity;
             Services.ActiveGameTrackerService.OnActiveGameChanged -= HandleActiveGameChanged;
             Services.GameBoostService.OnBoostStateChanged -= HandleBoostStateChanged;
+            Services.PatchWikiService.Instance.TutorialsUpdated -= HandlePatchWikiTutorialsUpdated;
             _autoRefreshTimer?.Stop();
             _autoRefreshTimer = null;
         };
@@ -291,6 +293,21 @@ public partial class DashboardPage : Page
 
                 ActiveGameFixSyncButton.Visibility = Visibility.Collapsed;
 
+                // Check if active game has a PatchWiki tutorial guide
+                if (game.AppId > 0 && Services.PatchWikiService.Instance.HasTutorial(game.AppId))
+                {
+                    var tutorial = Services.PatchWikiService.Instance.GetTutorial(game.AppId);
+                    ActiveGamePatchWikiButton.Visibility = Visibility.Visible;
+                    ActiveGamePatchWikiButton.Tag = tutorial?.TutorialUrl ?? $"{Services.PatchWikiService.PatchWikiHomeUrl}?appid={game.AppId}";
+                    ActiveGamePatchWikiButton.ToolTip = tutorial != null
+                        ? $"PatchWiki: {tutorial.Title}"
+                        : "Open patch & bypass tutorial on PatchWiki in Mini Window";
+                }
+                else
+                {
+                    ActiveGamePatchWikiButton.Visibility = Visibility.Collapsed;
+                }
+
                 if (game.IsCloudDenied || (!game.IsGenuineOwned && !game.IsFreeGame && !game.IsLuaGame && !game.IsZeroLuaIntercepted))
                 {
                     // Blocked / Unlocked game without interception!
@@ -425,6 +442,7 @@ public partial class DashboardPage : Page
             else
             {
                 ActiveGameCard.Visibility = Visibility.Collapsed;
+                ActiveGamePatchWikiButton.Visibility = Visibility.Collapsed;
                 ActiveGameBoostBadge.Visibility = Visibility.Collapsed;
                 ActiveGamePosterImage.Source = null;
                 ActiveGameFallbackIcon.Visibility = Visibility.Visible;
@@ -433,6 +451,29 @@ public partial class DashboardPage : Page
             // Trigger zoom recalculation when banner appears/disappears
             Services.UiZoomManager.Instance.TriggerAutoFitRecalculation();
         });
+    }
+
+    private void HandlePatchWikiTutorialsUpdated()
+    {
+        Dispatcher.Invoke(() =>
+        {
+            if (_currentActiveGame != null)
+            {
+                HandleActiveGameChanged(_currentActiveGame);
+            }
+        });
+    }
+
+    private void ActiveGamePatchWiki_Click(object sender, RoutedEventArgs e)
+    {
+        if (ActiveGamePatchWikiButton.Tag is string url && !string.IsNullOrEmpty(url))
+        {
+            Windows.MiniBrowserWindow.Open(url);
+        }
+        else if (_currentActiveGame != null && _currentActiveGame.AppId > 0)
+        {
+            Services.PatchWikiService.Instance.OpenTutorial(_currentActiveGame.AppId);
+        }
     }
 
     private void HandleBoostStateChanged(bool isBoosted, string? gameName)

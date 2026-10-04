@@ -231,6 +231,12 @@
 
                     <!-- Quick Bookmarks Row -->
                     <WrapPanel Margin="0,2,0,0">
+                        <Button Click="BookmarkPatchWiki_Click" Style="{StaticResource SteamButtonStyle}" Padding="8,3" Margin="0,0,5,4" ToolTip="Open PatchWiki Game Guides">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="🛠️" FontSize="10" Margin="0,0,4,0" />
+                                <TextBlock Text="PatchWiki" FontSize="10" Foreground="#A4D007" FontWeight="Bold" />
+                            </StackPanel>
+                        </Button>
                         <Button Click="BookmarkMapGenie_Click" Style="{StaticResource SteamButtonStyle}" Padding="8,3" Margin="0,0,5,4">
                             <TextBlock Text="🗺️ MapGenie" FontSize="10" />
                         </Button>

@@ -685,6 +685,20 @@ public partial class GameSpaceOverlayWindow : Window
         MiniBrowserWindow.Open();
     }
 
+    private void BookmarkPatchWiki_Click(object sender, RoutedEventArgs e)
+    {
+        var game = ActiveGameTrackerService.CurrentGame;
+        if (game != null && game.AppId > 0 && PatchWikiService.Instance.HasTutorial(game.AppId))
+        {
+            var url = PatchWikiService.Instance.GetTutorialUrl(game.AppId);
+            MiniBrowserWindow.Open(url ?? PatchWikiService.PatchWikiHomeUrl);
+        }
+        else
+        {
+            MiniBrowserWindow.Open(PatchWikiService.PatchWikiHomeUrl);
+        }
+    }
+
     private void BookmarkMapGenie_Click(object sender, RoutedEventArgs e)
     {
         MiniBrowserWindow.Open("https://mapgenie.io");

@@ -360,6 +360,13 @@ public partial class App : System.Windows.Application
                                                     mw.NavigateTo(typeof(Pages.UniversalSavesPage));
                                                 }
                                             }
+                                            else if (cmd.Contains("minibrowser", StringComparison.OrdinalIgnoreCase) ||
+                                                     cmd.Contains("guide", StringComparison.OrdinalIgnoreCase) ||
+                                                     cmd.Contains("patchwiki", StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                var targetUrl = Services.PatchWikiService.ExtractUrlFromProtocolCommand(cmd);
+                                                CloudRedirect.Windows.MiniBrowserWindow.Open(targetUrl);
+                                            }
                                         }
                                     }
                                     catch { }
@@ -410,6 +417,20 @@ public partial class App : System.Windows.Application
 
         Services.LanguageService.ApplyLanguage(Services.LanguageService.ReadLanguagePreference(), save: false);
         Services.WebView2Helper.EnsureLoaderConfigured();
+        Services.PatchWikiService.Instance.Initialize();
+
+        var miniBrowserCmd = e.Args.FirstOrDefault(a => a.StartsWith("cloudredirect://minibrowser", StringComparison.OrdinalIgnoreCase) ||
+                                                        a.StartsWith("cloudredirect://guide", StringComparison.OrdinalIgnoreCase) ||
+                                                        a.StartsWith("cloudredirect://patchwiki", StringComparison.OrdinalIgnoreCase));
+        if (!string.IsNullOrEmpty(miniBrowserCmd))
+        {
+            var targetUrl = Services.PatchWikiService.ExtractUrlFromProtocolCommand(miniBrowserCmd);
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                CloudRedirect.Windows.MiniBrowserWindow.Open(targetUrl);
+            }));
+        }
+
         base.OnStartup(e);
         ApplicationThemeManager.Apply(ApplicationTheme.Dark);
         LogStartup("OnStartup completed. MainWindow: " + (MainWindow != null ? MainWindow.GetType().Name : "null"));
