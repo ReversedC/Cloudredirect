@@ -2493,6 +2493,15 @@ Deseja reiniciar a Steam agora para limpar o erro "Não foi possível sincroniza
   <data name="Settings_MillenniumNotFound" xml:space="preserve">
     <value>Millennium Não Instalado</value>
   </data>
+  <data name="Settings_AutoRestartSteamOnLaunchTitle" xml:space="preserve">
+    <value>Reiniciar o Steam Automaticamente ao Iniciar</value>
+  </data>
+  <data name="Settings_AutoRestartSteamOnLaunchDescription" xml:space="preserve">
+    <value>Reinicia o Steam automaticamente ao iniciar o CloudRedirect se o Steam já estiver em execução, garantindo o carregamento dos plugins do Millennium (ignorado se um jogo estiver ativo).</value>
+  </data>
+  <data name="Steam_RestartingForPlugins" xml:space="preserve">
+    <value>Reiniciando o Steam para carregar os plugins do Millennium...</value>
+  </data>
   <data name="Nav_LuaSync" xml:space="preserve">
     <value>Sincronização Lua</value>
   </data>

@@ -90,6 +90,12 @@ public static class AppSettings
         set => WriteBool("enable_millennium_plugin", value);
     }
 
+    public static bool AutoRestartSteamOnLaunch
+    {
+        get => ReadBool("auto_restart_steam_on_launch", true);
+        set => WriteBool("auto_restart_steam_on_launch", value);
+    }
+
     public static bool AutoSyncOnGameExit
     {
         get => ReadBool("auto_sync_on_game_exit", true);

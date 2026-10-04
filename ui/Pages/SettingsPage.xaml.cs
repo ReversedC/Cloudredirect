@@ -102,6 +102,8 @@ public partial class SettingsPage : Page
             MillenniumStatusBorder.BorderBrush = new System.Windows.Media.SolidColorBrush(
                 millInstalled ? System.Windows.Media.Color.FromRgb(0x25, 0x42, 0x5F) : System.Windows.Media.Color.FromRgb(0x36, 0x3E, 0x45));
             AutoFitZoomToggle.IsChecked = AppSettings.AutoFitZoom;
+            if (AutoRestartSteamOnLaunchToggle != null)
+                AutoRestartSteamOnLaunchToggle.IsChecked = AppSettings.AutoRestartSteamOnLaunch;
 
             AutoSyncExitToggle.IsChecked = AppSettings.AutoSyncOnGameExit;
             AutoCheckpointToggle.IsChecked = AppSettings.AutoMidGameCheckpoint;
@@ -244,6 +246,9 @@ public partial class SettingsPage : Page
                 Task.Run(() => MillenniumPluginService.SyncWithSettings());
             }
         }
+
+        if (AutoRestartSteamOnLaunchToggle != null)
+            AppSettings.AutoRestartSteamOnLaunch = AutoRestartSteamOnLaunchToggle.IsChecked == true;
 
         if (AutoSyncExitToggle != null)
             AppSettings.AutoSyncOnGameExit = AutoSyncExitToggle.IsChecked == true;

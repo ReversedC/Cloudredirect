@@ -2538,6 +2538,15 @@ Steam의 '동기화할 수 없음' 오류를 지우기 위해 지금 Steam을 �
   <data name="Settings_MillenniumNotFound" xml:space="preserve">
     <value>Millennium 설치되지 않음</value>
   </data>
+  <data name="Settings_AutoRestartSteamOnLaunchTitle" xml:space="preserve">
+    <value>실행 시 Steam 자동 재시작</value>
+  </data>
+  <data name="Settings_AutoRestartSteamOnLaunchDescription" xml:space="preserve">
+    <value>CloudRedirect 실행 시 Steam이 이미 실행 중인 경우 자동으로 재시작하여 Millennium 플러그인을 즉시 로드합니다 (게임 실행 중일 경우 안전하게 건너뜀).</value>
+  </data>
+  <data name="Steam_RestartingForPlugins" xml:space="preserve">
+    <value>Millennium 플러그인을 로드하기 위해 Steam을 재시작하는 중...</value>
+  </data>
   <data name="Nav_LuaSync" xml:space="preserve">
     <value>Lua 스크립트 동기화</value>
   </data>

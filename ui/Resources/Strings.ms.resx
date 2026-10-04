@@ -2409,6 +2409,15 @@ Adakah anda mahu memulakan semula (restart) Steam sekarang untuk membersihkan ra
   <data name="Settings_MillenniumNotFound" xml:space="preserve">
     <value>Millennium Tidak Dijumpai</value>
   </data>
+  <data name="Settings_AutoRestartSteamOnLaunchTitle" xml:space="preserve">
+    <value>Mulakan Semula Steam Automatik Semasa Pelancaran</value>
+  </data>
+  <data name="Settings_AutoRestartSteamOnLaunchDescription" xml:space="preserve">
+    <value>Mulakan semula Steam secara automatik apabila CloudRedirect dilancarkan jika Steam sedang berjalan, memastikan pemalam Millennium dimuatkan segera (dilangkau jika permainan sedang dimainkan).</value>
+  </data>
+  <data name="Steam_RestartingForPlugins" xml:space="preserve">
+    <value>Memulakan semula Steam untuk memuatkan pemalam Millennium...</value>
+  </data>
   <data name="Nav_LuaSync" xml:space="preserve">
     <value>Penyegerakan Skrip Lua</value>
   </data>

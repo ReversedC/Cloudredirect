@@ -2514,6 +2514,15 @@
   <data name="Settings_MillenniumNotFound" xml:space="preserve">
     <value>未检测到 Millennium</value>
   </data>
+  <data name="Settings_AutoRestartSteamOnLaunchTitle" xml:space="preserve">
+    <value>启动时自动重启 Steam</value>
+  </data>
+  <data name="Settings_AutoRestartSteamOnLaunchDescription" xml:space="preserve">
+    <value>当 CloudRedirect 启动且 Steam 已在运行时，自动平稳重启 Steam 以立即加载 Millennium 插件（若正在运行游戏则安全跳过）。</value>
+  </data>
+  <data name="Steam_RestartingForPlugins" xml:space="preserve">
+    <value>正在重启 Steam 以加载 Millennium 插件...</value>
+  </data>
   <data name="Nav_LuaSync" xml:space="preserve">
     <value>Lua 脚本同步</value>
   </data>

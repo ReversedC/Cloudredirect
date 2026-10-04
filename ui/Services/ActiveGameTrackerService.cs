@@ -57,6 +57,23 @@ public static class ActiveGameTrackerService
         }
     }
 
+    /// <summary>
+    /// Checks whether any game is currently actively running (either tracked by CloudRedirect or indicated by Steam).
+    /// </summary>
+    public static bool IsAnyGameActive()
+    {
+        if (_currentGame != null) return true;
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(@"Software\Valve\Steam", false);
+            var val = key?.GetValue("RunningAppId");
+            if (val is int intVal && intVal > 0) return true;
+            if (val is long longVal && longVal > 0) return true;
+        }
+        catch { }
+        return false;
+    }
+
     public static void Start()
     {
         if (_pollTimer != null) return;

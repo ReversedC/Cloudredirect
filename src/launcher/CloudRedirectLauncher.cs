@@ -13,8 +13,8 @@ using Microsoft.Win32;
 [assembly: AssemblyTitle("CloudRedirect")]
 [assembly: AssemblyDescription("CloudRedirect Steam Cloud Synchronization & Save Redirection Companion")]
 [assembly: AssemblyProduct("CloudRedirect")]
-[assembly: AssemblyVersion("2.9.91.0")]
-[assembly: AssemblyFileVersion("2.9.91.0")]
+[assembly: AssemblyVersion("2.9.92.0")]
+[assembly: AssemblyFileVersion("2.9.92.0")]
 
 namespace CloudRedirectLauncher
 {

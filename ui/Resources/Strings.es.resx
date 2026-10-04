@@ -2488,6 +2488,15 @@ Esto puede causar pérdida de datos en algunos casos.
   <data name="Settings_MillenniumNotFound" xml:space="preserve">
     <value>Millennium no encontrado</value>
   </data>
+  <data name="Settings_AutoRestartSteamOnLaunchTitle" xml:space="preserve">
+    <value>Reiniciar Steam Automáticamente al Iniciar</value>
+  </data>
+  <data name="Settings_AutoRestartSteamOnLaunchDescription" xml:space="preserve">
+    <value>Reinicia Steam automáticamente cuando CloudRedirect se inicia si Steam ya se está ejecutando, asegurando la carga inmediata de los complementos de Millennium (se omite de forma segura si hay un juego activo).</value>
+  </data>
+  <data name="Steam_RestartingForPlugins" xml:space="preserve">
+    <value>Reiniciando Steam para cargar los complementos de Millennium...</value>
+  </data>
   <data name="Nav_LuaSync" xml:space="preserve">
     <value>Sincronización Lua</value>
   </data>

@@ -73,10 +73,33 @@ public partial class MainWindow : FluentWindow
                 App.LogStartup("Loaded: AutoSetupService.RunAutoSetupAsync");
                 await Services.AutoSetupService.RunAutoSetupAsync();
 
-                _ = Task.Run(() =>
+                _ = Task.Run(async () =>
                 {
                     Services.SteamWebUiPatcher.EnsureStockIconRestored();
                     Services.MillenniumPluginService.SyncWithSettings();
+
+                    // If enabled and Steam is already running on launch, auto-restart Steam gracefully so Millennium loads the plugin
+                    if (Services.AppSettings.AutoRestartSteamOnLaunch &&
+                        !App.LaunchedFromProtocol &&
+                        Services.MillenniumPluginService.IsMillenniumInstalled())
+                    {
+                        if (Services.SteamDetector.IsSteamRunning())
+                        {
+                            if (!Services.ActiveGameTrackerService.IsAnyGameActive())
+                            {
+                                App.LogStartup("AutoRestartSteamOnLaunch: Steam is running without active game. Gracefully restarting Steam to load Millennium plugins.");
+                                Services.SteamToastService.ShowAuto(
+                                    "CloudRedirect",
+                                    S.Get("Steam_RestartingForPlugins")
+                                );
+                                await Services.SteamDetector.RestartSteamAsync();
+                            }
+                            else
+                            {
+                                App.LogStartup("AutoRestartSteamOnLaunch skipped: Active game detected.");
+                            }
+                        }
+                    }
                 });
 
                 App.LogStartup("Loaded: ActiveGameTrackerService.Start");

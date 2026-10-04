@@ -99,6 +99,7 @@ public partial class App : System.Windows.Application
     private const int SW_RESTORE = 9;
 
     public static bool StartMinimized { get; private set; }
+    public static bool LaunchedFromProtocol { get; private set; }
 
     public static void LogStartup(string msg)
     {
@@ -405,6 +406,7 @@ public partial class App : System.Windows.Application
 
         StartMinimized = e.Args.Any(a => a.Equals("-minimized", StringComparison.OrdinalIgnoreCase) ||
                                          a.Equals("--minimized", StringComparison.OrdinalIgnoreCase));
+        LaunchedFromProtocol = e.Args.Any(a => a.StartsWith("cloudredirect://", StringComparison.OrdinalIgnoreCase));
 
         Services.LanguageService.ApplyLanguage(Services.LanguageService.ReadLanguagePreference(), save: false);
         Services.WebView2Helper.EnsureLoaderConfigured();

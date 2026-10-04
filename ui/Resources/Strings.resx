@@ -2541,6 +2541,15 @@ Would you like to restart Steam now to clear the Steam UI 'Unable to sync' error
   <data name="Settings_MillenniumNotFound" xml:space="preserve">
     <value>Millennium Not Found</value>
   </data>
+  <data name="Settings_AutoRestartSteamOnLaunchTitle" xml:space="preserve">
+    <value>Auto-Restart Steam on Launch</value>
+  </data>
+  <data name="Settings_AutoRestartSteamOnLaunchDescription" xml:space="preserve">
+    <value>Automatically restart Steam when CloudRedirect starts if Steam is already running, ensuring Millennium plugins load immediately (safely skipped if a game is active).</value>
+  </data>
+  <data name="Steam_RestartingForPlugins" xml:space="preserve">
+    <value>Restarting Steam to load Millennium plugins...</value>
+  </data>
   <data name="Nav_LuaSync" xml:space="preserve">
     <value>Lua Scripts Sync</value>
   </data>

@@ -440,6 +440,23 @@
                                                  Unchecked="AppSettingsToggle_Changed" />
                             </ui:CardControl>
 
+                            <!-- Auto-Restart Steam on Launch (to load plugins) -->
+                            <ui:CardControl Margin="0,8,0,0">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="{res:Loc Settings_AutoRestartSteamOnLaunchTitle}"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                        <TextBlock Text="{res:Loc Settings_AutoRestartSteamOnLaunchDescription}"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch x:Name="AutoRestartSteamOnLaunchToggle"
+                                                 Checked="AppSettingsToggle_Changed"
+                                                 Unchecked="AppSettingsToggle_Changed" />
+                            </ui:CardControl>
+
                             <!-- Auto-Fit Window (No Scrolling) -->
                             <ui:CardControl Margin="0,8,0,0">
                                 <ui:CardControl.Header>
