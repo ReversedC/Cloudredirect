@@ -121,6 +121,7 @@ public partial class App : System.Windows.Application
         {
             var steamPath = Services.SteamDetector.FindSteamPath();
             var (success, msg) = Services.SteamWebUiPatcher.ApplyPatch(steamPath);
+            Services.MillenniumPluginService.DeployPlugin();
             Console.WriteLine(msg);
             Environment.Exit(success ? 0 : 1);
             return;

@@ -788,13 +788,20 @@ var PluginEntryPointMain = function () {
             doc.head.appendChild(style);
         }
 
-        // Helper to locate the exact SuperNav tab bar container in doc
+        // Helper to locate the exact SuperNav tab bar container in doc (Multi-language & URL resilient)
         function findSuperNavInfo(doc) {
-            const allEls = doc.querySelectorAll('div, a, span, button');
+            const allEls = doc.querySelectorAll('a, div, span, button');
 
             for (const el of allEls) {
+                const href = (el.getAttribute && el.getAttribute('href')) || '';
+                const isNavUrl = href.includes('store.steampowered.com') || href.includes('steamcommunity.com');
                 const t = (el.textContent || '').trim().toUpperCase();
-                if (t === 'COMMUNITY' || t === 'STORE' || t === 'LIBRARY') {
+                const isNavText = t === 'COMMUNITY' || t === 'STORE' || t === 'LIBRARY' ||
+                                  t === 'TOKO' || t === 'KOMUNITAS' || t === 'PERPUSTAKAAN' ||
+                                  t === 'KEDAI' || t === 'KOMUNITI' ||
+                                  t === 'TIENDA' || t === 'COMUNIDAD' || t === 'BIBLIOTECA';
+
+                if (isNavUrl || isNavText) {
                     // Traverse up within 5 levels to locate the SuperNav container
                     let curr = el;
                     let depth = 0;
@@ -802,27 +809,26 @@ var PluginEntryPointMain = function () {
                         const parent = curr.parentElement;
                         if (!parent) break;
                         const pText = (parent.textContent || '').toUpperCase();
-                        if (pText.includes('STORE') && pText.includes('LIBRARY') && pText.includes('COMMUNITY')) {
+                        const hasStore = (parent.querySelector && parent.querySelector('a[href*=""store.steampowered.com""]')) ||
+                                         pText.includes('STORE') || pText.includes('TOKO') || pText.includes('KEDAI') || pText.includes('TIENDA');
+                        const hasCommunity = (parent.querySelector && parent.querySelector('a[href*=""steamcommunity.com""]')) ||
+                                             pText.includes('COMMUNITY') || pText.includes('KOMUNITAS') || pText.includes('KOMUNITI') || pText.includes('COMUNIDAD');
+
+                        if (hasStore && hasCommunity) {
                             const children = Array.from(parent.children);
                             let sampleTab = null;
                             let lastNavTab = null;
-                            let passedCommunity = false;
 
                             for (const child of children) {
                                 const cText = (child.textContent || '').trim().toUpperCase();
-                                if (cText.includes('COMMUNITY')) {
-                                    sampleTab = child;
-                                    lastNavTab = child;
-                                    passedCommunity = true;
-                                } else if (cText.includes('STORE') || cText.includes('LIBRARY')) {
+                                const cTag = child.tagName;
+                                // Ignore search inputs, window control buttons, or hidden spacers
+                                if (child.querySelector && (child.querySelector('input') || child.querySelector('svg[class*=""close""]'))) {
+                                    continue;
+                                }
+                                if (cText.length > 0 && !cText.includes('HTTP') && !cText.includes('🔍') && !cText.includes('SEARCH') && !cText.includes('✕')) {
                                     if (!sampleTab) sampleTab = child;
-                                    if (!passedCommunity) lastNavTab = child;
-                                } else if (passedCommunity) {
-                                    if (cText.length > 0 && !cText.includes('HTTP') && !cText.includes('🔍') && !cText.includes('SEARCH') && !cText.includes('✕')) {
-                                        lastNavTab = child;
-                                        sampleTab = child;
-                                    }
-                                    break;
+                                    lastNavTab = child;
                                 }
                             }
 
