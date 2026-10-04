@@ -1,0 +1,203 @@
+<Window x:Class="CloudRedirect.Dialogs.SteamUpdatePromptDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        Title="CloudRedirect Update"
+        Width="460" SizeToContent="Height"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        ResizeMode="NoResize"
+        KeyDown="Window_KeyDown">
+
+    <Window.Resources>
+        <LinearGradientBrush x:Key="SteamPlayButtonGradient" StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Color="#5C7E10" Offset="0.0" />
+            <GradientStop Color="#4B6B0D" Offset="1.0" />
+        </LinearGradientBrush>
+        <LinearGradientBrush x:Key="SteamPlayButtonHoverGradient" StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Color="#6EA114" Offset="0.0" />
+            <GradientStop Color="#598210" Offset="1.0" />
+        </LinearGradientBrush>
+
+        <Style x:Key="SteamUpdatePlayButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource SteamPlayButtonGradient}" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+            <Setter Property="BorderBrush" Value="#6CA015" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="playBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="5"
+                                Padding="16,8">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="playBorder" Property="Background" Value="{StaticResource SteamPlayButtonHoverGradient}" />
+                                <Setter TargetName="playBorder" Property="BorderBrush" Value="#86C825" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="playBorder" Property="Background" Value="#3D6310" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SteamUpdateSecondaryButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#22364B" />
+            <Setter Property="Foreground" Value="#C6D4DF" />
+            <Setter Property="BorderBrush" Value="#325272" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="secBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="5"
+                                Padding="16,8">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="secBorder" Property="Background" Value="#2F4C69" />
+                                <Setter TargetName="secBorder" Property="BorderBrush" Value="#4C78A4" />
+                                <Setter Property="Foreground" Value="#FFFFFF" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="secBorder" Property="Background" Value="#172738" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Border Margin="14"
+            Background="#171A21"
+            BorderBrush="#2A475E"
+            BorderThickness="1"
+            CornerRadius="8"
+            ClipToBounds="True">
+        <Border.Effect>
+            <DropShadowEffect Color="#000000" BlurRadius="24" ShadowDepth="4" Opacity="0.8" />
+        </Border.Effect>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" /> <!-- Header -->
+                <RowDefinition Height="*" />    <!-- Content -->
+                <RowDefinition Height="Auto" /> <!-- Actions -->
+            </Grid.RowDefinitions>
+
+            <!-- 1. Header Bar -->
+            <Border Grid.Row="0"
+                    Background="#1B2838"
+                    BorderBrush="#253A4E"
+                    BorderThickness="0,0,0,1"
+                    Padding="14,10"
+                    MouseLeftButtonDown="Header_MouseLeftButtonDown">
+                <Grid>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Image Source="pack://application:,,,/steam_logo3.ico" Width="18" Height="18" Margin="0,0,8,0" VerticalAlignment="Center" />
+                        <TextBlock Text="CLOUDREDIRECT UPDATE"
+                                   FontSize="12"
+                                   FontWeight="Bold"
+                                   Foreground="#66C0F4"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <!-- Close X Button -->
+                    <Button HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Width="26" Height="26"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Foreground="#8F98A0"
+                            Cursor="Hand"
+                            Click="LaterButton_Click"
+                            ToolTip="Dismiss">
+                        <TextBlock Text="✕" FontSize="12" FontWeight="Bold" />
+                    </Button>
+                </Grid>
+            </Border>
+
+            <!-- 2. Body -->
+            <StackPanel Grid.Row="1" Margin="20,16,20,16">
+                <!-- Version Pill Badges -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                    <Border Background="#162E1A" BorderBrush="#2C5C26" BorderThickness="1" CornerRadius="4" Padding="8,3" Margin="0,0,8,0">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="NEW" FontSize="10" FontWeight="Bold" Foreground="#A4D007" Margin="0,0,5,0" />
+                            <TextBlock x:Name="NewVersionText" Text="v2.9.82" FontSize="11" FontWeight="Bold" Foreground="#FFFFFF" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Background="#141E28" BorderBrush="#253548" BorderThickness="1" CornerRadius="4" Padding="8,3">
+                        <TextBlock x:Name="CurrentVersionText" Text="Installed: v2.9.78" FontSize="11" Foreground="#8F98A0" />
+                    </Border>
+                </StackPanel>
+
+                <TextBlock x:Name="TitleText"
+                           Text="CloudRedirect update is available!"
+                           FontSize="15"
+                           FontWeight="Bold"
+                           Foreground="#F3F3F3"
+                           Margin="0,0,0,6" />
+
+                <TextBlock x:Name="MessageText"
+                           Text="A new version with performance improvements and bug fixes is ready to install. Would you like to update now or later?"
+                           FontSize="12"
+                           Foreground="#C6D4DF"
+                           TextWrapping="Wrap"
+                           LineHeight="18" />
+            </StackPanel>
+
+            <!-- 3. Actions / Footer -->
+            <Border Grid.Row="2"
+                    Background="#131C26"
+                    BorderBrush="#253A4E"
+                    BorderThickness="0,1,0,0"
+                    Padding="20,14">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <Button Grid.Column="0"
+                            x:Name="UpdateNowButton"
+                            Content="⚡ Update Now"
+                            Style="{StaticResource SteamUpdatePlayButtonStyle}"
+                            HorizontalAlignment="Stretch"
+                            Margin="0,0,10,0"
+                            Click="UpdateNowButton_Click" />
+
+                    <Button Grid.Column="1"
+                            x:Name="LaterButton"
+                            Content="Later"
+                            Style="{StaticResource SteamUpdateSecondaryButtonStyle}"
+                            MinWidth="100"
+                            Click="LaterButton_Click" />
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

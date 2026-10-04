@@ -13,6 +13,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using CloudRedirect.Services;
+using Microsoft.Web.WebView2.Core;
 
 namespace CloudRedirect.Windows;
 
@@ -29,8 +30,33 @@ public partial class GameSpaceOverlayWindow : Window
 
     private readonly DispatcherTimer _updateTimer;
     private readonly DispatcherTimer _notesDebounceTimer;
+    private readonly DispatcherTimer _forceKillResetTimer;
+
     private bool _isClosing;
     private string? _currentGameName;
+    private bool _forceKillPending;
+    private bool _isDrawerExpanded;
+    private bool _isBrowserInitialized;
+
+    private static readonly string[] AdDomains = new[]
+    {
+        "doubleclick.net",
+        "googlesyndication.com",
+        "googleadservices.com",
+        "adnxs.com",
+        "taboola.com",
+        "outbrain.com",
+        "criteo.com",
+        "amazon-adsystem.com",
+        "scorecardresearch.com",
+        "rubiconproject.com",
+        "pubmatic.com",
+        "adroll.com",
+        "adsystem",
+        "adskeeper",
+        "adservice",
+        "fandom-ads"
+    };
 
     public GameSpaceOverlayWindow()
     {
@@ -62,6 +88,18 @@ public partial class GameSpaceOverlayWindow : Window
                 fadeTimer.Start();
             }
         };
+
+        _forceKillResetTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(2.5)
+        };
+        _forceKillResetTimer.Tick += (_, _) =>
+        {
+            _forceKillResetTimer.Stop();
+            ResetForceKillButton();
+        };
+
+        BackgroundAppFreezer.FreezeStateChanged += OnFreezeStateChanged;
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -79,13 +117,17 @@ public partial class GameSpaceOverlayWindow : Window
     {
         _isClosing = false;
         var workArea = SystemParameters.WorkArea;
-        Left = workArea.Right - Width;
+        double currentWidth = _isDrawerExpanded ? 720 : 380;
+        Width = currentWidth;
+        DrawerBorder.Width = currentWidth;
+        Left = workArea.Right - currentWidth;
         Top = workArea.Top;
         Height = workArea.Height;
 
         RefreshGameContext();
-        RefreshMemoryStats();
+        RefreshTelemetryStats();
         RefreshRecentSnapshots();
+        UpdateFreezeButtonState();
 
         Show();
         Activate();
@@ -137,6 +179,7 @@ public partial class GameSpaceOverlayWindow : Window
             _currentGameName = game.Name;
             GameTitleText.Text = game.Name;
             BoostActiveBadge.Visibility = GameBoostService.IsBoostActive ? Visibility.Visible : Visibility.Collapsed;
+            ForceKillContainer.Visibility = Visibility.Visible;
 
             // Load header poster if available
             if (!string.IsNullOrEmpty(game.HeaderUrl))
@@ -169,10 +212,13 @@ public partial class GameSpaceOverlayWindow : Window
             GameTitleText.Text = "Standby (No Game Running)";
             GameTimerText.Text = "⏱️ Ready for game launch";
             BoostActiveBadge.Visibility = Visibility.Collapsed;
+            ForceKillContainer.Visibility = Visibility.Collapsed;
             GamePosterFallback.Visibility = Visibility.Visible;
             GamePosterImage.Source = null;
             GameNotesTextBox.Text = GameSpaceService.LoadGameNotes("Desktop");
         }
+
+        ResetForceKillButton();
     }
 
     private void UpdateTimer_Tick(object? sender, EventArgs e)
@@ -183,26 +229,52 @@ public partial class GameSpaceOverlayWindow : Window
             var elapsed = DateTime.Now - game.StartTime;
             GameTimerText.Text = $"⏱️ {elapsed.Hours:D2}:{elapsed.Minutes:D2}:{elapsed.Seconds:D2}";
             BoostActiveBadge.Visibility = GameBoostService.IsBoostActive ? Visibility.Visible : Visibility.Collapsed;
-        }
-
-        RefreshMemoryStats();
-    }
-
-    private void RefreshMemoryStats()
-    {
-        var mem = GameSpaceService.GetMemoryStats();
-        RamUsageText.Text = $"RAM: {mem.UsedGb:F1} GB / {mem.TotalGb:F1} GB";
-        RamPercentText.Text = $"{mem.LoadPercent}%";
-        RamProgressBar.Value = mem.LoadPercent;
-
-        if (mem.LoadPercent > 80)
-        {
-            RamProgressBar.Foreground = new SolidColorBrush(Color.FromRgb(0xE5, 0xA1, 0x30)); // Steam Amber
+            ForceKillContainer.Visibility = Visibility.Visible;
         }
         else
         {
-            RamProgressBar.Foreground = new SolidColorBrush(Color.FromRgb(0x66, 0xC0, 0xF4)); // Steam Cyan
+            ForceKillContainer.Visibility = Visibility.Collapsed;
         }
+
+        RefreshTelemetryStats();
+    }
+
+    private void RefreshTelemetryStats()
+    {
+        var data = SystemTelemetryService.ReadTelemetry();
+
+        // 1. CPU Telemetry (Auto-fitted by Viewbox)
+        CpuPercentText.Text = $"{data.CpuPercent:0}%";
+        CpuTempText.Text = $"🌡️ {data.CpuTempC}°C";
+
+        // Color thermal indicator based on safety limits
+        if (data.CpuTempC >= 85)
+            CpuTempText.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x55, 0x55)); // Hot Red
+        else if (data.CpuTempC >= 75)
+            CpuTempText.Foreground = new SolidColorBrush(Color.FromRgb(0xE5, 0xA1, 0x30)); // Amber
+        else
+            CpuTempText.Foreground = new SolidColorBrush(Color.FromRgb(0xA4, 0xD0, 0x07)); // Normal Green
+
+        // 2. GPU Telemetry (Auto-fitted by Viewbox)
+        GpuPercentText.Text = $"{data.GpuPercent:0}%";
+        GpuTempText.Text = $"🌡️ {data.GpuTempC}°C";
+
+        if (data.GpuTempC >= 83)
+            GpuTempText.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x55, 0x55));
+        else if (data.GpuTempC >= 75)
+            GpuTempText.Foreground = new SolidColorBrush(Color.FromRgb(0xE5, 0xA1, 0x30));
+        else
+            GpuTempText.Foreground = new SolidColorBrush(Color.FromRgb(0xA4, 0xD0, 0x07));
+
+        // 3. RAM Telemetry (Auto-fitted by Viewbox)
+        RamPercentValueText.Text = $"{data.RamPercent:0}%";
+        RamUsageDetailedText.Text = $"{data.RamUsedGb:F1} / {data.RamTotalGb:0} GB";
+
+        RamProgressBar.Value = data.RamPercent;
+        if (data.RamPercent > 85)
+            RamProgressBar.Foreground = new SolidColorBrush(Color.FromRgb(0xE5, 0xA1, 0x30)); // Steam Amber
+        else
+            RamProgressBar.Foreground = new SolidColorBrush(Color.FromRgb(0x66, 0xC0, 0xF4)); // Steam Cyan
 
         PowerPlanText.Text = GameBoostService.IsBoostActive ? "🚀 Ultimate Performance" : "High Performance";
     }
@@ -349,7 +421,7 @@ public partial class GameSpaceOverlayWindow : Window
         }
 
         long freed = await Task.Run(() => GameBoostService.PurgeMemory(gamePid));
-        RefreshMemoryStats();
+        RefreshTelemetryStats();
 
         double freedMb = Math.Round((double)freed / (1024 * 1024), 0);
         if (freedMb > 0)
@@ -371,6 +443,134 @@ public partial class GameSpaceOverlayWindow : Window
             RamReclaimedPill.Visibility = Visibility.Collapsed;
         };
         pillTimer.Start();
+    }
+
+    private void FreezeBgApps_Click(object sender, RoutedEventArgs e)
+    {
+        FreezeBgAppsBtn.IsEnabled = false;
+
+        try
+        {
+            if (BackgroundAppFreezer.IsFrozen)
+            {
+                int thawed = BackgroundAppFreezer.ThawBackgroundApps();
+                FreezeFeedbackText.Text = $"✓ Thawed {thawed} apps (Normal Priority)";
+                FreezeFeedbackText.Foreground = new SolidColorBrush(Color.FromRgb(0x66, 0xC0, 0xF4));
+            }
+            else
+            {
+                (int frozenCount, long reclaimedMb) = BackgroundAppFreezer.FreezeBackgroundApps();
+                FreezeFeedbackText.Text = $"✓ Frozen {frozenCount} apps (+{reclaimedMb} MB freed)";
+                FreezeFeedbackText.Foreground = new SolidColorBrush(Color.FromRgb(0xA4, 0xD0, 0x07));
+            }
+
+            FreezeFeedbackPill.Visibility = Visibility.Visible;
+            var pillTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+            pillTimer.Tick += (_, _) =>
+            {
+                pillTimer.Stop();
+                FreezeFeedbackPill.Visibility = Visibility.Collapsed;
+            };
+            pillTimer.Start();
+        }
+        finally
+        {
+            FreezeBgAppsBtn.IsEnabled = true;
+            UpdateFreezeButtonState();
+        }
+    }
+
+    private void OnFreezeStateChanged(bool isFrozen, int count)
+    {
+        Dispatcher.Invoke(UpdateFreezeButtonState);
+    }
+
+    private void UpdateFreezeButtonState()
+    {
+        if (BackgroundAppFreezer.IsFrozen)
+        {
+            FreezeBtnText.Text = "🧊 Thaw Apps";
+            FreezeIcon.Foreground = new SolidColorBrush(Color.FromRgb(0xA4, 0xD0, 0x07));
+            FreezeBgAppsBtn.Background = new SolidColorBrush(Color.FromRgb(0x1B, 0x33, 0x22));
+            FreezeBgAppsBtn.BorderBrush = new SolidColorBrush(Color.FromRgb(0x3D, 0x6D, 0x24));
+        }
+        else
+        {
+            FreezeBtnText.Text = "🧊 Freeze Apps";
+            FreezeIcon.Foreground = new SolidColorBrush(Color.FromRgb(0x66, 0xC0, 0xF4));
+            FreezeBgAppsBtn.Background = new SolidColorBrush(Color.FromRgb(0x22, 0x36, 0x4B));
+            FreezeBgAppsBtn.BorderBrush = new SolidColorBrush(Color.FromRgb(0x32, 0x52, 0x72));
+        }
+    }
+
+    private void ForceKill_Click(object sender, RoutedEventArgs e)
+    {
+        var game = ActiveGameTrackerService.CurrentGame;
+        if (game == null) return;
+
+        if (!_forceKillPending)
+        {
+            _forceKillPending = true;
+            ForceKillBtnText.Text = "⚠️ Click again to confirm Force Kill!";
+            ForceKillBtn.Background = new SolidColorBrush(Color.FromRgb(0x4D, 0x16, 0x1C));
+            ForceKillBtn.BorderBrush = new SolidColorBrush(Color.FromRgb(0x9E, 0x24, 0x2F));
+            _forceKillResetTimer.Stop();
+            _forceKillResetTimer.Start();
+            return;
+        }
+
+        // Confirmed force kill
+        _forceKillResetTimer.Stop();
+        _forceKillPending = false;
+        ResetForceKillButton();
+
+        try
+        {
+            int killed = 0;
+            if (!string.IsNullOrEmpty(game.ProcessName))
+            {
+                var procs = Process.GetProcessesByName(game.ProcessName);
+                foreach (var p in procs)
+                {
+                    try
+                    {
+                        p.Kill(true);
+                        killed++;
+                    }
+                    catch { }
+                }
+            }
+
+            if (game.ProcessId > 0 && killed == 0)
+            {
+                try
+                {
+                    using var p = Process.GetProcessById(game.ProcessId);
+                    p.Kill(true);
+                    killed++;
+                }
+                catch { }
+            }
+
+            SteamToastService.ShowAuto(
+                "Game Force Killed ⚠️",
+                $"Terminated frozen process '{game.Name}'. System resources freed!");
+
+            ActiveGameTrackerService.ClearActiveGame();
+            RefreshGameContext();
+        }
+        catch (Exception ex)
+        {
+            SteamToastService.ShowAuto("Kill Failed ⚠️", ex.Message);
+        }
+    }
+
+    private void ResetForceKillButton()
+    {
+        _forceKillPending = false;
+        ForceKillBtnText.Text = "⚠️ Force Kill Frozen Game";
+        ForceKillBtn.Background = new SolidColorBrush(Color.FromRgb(0x2B, 0x16, 0x19));
+        ForceKillBtn.BorderBrush = new SolidColorBrush(Color.FromRgb(0x5C, 0x25, 0x2B));
     }
 
     private void CreateCheckpoint_Click(object sender, RoutedEventArgs e)
@@ -420,6 +620,216 @@ public partial class GameSpaceOverlayWindow : Window
         _notesDebounceTimer.Start();
     }
 
+    private void NotesTab_Click(object sender, RoutedEventArgs e)
+    {
+        NotesPanel.Visibility = Visibility.Visible;
+        WebBrowserPanel.Visibility = Visibility.Collapsed;
+        WebHeaderActions.Visibility = Visibility.Collapsed;
+
+        NotesTabBtn.Style = (Style)FindResource("SteamActiveTabButtonStyle");
+        WebTabBtn.Style = (Style)FindResource("SteamButtonStyle");
+    }
+
+    private async void WebTab_Click(object sender, RoutedEventArgs e)
+    {
+        NotesPanel.Visibility = Visibility.Collapsed;
+        WebBrowserPanel.Visibility = Visibility.Visible;
+        WebHeaderActions.Visibility = Visibility.Visible;
+
+        WebTabBtn.Style = (Style)FindResource("SteamActiveTabButtonStyle");
+        NotesTabBtn.Style = (Style)FindResource("SteamButtonStyle");
+
+        if (!_isBrowserInitialized)
+        {
+            await InitWebBrowserAsync();
+        }
+    }
+
+    private async Task InitWebBrowserAsync()
+    {
+        if (_isBrowserInitialized) return;
+
+        try
+        {
+            BrowserLoadingIndicator.Visibility = Visibility.Visible;
+
+            var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var userDataFolder = Path.Combine(appData, "CloudRedirect", "gamespace_browser");
+            Directory.CreateDirectory(userDataFolder);
+
+            var options = new CoreWebView2EnvironmentOptions();
+            var env = await CoreWebView2Environment.CreateAsync(null, userDataFolder, options);
+            await MiniBrowserWebView.EnsureCoreWebView2Async(env);
+
+            MiniBrowserWebView.DefaultBackgroundColor = System.Drawing.Color.FromArgb(0x0E, 0x16, 0x20);
+            MiniBrowserWebView.CoreWebView2.Settings.IsStatusBarEnabled = false;
+
+            // 1. Network-level Ad & Tracker Blocker
+            MiniBrowserWebView.CoreWebView2.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All);
+            MiniBrowserWebView.CoreWebView2.WebResourceRequested += CoreWebView2_WebResourceRequested;
+
+            // 2. Cosmetic Ad Banner & Slot remover CSS
+            await MiniBrowserWebView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(@"
+                (function() {
+                    const css = `
+                        .ad-container, .top-ads-container, .bottom-ads-container, 
+                        [id*='google_ads'], [id*='aswift'], [class*='advertisement'], 
+                        .fandom-sticky-header, .gpt-ad, .ad-slot, .ad_wrapper,
+                        [data-ad-unit], ins.adsbygoogle {
+                            display: none !important;
+                            visibility: hidden !important;
+                            height: 0 !important;
+                            max-height: 0 !important;
+                            pointer-events: none !important;
+                        }
+                    `;
+                    const style = document.createElement('style');
+                    style.type = 'text/css';
+                    style.appendChild(document.createTextNode(css));
+                    (document.head || document.documentElement).appendChild(style);
+                })();
+            ");
+
+            MiniBrowserWebView.NavigationStarting += (_, args) =>
+            {
+                BrowserLoadingIndicator.Visibility = Visibility.Visible;
+                BrowserUrlInput.Text = args.Uri;
+            };
+
+            MiniBrowserWebView.NavigationCompleted += (_, _) =>
+            {
+                BrowserLoadingIndicator.Visibility = Visibility.Collapsed;
+            };
+
+            MiniBrowserWebView.CoreWebView2.Navigate(BrowserUrlInput.Text);
+            _isBrowserInitialized = true;
+        }
+        catch (Exception ex)
+        {
+            BrowserLoadingIndicator.Visibility = Visibility.Collapsed;
+            App.LogStartup($"MiniBrowser init failed: {ex.Message}");
+        }
+    }
+
+    private void CoreWebView2_WebResourceRequested(object? sender, CoreWebView2WebResourceRequestedEventArgs e)
+    {
+        var uri = e.Request.Uri;
+        foreach (var domain in AdDomains)
+        {
+            if (uri.Contains(domain, StringComparison.OrdinalIgnoreCase))
+            {
+                // Block network request by returning empty 204 No Content
+                var response = MiniBrowserWebView.CoreWebView2.Environment.CreateWebResourceResponse(
+                    Stream.Null, 204, "No Content", "Content-Type: text/plain");
+                e.Response = response;
+                return;
+            }
+        }
+    }
+
+    private void BrowserBack_Click(object sender, RoutedEventArgs e)
+    {
+        if (_isBrowserInitialized && MiniBrowserWebView.CanGoBack)
+        {
+            MiniBrowserWebView.GoBack();
+        }
+    }
+
+    private void BrowserReload_Click(object sender, RoutedEventArgs e)
+    {
+        if (_isBrowserInitialized)
+        {
+            MiniBrowserWebView.Reload();
+        }
+    }
+
+    private void BrowserGo_Click(object sender, RoutedEventArgs e)
+    {
+        NavigateBrowser(BrowserUrlInput.Text);
+    }
+
+    private void BrowserUrlInput_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            NavigateBrowser(BrowserUrlInput.Text);
+        }
+    }
+
+    private void NavigateBrowser(string input)
+    {
+        string url = input.Trim();
+        if (string.IsNullOrWhiteSpace(url)) return;
+
+        if (!url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+            !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            if (url.Contains('.') && !url.Contains(' '))
+            {
+                url = "https://" + url;
+            }
+            else
+            {
+                url = "https://www.google.com/search?q=" + Uri.EscapeDataString(url);
+            }
+        }
+
+        BrowserUrlInput.Text = url;
+        if (_isBrowserInitialized)
+        {
+            MiniBrowserWebView.CoreWebView2.Navigate(url);
+        }
+    }
+
+    private void BookmarkMapGenie_Click(object sender, RoutedEventArgs e)
+    {
+        NavigateBrowser("https://mapgenie.io");
+    }
+
+    private void BookmarkSteamGuides_Click(object sender, RoutedEventArgs e)
+    {
+        var game = ActiveGameTrackerService.CurrentGame;
+        if (game != null && game.AppId > 0)
+        {
+            NavigateBrowser($"https://steamcommunity.com/app/{game.AppId}/guides/");
+        }
+        else
+        {
+            NavigateBrowser("https://steamcommunity.com/?subsection=guides");
+        }
+    }
+
+    private void BookmarkWiki_Click(object sender, RoutedEventArgs e)
+    {
+        var game = ActiveGameTrackerService.CurrentGame;
+        if (game != null && !string.IsNullOrWhiteSpace(game.Name))
+        {
+            NavigateBrowser($"https://www.google.com/search?q={Uri.EscapeDataString(game.Name + " wiki guide")}");
+        }
+        else
+        {
+            NavigateBrowser("https://www.fandom.com");
+        }
+    }
+
+    private void BookmarkGoogle_Click(object sender, RoutedEventArgs e)
+    {
+        NavigateBrowser("https://www.google.com");
+    }
+
+    private void ToggleExpandDrawer_Click(object sender, RoutedEventArgs e)
+    {
+        var workArea = SystemParameters.WorkArea;
+        _isDrawerExpanded = !_isDrawerExpanded;
+
+        double targetWidth = _isDrawerExpanded ? Math.Min(740, workArea.Width - 100) : 380;
+        ExpandBtnText.Text = _isDrawerExpanded ? "⤡ 380px" : "⤢ 720px";
+
+        Width = targetWidth;
+        DrawerBorder.Width = targetWidth;
+        Left = workArea.Right - targetWidth;
+    }
+
     private void OpenMainApp_Click(object sender, RoutedEventArgs e)
     {
         HideOverlay();
@@ -431,7 +841,7 @@ public partial class GameSpaceOverlayWindow : Window
         HideOverlay();
     }
 
-    private void Window_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Escape)
         {

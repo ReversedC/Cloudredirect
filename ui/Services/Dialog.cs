@@ -73,24 +73,55 @@ public static class Dialog
         return await box.ShowDialogAsync() == MessageBoxResult.Primary;
     }
 
-    public static async Task<bool> PromptUpdateAsync(string title, string message, string primaryText, string secondaryText)
+    public static async Task<bool> PromptUpdateAsync(string title, string message, string primaryText, string secondaryText, string? newVersion = null, string? currentVersion = null)
     {
-        var box = new MessageBox
+        if (Application.Current?.Dispatcher != null && !Application.Current.Dispatcher.CheckAccess())
         {
-            Title = title,
-            Content = new TextBlock
+            return Application.Current.Dispatcher.Invoke(() => PromptUpdateAsync(title, message, primaryText, secondaryText, newVersion, currentVersion)).GetAwaiter().GetResult();
+        }
+
+        try
+        {
+            string nVer = newVersion ?? "";
+            string cVer = currentVersion ?? "";
+            if (string.IsNullOrWhiteSpace(nVer))
             {
-                Text = message,
-                TextWrapping = TextWrapping.Wrap,
-                LineHeight = 22,
-                FontSize = 13
-            },
-            PrimaryButtonText = primaryText,
-            PrimaryButtonAppearance = ControlAppearance.Primary,
-            CloseButtonText = secondaryText
-        };
-        box.Loaded += (_, _) => CollapseEmptyFooterButtons(box);
-        return await box.ShowDialogAsync() == MessageBoxResult.Primary;
+                var match = System.Text.RegularExpressions.Regex.Match(message, @"v(\d+\.\d+\.\d+)");
+                if (match.Success) nVer = match.Groups[1].Value;
+            }
+            if (string.IsNullOrWhiteSpace(cVer))
+            {
+                cVer = Services.AppUpdater.GetCurrentVersionString();
+            }
+
+            var dialog = new Dialogs.SteamUpdatePromptDialog(nVer, cVer, message);
+            if (Application.Current?.MainWindow != null && Application.Current.MainWindow.IsVisible)
+            {
+                dialog.Owner = Application.Current.MainWindow;
+            }
+            bool? result = dialog.ShowDialog();
+            return result == true || dialog.UserChoseUpdate;
+        }
+        catch (Exception ex)
+        {
+            App.LogStartup($"Failed to display SteamUpdatePromptDialog: {ex.Message}. Falling back to default message box.");
+            var box = new MessageBox
+            {
+                Title = title,
+                Content = new TextBlock
+                {
+                    Text = message,
+                    TextWrapping = TextWrapping.Wrap,
+                    LineHeight = 22,
+                    FontSize = 13
+                },
+                PrimaryButtonText = primaryText,
+                PrimaryButtonAppearance = ControlAppearance.Primary,
+                CloseButtonText = secondaryText
+            };
+            box.Loaded += (_, _) => CollapseEmptyFooterButtons(box);
+            return await box.ShowDialogAsync() == MessageBoxResult.Primary;
+        }
     }
 
     public static async Task<bool> ConfirmDangerAsync(string title, string message)

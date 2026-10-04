@@ -284,7 +284,9 @@ public partial class MainWindow : FluentWindow
                 ? $"CloudRedirect v{versionStr} is available! (Current: {currentVer})\n\nWould you like to update now or later?"
                 : message,
             string.IsNullOrEmpty(updateNowText) ? "Update Now" : updateNowText,
-            string.IsNullOrEmpty(laterText) ? "Later" : laterText);
+            string.IsNullOrEmpty(laterText) ? "Later" : laterText,
+            versionStr,
+            currentVer);
 
         if (updateNow)
         {

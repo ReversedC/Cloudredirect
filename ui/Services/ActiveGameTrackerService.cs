@@ -22,7 +22,8 @@ public record ActiveGameInfo(
     bool IsCloudDenied = false,
     bool IsZeroLuaIntercepted = false,
     UniversalGameProfile? UniversalProfile = null,
-    bool IsFreeGame = false
+    bool IsFreeGame = false,
+    int ProcessId = 0
 );
 
 /// <summary>
@@ -42,6 +43,18 @@ public static class ActiveGameTrackerService
 
     public static ActiveGameInfo? CurrentGame => _currentGame;
     public static event Action<ActiveGameInfo?>? OnActiveGameChanged;
+
+    public static void ClearActiveGame()
+    {
+        if (_currentGame != null)
+        {
+            _currentGame = null;
+            _lastMidGameCheckpointTime = DateTime.MinValue;
+            _lastTrackedSaveDir = null;
+            OnActiveGameChanged?.Invoke(null);
+            GameBoostService.RevertBoost();
+        }
+    }
 
     public static void Start()
     {
@@ -220,7 +233,8 @@ public static class ActiveGameTrackerService
                         IsCloudDenied: hasCloudDenied || isUnlockedNoLua,
                         IsZeroLuaIntercepted: isZeroLua,
                         UniversalProfile: universalProfile,
-                        IsFreeGame: isFreeGame
+                        IsFreeGame: isFreeGame,
+                        ProcessId: matchedGameProcess?.Id ?? 0
                     );
 
                     OnActiveGameChanged?.Invoke(_currentGame);
@@ -261,6 +275,12 @@ public static class ActiveGameTrackerService
                     {
                         if (_currentGame == null || _currentGame.ProcessName != targetProcName)
                         {
+                            var matchedProc = processes.FirstOrDefault(p =>
+                            {
+                                try { return p.ProcessName.Equals(targetProcName, StringComparison.OrdinalIgnoreCase); }
+                                catch { return false; }
+                            });
+
                             _currentGame = new ActiveGameInfo(
                                 profile.SteamAppId,
                                 profile.GameName,
@@ -273,7 +293,8 @@ public static class ActiveGameTrackerService
                                 IsGenuineOwned: profile.IsGenuineSteamGame,
                                 HasAntiCheat: profile.HasAntiCheat,
                                 UniversalProfile: profile,
-                                IsFreeGame: profile.SteamAppId > 0 && SteamStoreClient.Shared.IsFreeGame(profile.SteamAppId)
+                                IsFreeGame: profile.SteamAppId > 0 && SteamStoreClient.Shared.IsFreeGame(profile.SteamAppId),
+                                ProcessId: matchedProc?.Id ?? 0
                             );
                             _lastMonitoredUniversalProcess = targetProcName;
                             _lastActiveUniversalProfile = profile;
@@ -281,11 +302,6 @@ public static class ActiveGameTrackerService
                             UniversalSaveWatcherService.UpdateProfileStatus(profile, "Game Running 🎮");
                             OnActiveGameChanged?.Invoke(_currentGame);
 
-                            var matchedProc = processes.FirstOrDefault(p =>
-                            {
-                                try { return p.ProcessName.Equals(targetProcName, StringComparison.OrdinalIgnoreCase); }
-                                catch { return false; }
-                            });
                             _ = GameBoostService.ApplyBoostAsync(matchedProc, profile.GameName, null, targetProcName, null);
                         }
 

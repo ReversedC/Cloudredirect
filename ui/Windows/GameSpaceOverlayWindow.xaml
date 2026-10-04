@@ -2,6 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         Title="CloudRedirect Game Space"
         Width="380"
         WindowStyle="None"
@@ -74,6 +75,12 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <Style x:Key="SteamActiveTabButtonStyle" TargetType="Button" BasedOn="{StaticResource SteamButtonStyle}">
+            <Setter Property="Background" Value="#2A475E" />
+            <Setter Property="BorderBrush" Value="#66C0F4" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+        </Style>
     </Window.Resources>
 
     <Grid x:Name="RootLayout" ClipToBounds="True">
@@ -144,7 +151,7 @@
                 <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,4,0">
                     <StackPanel>
 
-                        <!-- Active Game Card -->
+                        <!-- Active Game Card with Force Kill option -->
                         <Border x:Name="ActiveGameCard"
                                 Background="#1A2938"
                                 BorderBrush="#2C4863"
@@ -153,58 +160,78 @@
                                 Padding="12"
                                 Margin="0,0,0,14">
                             <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
 
-                                <!-- Game Poster Capsule -->
-                                <Border Grid.Column="0"
-                                        Width="88" Height="44"
-                                        CornerRadius="4"
-                                        Background="#101922"
-                                        BorderBrush="#253A4E"
-                                        BorderThickness="1"
-                                        ClipToBounds="True"
-                                        Margin="0,0,10,0"
-                                        VerticalAlignment="Center">
-                                    <Grid>
-                                        <ui:SymbolIcon x:Name="GamePosterFallback" Symbol="Games24" FontSize="20" Foreground="#66C0F4"
-                                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        <Image x:Name="GamePosterImage" Stretch="UniformToFill" />
-                                    </Grid>
-                                </Border>
+                                <Grid Grid.Row="0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
 
-                                <!-- Game Info Details -->
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock x:Name="GameTitleText"
-                                               Text="Standby Mode"
-                                               FontSize="13"
-                                               FontWeight="Bold"
-                                               Foreground="#FFFFFF"
-                                               TextTrimming="CharacterEllipsis" />
-                                    <StackPanel Orientation="Horizontal" Margin="0,3,0,0" VerticalAlignment="Center">
-                                        <TextBlock x:Name="GameTimerText"
-                                                   Text="⏱️ No Active Game"
-                                                   FontSize="11"
-                                                   Foreground="#8F98A0" />
-                                        <TextBlock x:Name="BoostActiveBadge"
-                                                   Text="🚀 Boosted"
-                                                   FontSize="10"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="#00D2FF"
-                                                   Margin="8,0,0,0"
-                                                   Visibility="Collapsed" />
+                                    <!-- Game Poster Capsule -->
+                                    <Border Grid.Column="0"
+                                            Width="88" Height="44"
+                                            CornerRadius="4"
+                                            Background="#101922"
+                                            BorderBrush="#253A4E"
+                                            BorderThickness="1"
+                                            ClipToBounds="True"
+                                            Margin="0,0,10,0"
+                                            VerticalAlignment="Center">
+                                        <Grid>
+                                            <ui:SymbolIcon x:Name="GamePosterFallback" Symbol="Games24" FontSize="20" Foreground="#66C0F4"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            <Image x:Name="GamePosterImage" Stretch="UniformToFill" />
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- Game Info Details -->
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock x:Name="GameTitleText"
+                                                   Text="Standby Mode"
+                                                   FontSize="13"
+                                                   FontWeight="Bold"
+                                                   Foreground="#FFFFFF"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <StackPanel Orientation="Horizontal" Margin="0,3,0,0" VerticalAlignment="Center">
+                                            <TextBlock x:Name="GameTimerText"
+                                                       Text="⏱️ No Active Game"
+                                                       FontSize="11"
+                                                       Foreground="#8F98A0" />
+                                            <TextBlock x:Name="BoostActiveBadge"
+                                                       Text="🚀 Boosted"
+                                                       FontSize="10"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="#00D2FF"
+                                                       Margin="8,0,0,0"
+                                                       Visibility="Collapsed" />
+                                        </StackPanel>
                                     </StackPanel>
-                                </StackPanel>
+                                </Grid>
+
+                                <!-- Emergency Force Kill Game Button (visible when a game is running) -->
+                                <Border Grid.Row="1" x:Name="ForceKillContainer" Margin="0,10,0,0" Visibility="Collapsed">
+                                    <Button x:Name="ForceKillBtn" Click="ForceKill_Click"
+                                            Style="{StaticResource SteamButtonStyle}"
+                                            Background="#2B1619" BorderBrush="#5C252B" Foreground="#FF6B72"
+                                            HorizontalAlignment="Stretch" Padding="8,5">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                            <ui:SymbolIcon Symbol="DismissSquare24" FontSize="13" Foreground="#FF6B72" Margin="0,0,6,0" />
+                                            <TextBlock x:Name="ForceKillBtnText" Text="⚠️ Force Kill Frozen Game" FontSize="11" FontWeight="SemiBold" />
+                                        </StackPanel>
+                                    </Button>
+                                </Border>
                             </Grid>
                         </Border>
 
-                        <!-- Performance & Instant RAM Purge Section -->
+                        <!-- System & Performance Telemetry Card with Auto-Fit 3-Column Grid -->
                         <Border Background="#16222F" BorderBrush="#24394E" BorderThickness="1"
                                 CornerRadius="8" Padding="12" Margin="0,0,0,14">
                             <StackPanel>
-                                <DockPanel LastChildFill="False" Margin="0,0,0,8">
+                                <DockPanel LastChildFill="False" Margin="0,0,0,10">
                                     <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
                                         <ui:SymbolIcon Symbol="Flash24" FontSize="14" Foreground="#A4D007" Margin="0,0,6,0" />
                                         <TextBlock Text="SYSTEM &amp; PERFORMANCE" FontSize="11" FontWeight="Bold" Foreground="#66C0F4" />
@@ -213,27 +240,96 @@
                                                Text="High Perf" FontSize="10" Foreground="#8F98A0" VerticalAlignment="Center" />
                                 </DockPanel>
 
+                                <!-- 3-Column Telemetry Tiles: CPU | GPU | RAM (with Viewbox Auto-Fit) -->
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="6" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="6" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Column 0: CPU Tile -->
+                                    <Border Grid.Column="0" Background="#101922" BorderBrush="#213447" BorderThickness="1" CornerRadius="6" Padding="6,6">
+                                        <StackPanel HorizontalAlignment="Stretch">
+                                            <TextBlock Text="CPU" FontSize="10" FontWeight="Bold" Foreground="#8F98A0" HorizontalAlignment="Center" />
+                                            <!-- Auto-fit Load Percentage (e.g. 38%) -->
+                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly" MaxHeight="24" Margin="0,2,0,2">
+                                                <TextBlock x:Name="CpuPercentText" Text="38%" FontSize="18" FontWeight="Bold" Foreground="#66C0F4" HorizontalAlignment="Center" TextWrapping="NoWrap" />
+                                            </Viewbox>
+                                            <!-- Auto-fit Temperature (e.g. 🌡️ 62°C) -->
+                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly" MaxHeight="16">
+                                                <TextBlock x:Name="CpuTempText" Text="🌡️ 62°C" FontSize="11" FontWeight="SemiBold" Foreground="#A4D007" HorizontalAlignment="Center" TextWrapping="NoWrap" />
+                                            </Viewbox>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Column 2: GPU Tile -->
+                                    <Border Grid.Column="2" Background="#101922" BorderBrush="#213447" BorderThickness="1" CornerRadius="6" Padding="6,6">
+                                        <StackPanel HorizontalAlignment="Stretch">
+                                            <TextBlock Text="GPU" FontSize="10" FontWeight="Bold" Foreground="#8F98A0" HorizontalAlignment="Center" />
+                                            <!-- Auto-fit Load Percentage (e.g. 92%) -->
+                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly" MaxHeight="24" Margin="0,2,0,2">
+                                                <TextBlock x:Name="GpuPercentText" Text="92%" FontSize="18" FontWeight="Bold" Foreground="#66C0F4" HorizontalAlignment="Center" TextWrapping="NoWrap" />
+                                            </Viewbox>
+                                            <!-- Auto-fit Temperature (e.g. 🌡️ 68°C) -->
+                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly" MaxHeight="16">
+                                                <TextBlock x:Name="GpuTempText" Text="🌡️ 68°C" FontSize="11" FontWeight="SemiBold" Foreground="#A4D007" HorizontalAlignment="Center" TextWrapping="NoWrap" />
+                                            </Viewbox>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Column 4: RAM Tile -->
+                                    <Border Grid.Column="4" Background="#101922" BorderBrush="#213447" BorderThickness="1" CornerRadius="6" Padding="6,6">
+                                        <StackPanel HorizontalAlignment="Stretch">
+                                            <TextBlock Text="RAM" FontSize="10" FontWeight="Bold" Foreground="#8F98A0" HorizontalAlignment="Center" />
+                                            <!-- Auto-fit Load Percentage (e.g. 44%) -->
+                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly" MaxHeight="24" Margin="0,2,0,2">
+                                                <TextBlock x:Name="RamPercentValueText" Text="44%" FontSize="18" FontWeight="Bold" Foreground="#66C0F4" HorizontalAlignment="Center" TextWrapping="NoWrap" />
+                                            </Viewbox>
+                                            <!-- Auto-fit Usage Detail (e.g. 14.1 / 32 GB) -->
+                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly" MaxHeight="16">
+                                                <TextBlock x:Name="RamUsageDetailedText" Text="14.1 / 32 GB" FontSize="11" FontWeight="SemiBold" Foreground="#C6D4DF" HorizontalAlignment="Center" TextWrapping="NoWrap" />
+                                            </Viewbox>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+
                                 <!-- RAM Progress Bar -->
-                                <Grid Margin="0,0,0,4">
-                                    <ProgressBar x:Name="RamProgressBar" Height="10" Minimum="0" Maximum="100" Value="40"
+                                <Grid Margin="0,0,0,8">
+                                    <ProgressBar x:Name="RamProgressBar" Height="8" Minimum="0" Maximum="100" Value="44"
                                                  Foreground="#66C0F4" Background="#0F1720" BorderThickness="0" />
                                 </Grid>
-                                <DockPanel LastChildFill="False" Margin="0,0,0,10">
-                                    <TextBlock x:Name="RamUsageText" DockPanel.Dock="Left"
-                                               Text="RAM: 8.5 GB / 32.0 GB" FontSize="11" Foreground="#C6D4DF" />
-                                    <TextBlock x:Name="RamPercentText" DockPanel.Dock="Right"
-                                               Text="26%" FontSize="11" FontWeight="SemiBold" Foreground="#66C0F4" />
-                                </DockPanel>
 
-                                <!-- Purge RAM Button -->
-                                <Button x:Name="PurgeRamBtn" Click="PurgeRam_Click"
-                                        Style="{StaticResource SteamPlayButtonStyle}"
-                                        HorizontalAlignment="Stretch">
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <ui:SymbolIcon Symbol="Broom24" FontSize="14" Margin="0,0,6,0" />
-                                        <TextBlock Text="⚡ Purge Standby RAM &amp; Cache" FontSize="11" />
-                                    </StackPanel>
-                                </Button>
+                                <!-- Action Buttons: Purge RAM & Freeze Background Apps -->
+                                <Grid Margin="0,2,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="6" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Purge RAM Button -->
+                                    <Button Grid.Column="0" x:Name="PurgeRamBtn" Click="PurgeRam_Click"
+                                            Style="{StaticResource SteamPlayButtonStyle}"
+                                            HorizontalAlignment="Stretch" Padding="6,6">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <ui:SymbolIcon Symbol="Broom24" FontSize="13" Margin="0,0,4,0" />
+                                            <TextBlock Text="⚡ Purge RAM" FontSize="11" />
+                                        </StackPanel>
+                                    </Button>
+
+                                    <!-- Freeze BG Apps Toggle Button -->
+                                    <Button Grid.Column="2" x:Name="FreezeBgAppsBtn" Click="FreezeBgApps_Click"
+                                            Style="{StaticResource SteamButtonStyle}"
+                                            HorizontalAlignment="Stretch" Padding="6,6">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <ui:SymbolIcon x:Name="FreezeIcon" Symbol="WeatherSnowflake24" FontSize="13" Foreground="#66C0F4" Margin="0,0,4,0" />
+                                            <TextBlock x:Name="FreezeBtnText" Text="🧊 Freeze Apps" FontSize="11" />
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
 
                                 <!-- Reclaim Feedback Pill -->
                                 <Border x:Name="RamReclaimedPill" Visibility="Collapsed"
@@ -241,6 +337,14 @@
                                         CornerRadius="5" Padding="8,4" Margin="0,8,0,0">
                                     <TextBlock x:Name="RamReclaimedText" Text="✓ Reclaimed +1.2 GB Memory"
                                                FontSize="11" FontWeight="SemiBold" Foreground="#A4D007" HorizontalAlignment="Center" />
+                                </Border>
+
+                                <!-- Freeze Feedback Pill -->
+                                <Border x:Name="FreezeFeedbackPill" Visibility="Collapsed"
+                                        Background="#152738" BorderBrush="#254A6B" BorderThickness="1"
+                                        CornerRadius="5" Padding="8,4" Margin="0,8,0,0">
+                                    <TextBlock x:Name="FreezeFeedbackText" Text="✓ Frozen 6 background apps"
+                                               FontSize="11" FontWeight="SemiBold" Foreground="#66C0F4" HorizontalAlignment="Center" />
                                 </Border>
                             </StackPanel>
                         </Border>
@@ -300,33 +404,131 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- Game Scratchpad / Notes Section -->
+                        <!-- In-Game Tools: Dual-tab Switcher (Notes vs Mini Web Browser) -->
                         <Border Background="#16222F" BorderBrush="#24394E" BorderThickness="1"
                                 CornerRadius="8" Padding="12" Margin="0,0,0,10">
                             <StackPanel>
-                                <DockPanel LastChildFill="False" Margin="0,0,0,6">
-                                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
-                                        <ui:SymbolIcon Symbol="Note24" FontSize="14" Foreground="#E5A130" Margin="0,0,6,0" />
-                                        <TextBlock Text="GAME SCRATCHPAD / NOTES" FontSize="11" FontWeight="Bold" Foreground="#66C0F4" />
-                                    </StackPanel>
-                                    <TextBlock x:Name="NotesSavedIndicator" DockPanel.Dock="Right"
-                                               Text="Saved" FontSize="10" Foreground="#A4D007" Visibility="Collapsed" />
-                                </DockPanel>
-                                <TextBlock Text="Codes, puzzle clues, coords (auto-saved per game):"
-                                           FontSize="10" Foreground="#8F98A0" Margin="0,0,0,6" />
+                                <!-- Tab Switcher & Browser Controls Header -->
+                                <DockPanel LastChildFill="False" Margin="0,0,0,8">
+                                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                                        <Button x:Name="NotesTabBtn" Click="NotesTab_Click"
+                                                Style="{StaticResource SteamActiveTabButtonStyle}"
+                                                Padding="8,4" Margin="0,0,4,0">
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <ui:SymbolIcon Symbol="Note24" FontSize="13" Foreground="#E5A130" Margin="0,0,4,0" />
+                                                <TextBlock Text="Notes" FontSize="11" FontWeight="Bold" />
+                                            </StackPanel>
+                                        </Button>
 
-                                <TextBox x:Name="GameNotesTextBox"
-                                         AcceptsReturn="True"
-                                         TextWrapping="Wrap"
-                                         Height="84"
-                                         FontSize="11"
-                                         Background="#0F1720"
-                                         Foreground="#C6D4DF"
-                                         BorderBrush="#253A4E"
-                                         BorderThickness="1"
-                                         Padding="8,6"
-                                         VerticalScrollBarVisibility="Auto"
-                                         TextChanged="GameNotesTextBox_TextChanged" />
+                                        <Button x:Name="WebTabBtn" Click="WebTab_Click"
+                                                Style="{StaticResource SteamButtonStyle}"
+                                                Padding="8,4">
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <ui:SymbolIcon Symbol="Globe24" FontSize="13" Foreground="#66C0F4" Margin="0,0,4,0" />
+                                                <TextBlock Text="Web Guides &amp; Maps" FontSize="11" FontWeight="Bold" />
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+
+                                    <!-- Right-aligned Actions when Web Tab is Active -->
+                                    <StackPanel x:Name="WebHeaderActions" Orientation="Horizontal" DockPanel.Dock="Right" Visibility="Collapsed" VerticalAlignment="Center">
+                                        <!-- Built-in AdBlock Badge -->
+                                        <Border Background="#162E1A" BorderBrush="#2C5C26" BorderThickness="1" CornerRadius="4" Padding="5,2" Margin="0,0,6,0"
+                                                ToolTip="Built-in Ad &amp; Tracker Blocker active">
+                                            <TextBlock Text="🛡️ AdBlock ON" FontSize="9" FontWeight="Bold" Foreground="#A4D007" />
+                                        </Border>
+
+                                        <!-- Panel Width Expand Toggle Button -->
+                                        <Button x:Name="ExpandDrawerBtn" Click="ToggleExpandDrawer_Click"
+                                                Style="{StaticResource SteamButtonStyle}"
+                                                Padding="6,2" ToolTip="Expand/Shrink panel width for interactive maps">
+                                            <TextBlock x:Name="ExpandBtnText" Text="⤢ 720px" FontSize="10" Foreground="#66C0F4" />
+                                        </Button>
+                                    </StackPanel>
+
+                                    <TextBlock x:Name="NotesSavedIndicator" DockPanel.Dock="Right"
+                                               Text="Saved" FontSize="10" Foreground="#A4D007" Visibility="Collapsed" VerticalAlignment="Center" />
+                                </DockPanel>
+
+                                <!-- Tab 1: Game Scratchpad / Notes -->
+                                <Grid x:Name="NotesPanel" Visibility="Visible">
+                                    <StackPanel>
+                                        <TextBlock Text="Codes, puzzle clues, coords (auto-saved per game):"
+                                                   FontSize="10" Foreground="#8F98A0" Margin="0,0,0,6" />
+
+                                        <TextBox x:Name="GameNotesTextBox"
+                                                 AcceptsReturn="True"
+                                                 TextWrapping="Wrap"
+                                                 Height="100"
+                                                 FontSize="11"
+                                                 Background="#0F1720"
+                                                 Foreground="#C6D4DF"
+                                                 BorderBrush="#253A4E"
+                                                 BorderThickness="1"
+                                                 Padding="8,6"
+                                                 VerticalScrollBarVisibility="Auto"
+                                                 TextChanged="GameNotesTextBox_TextChanged" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Tab 2: Docked Mini Web Browser with Built-in Ad Blocker -->
+                                <Grid x:Name="WebBrowserPanel" Visibility="Collapsed">
+                                    <StackPanel>
+                                        <!-- Quick Bookmarks -->
+                                        <WrapPanel Margin="0,0,0,6">
+                                            <Button Click="BookmarkMapGenie_Click" Style="{StaticResource SteamButtonStyle}" Padding="6,2" Margin="0,0,4,4">
+                                                <TextBlock Text="🗺️ MapGenie" FontSize="10" />
+                                            </Button>
+                                            <Button Click="BookmarkSteamGuides_Click" Style="{StaticResource SteamButtonStyle}" Padding="6,2" Margin="0,0,4,4">
+                                                <TextBlock Text="📖 Steam Guides" FontSize="10" />
+                                            </Button>
+                                            <Button Click="BookmarkWiki_Click" Style="{StaticResource SteamButtonStyle}" Padding="6,2" Margin="0,0,4,4">
+                                                <TextBlock Text="📚 Game Wiki" FontSize="10" />
+                                            </Button>
+                                            <Button Click="BookmarkGoogle_Click" Style="{StaticResource SteamButtonStyle}" Padding="6,2" Margin="0,0,4,4">
+                                                <TextBlock Text="🔍 Search" FontSize="10" />
+                                            </Button>
+                                        </WrapPanel>
+
+                                        <!-- Browser Navigation Bar -->
+                                        <Grid Margin="0,0,0,6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <Button Grid.Column="0" Click="BrowserBack_Click" Style="{StaticResource SteamButtonStyle}" Padding="6,4" Margin="0,0,3,0" ToolTip="Back">
+                                                <TextBlock Text="◀" FontSize="10" />
+                                            </Button>
+                                            <Button Grid.Column="1" Click="BrowserReload_Click" Style="{StaticResource SteamButtonStyle}" Padding="6,4" Margin="0,0,4,0" ToolTip="Refresh">
+                                                <TextBlock Text="🔄" FontSize="10" />
+                                            </Button>
+                                            <TextBox Grid.Column="2" x:Name="BrowserUrlInput" Text="https://mapgenie.io"
+                                                     FontSize="11" Background="#0F1720" Foreground="#FFFFFF" BorderBrush="#253A4E"
+                                                     BorderThickness="1" Padding="6,4" VerticalContentAlignment="Center" KeyDown="BrowserUrlInput_KeyDown" />
+                                            <Button Grid.Column="3" Click="BrowserGo_Click" Style="{StaticResource SteamButtonStyle}" Padding="8,4" Margin="3,0,0,0">
+                                                <TextBlock Text="Go" FontSize="10" FontWeight="Bold" Foreground="#66C0F4" />
+                                            </Button>
+                                        </Grid>
+
+                                        <!-- Embedded WebView2 Frame -->
+                                        <Border Height="380" Background="#0B1015" BorderBrush="#253A4E" BorderThickness="1" CornerRadius="4" ClipToBounds="True">
+                                            <Grid>
+                                                <wv2:WebView2 x:Name="MiniBrowserWebView" />
+                                                <!-- Loading / AdBlock Overlay -->
+                                                <Border x:Name="BrowserLoadingIndicator" Background="#E60E1620" Visibility="Collapsed" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                        <TextBlock Text="Loading guide..." FontSize="11" Foreground="#66C0F4" HorizontalAlignment="Center" />
+                                                        <TextBlock Text="🛡️ Blocking trackers &amp; ads" FontSize="10" Foreground="#A4D007" HorizontalAlignment="Center" Margin="0,4,0,0" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </Grid>
+                                        </Border>
+                                    </StackPanel>
+                                </Grid>
+
                             </StackPanel>
                         </Border>
 
