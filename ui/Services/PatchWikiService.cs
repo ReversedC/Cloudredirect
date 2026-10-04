@@ -331,6 +331,7 @@ public sealed class PatchWikiService
             {
                 pluginMap[kvp.Key.ToString()] = new
                 {
+                    appId = kvp.Key,
                     id = kvp.Value.Id,
                     title = kvp.Value.Title,
                     url = kvp.Value.TutorialUrl,

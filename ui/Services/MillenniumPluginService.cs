@@ -1696,29 +1696,55 @@ var PluginEntryPointMain = function () {
             return appStatusCache;
         }
 
-        function buildPatchWikiMap(list) {
-            if (!Array.isArray(list)) return {};
+        function normalizePatchWikiMap(raw) {
+            if (!raw) return {};
             const map = {};
-            for (const item of list) {
+            const items = Array.isArray(raw) ? raw : (typeof raw === 'object' ? Object.keys(raw).map(k => {
+                const it = raw[k];
+                if (!it) return null;
+                if (!it.appId && /^\d+$/.test(k)) it.appId = parseInt(k, 10);
+                if (!it.id) it.id = k;
+                return it;
+            }).filter(Boolean) : []);
+
+            for (const item of items) {
                 const appId = item.appId || extractAppIdFromMetadata(item.id, item.title, item.game);
                 const tObj = {
-                    id: item.id,
-                    title: item.title,
-                    game: item.game,
-                    desc: item.desc,
-                    tags: item.tags,
-                    author: item.author,
-                    date: item.date,
+                    id: item.id || (appId ? String(appId) : ''),
+                    title: item.title || item.game || '',
+                    game: item.game || item.title || '',
+                    desc: item.desc || '',
+                    tags: item.tags || [],
+                    author: item.author || '',
+                    date: item.date || '',
                     appId: appId,
-                    url: `https://mirzaarsyad74-cmyk.github.io/patchwiki/?tutorial=${encodeURIComponent(item.id)}#read/${encodeURIComponent(item.id)}`
+                    url: item.url || `https://mirzaarsyad74-cmyk.github.io/patchwiki/?tutorial=${encodeURIComponent(item.id || appId)}#read/${encodeURIComponent(item.id || appId)}`
                 };
+
                 if (appId) {
-                    map[appId.toString()] = tObj;
+                    map[String(appId)] = tObj;
                 }
-                if (item.game) {
-                    const norm = item.game.toLowerCase().replace(/[^a-z0-9]/g, '');
-                    if (norm.length >= 3) {
-                        map['name:' + norm] = tObj;
+                if (tObj.id) {
+                    map['id:' + tObj.id] = tObj;
+                }
+                if (tObj.game) {
+                    const normGame = tObj.game.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    if (normGame.length >= 3) {
+                        map['name:' + normGame] = tObj;
+                        const baseNorm = normGame.replace(/(demo|prologue|playtest|beta|trial|teaser)$/, '');
+                        if (baseNorm.length >= 3 && !map['name:' + baseNorm]) {
+                            map['name:' + baseNorm] = tObj;
+                        }
+                    }
+                }
+                if (tObj.title) {
+                    const normTitle = tObj.title.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    if (normTitle.length >= 3 && !map['name:' + normTitle]) {
+                        map['name:' + normTitle] = tObj;
+                        const baseNormTitle = normTitle.replace(/(demo|prologue|playtest|beta|trial|teaser)$/, '');
+                        if (baseNormTitle.length >= 3 && !map['name:' + baseNormTitle]) {
+                            map['name:' + baseNormTitle] = tObj;
+                        }
                     }
                 }
             }
@@ -1731,7 +1757,7 @@ var PluginEntryPointMain = function () {
                 if (resp.ok) {
                     const list = await resp.json();
                     if (Array.isArray(list) && list.length > 0) {
-                        patchWikiCache = buildPatchWikiMap(list);
+                        patchWikiCache = normalizePatchWikiMap(list);
                         console.log(`[CloudRedirect] Guides auto-updated: ${list.length} tutorials loaded`);
                         return patchWikiCache;
                     }
@@ -1765,7 +1791,7 @@ var PluginEntryPointMain = function () {
                         try { data = JSON.parse(cleanJson); } catch (e) { }
                     }
                     if (data && typeof data === 'object' && Object.keys(data).length > 0) {
-                        patchWikiCache = data;
+                        patchWikiCache = normalizePatchWikiMap(data);
                     }
                 } catch (e) { }
 
@@ -1775,7 +1801,7 @@ var PluginEntryPointMain = function () {
                     if (resp.ok) {
                         const list = await resp.json();
                         if (Array.isArray(list) && list.length > 0) {
-                            patchWikiCache = buildPatchWikiMap(list);
+                            patchWikiCache = normalizePatchWikiMap(list);
                             return patchWikiCache;
                         }
                     }
@@ -1904,15 +1930,27 @@ var PluginEntryPointMain = function () {
                 } catch (e) { }
             }
 
-            // 3. Fallback: Check links ONLY in active game details area (NEVER across entire doc)
+            // 3. Fallback: Check links ONLY in active game details links section (NEVER from news or event cards)
             if (doc && !appId) {
                 try {
-                    const gameContainer = doc.querySelector('div[class*=""AppDetails""], div[class*=""appDetails""], div[class*=""GameDetails""], div[class*=""gameDetails""], div[class*=""HeroContainer""], div[class*=""heroContainer""]');
-                    const links = (gameContainer || doc.querySelector('div[class*=""LinksRow""], div[class*=""linksRow""]'))?.querySelectorAll('a[href*=""/app/""], a[href*=""steam://store/""], a[href*=""steam://url/StoreAppPage/""]');
-                    if (links) {
+                    const linksRow = doc.querySelector('div[class*=""LinksRow""], div[class*=""linksRow""], div[class*=""GameDetailsLinks""], div[class*=""rightDetails""]');
+                    const storeLinks = (linksRow || doc).querySelectorAll('a[href*=""steam://url/StoreAppPage/""], a[href*=""steam://store/""]');
+                    for (const link of storeLinks) {
+                        const href = link.getAttribute('href') || '';
+                        const m = href.match(/(?:store|StoreAppPage)\/(\d{3,9})/i);
+                        if (m) {
+                            const parsed = parseInt(m[1], 10);
+                            if (parsed > 0) {
+                                appId = parsed;
+                                break;
+                            }
+                        }
+                    }
+                    if (!appId && linksRow) {
+                        const links = linksRow.querySelectorAll('a[href*=""/app/""]');
                         for (const link of links) {
                             const href = link.getAttribute('href') || '';
-                            const m = href.match(/(?:app|store|StoreAppPage)\/(\d{3,9})/i);
+                            const m = href.match(/\/app\/(\d{3,9})/i);
                             if (m) {
                                 const parsed = parseInt(m[1], 10);
                                 if (parsed > 0) {
@@ -1925,12 +1963,12 @@ var PluginEntryPointMain = function () {
                 } catch (e) { }
             }
 
-            // 4. Fallback: Hero / Banner / Logo image or background-image in active game area ONLY
+            // 4. Fallback: Hero / Header image of active game ONLY
             if (doc && !appId) {
                 try {
-                    const gameContainer = doc.querySelector('div[class*=""AppDetails""], div[class*=""appDetails""], div[class*=""GameDetails""], div[class*=""gameDetails""], div[class*=""HeroContainer""], div[class*=""heroContainer""]');
-                    if (gameContainer) {
-                        const imgs = gameContainer.querySelectorAll('img[src*=""/apps/""], img[src*=""/app/""]');
+                    const heroContainer = doc.querySelector('div[class*=""HeroContainer""], div[class*=""heroContainer""], div[class*=""headerImageContainer""], div[class*=""logoContainer""]');
+                    if (heroContainer) {
+                        const imgs = heroContainer.querySelectorAll('img[src*=""/apps/""], img[src*=""/app/""]');
                         for (const img of imgs) {
                             const m = (img.getAttribute('src') || '').match(/(?:app|apps)\/(\d{3,9})/i);
                             if (m) {
@@ -1938,20 +1976,6 @@ var PluginEntryPointMain = function () {
                                 if (parsed > 0) {
                                     appId = parsed;
                                     break;
-                                }
-                            }
-                        }
-                        if (!appId) {
-                            const styledEls = gameContainer.querySelectorAll('div[style*=""/apps/""], div[style*=""/app/""]');
-                            for (const el of styledEls) {
-                                const style = el.getAttribute('style') || '';
-                                const m = style.match(/(?:app|apps)\/(\d{3,9})/i);
-                                if (m) {
-                                    const parsed = parseInt(m[1], 10);
-                                    if (parsed > 0) {
-                                        appId = parsed;
-                                        break;
-                                    }
                                 }
                             }
                         }
@@ -2285,36 +2309,63 @@ var PluginEntryPointMain = function () {
             injectionDebounceTimers.set(doc, timer);
         }
 
-        function isTutorialValidForGame(tut, activeAppId, activeTitle) {
-            if (!tut) return false;
+        function findTutorialForGame(appId, gameTitle) {
+            if (!patchWikiCache) return null;
 
-            const tutAppId = tut.appId ? String(tut.appId) : null;
-            const actAppId = activeAppId ? String(activeAppId) : null;
+            const strId = appId ? String(appId) : null;
+            let candidate = null;
 
-            const cleanActive = (activeTitle || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-            const cleanTutGame = (tut.game || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-            const cleanTutTitle = (tut.title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            // 1. Direct AppID lookup
+            if (strId && patchWikiCache[strId]) {
+                candidate = patchWikiCache[strId];
+            }
 
-            if (cleanActive.length >= 3) {
-                // Strip demo/prologue/playtest/beta/trial/teaser suffixes for clean comparison
-                const baseActive = cleanActive.replace(/(demo|prologue|playtest|beta|trial|teaser)$/, '');
-                const baseTutGame = cleanTutGame.replace(/(demo|prologue|playtest|beta|trial|teaser)$/, '');
-
-                const titleMatches = (baseTutGame.length >= 3 && (baseActive.includes(baseTutGame) || baseTutGame.includes(baseActive))) ||
-                                     (cleanTutTitle.length >= 3 && cleanTutTitle.includes(baseActive)) ||
-                                     (baseActive.length >= 5 && cleanTutTitle.includes(baseActive.slice(0, 5)));
-
-                if (titleMatches) {
-                    return true;
-                }
-
-                // If active title exists but completely mismatches tutorial game/title, reject it even if an AppID matched
-                if (cleanTutGame.length >= 3) {
-                    return false;
+            // 2. Title fallback lookup if not found by AppID
+            if (!candidate && gameTitle) {
+                const norm = gameTitle.toLowerCase().replace(/[^a-z0-9]/g, '');
+                const baseNorm = norm.replace(/(demo|prologue|playtest|beta|trial|teaser)$/, '');
+                if (patchWikiCache['name:' + norm]) {
+                    candidate = patchWikiCache['name:' + norm];
+                } else if (baseNorm.length >= 3 && patchWikiCache['name:' + baseNorm]) {
+                    candidate = patchWikiCache['name:' + baseNorm];
+                } else if (norm.length >= 3) {
+                    for (const k of Object.keys(patchWikiCache)) {
+                        const item = patchWikiCache[k];
+                        if (!item) continue;
+                        const itemNorm = (item.game || item.title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                        if (itemNorm.length >= 3 && (itemNorm === norm || itemNorm === baseNorm || (itemNorm.length >= 6 && (norm.includes(itemNorm) || itemNorm.includes(norm))))) {
+                            candidate = item;
+                            break;
+                        }
+                    }
                 }
             }
 
-            return Boolean(tutAppId && actAppId && tutAppId === actAppId);
+            if (!candidate) return null;
+
+            // 3. Collision guard: If matched by AppID, ensure candidate title is not completely unrelated to active title
+            // (prevents rogue carousel ad AppID collisions like Beencremental Demo vs Dying Light)
+            if (candidate && strId && patchWikiCache[strId] === candidate && gameTitle && (candidate.game || candidate.title)) {
+                const cleanActive = gameTitle.toLowerCase().replace(/[^a-z0-9]/g, '');
+                const cleanCandidate = (candidate.game || candidate.title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+                const substringMatch = (cleanActive.length >= 3 && cleanCandidate.length >= 3) &&
+                    (cleanActive.includes(cleanCandidate) || cleanCandidate.includes(cleanActive));
+
+                if (!substringMatch) {
+                    const wordsActive = gameTitle.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length >= 3 && !['demo','the','and','prologue','beta','edition','playtest','trial'].includes(w));
+                    const wordsCandidate = ((candidate.game || '') + ' ' + (candidate.title || '')).toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length >= 3 && !['demo','the','and','prologue','beta','edition','playtest','trial'].includes(w));
+
+                    if (wordsActive.length > 0 && wordsCandidate.length > 0) {
+                        const hasCommonWord = wordsActive.some(w => wordsCandidate.some(cw => cw.includes(w) || w.includes(cw)));
+                        if (!hasCommonWord) {
+                            return null;
+                        }
+                    }
+                }
+            }
+
+            return candidate;
         }
 
         // Floating Action Bar (FAB) for active Steam game details
@@ -2326,7 +2377,7 @@ var PluginEntryPointMain = function () {
                 doc.querySelectorAll('#cr-action-group, .cr-action-group, .cr-game-badge, .cr-patchwiki-btn').forEach(el => el.remove());
 
                 const appDetails = getAppDetails(doc, null);
-                const appId = appDetails?.appId;
+                let appId = appDetails?.appId;
                 const gameTitle = appDetails?.title;
 
                 let fab = doc.getElementById('cr-library-fab');
@@ -2347,12 +2398,40 @@ var PluginEntryPointMain = function () {
                     }
                 }
 
-                if (!appId) {
-                    if (fab) fab.style.display = 'none';
+                if (!patchWikiCache) {
+                    loadPatchWikiData().then(() => scheduleInjectionsForDoc(doc)).catch(() => {});
+                }
+                if (!appStatusCache) {
+                    fetchPluginStatus().then(() => scheduleInjectionsForDoc(doc)).catch(() => {});
+                }
+
+                const tutorial = findTutorialForGame(appId, gameTitle);
+                if (!appId && tutorial?.appId) {
+                    appId = tutorial.appId;
+                }
+
+                // Rule 1: Tutorial button ONLY if a valid tutorial was found in PatchWiki
+                const shouldShowTutorial = Boolean(tutorial);
+
+                // Rule 2: CloudRedirect button ONLY if game is redirected AND not free
+                const isFree = isAppFree(doc, appId, appDetails);
+                const isRedirected = isAppRedirected(appId, appDetails);
+                const shouldShowCloudRedirect = Boolean(!isFree && isRedirected);
+
+                // If neither button should be shown, hide FAB completely!
+                if (!shouldShowTutorial && !shouldShowCloudRedirect) {
+                    if (fab) {
+                        fab.style.display = 'none';
+                        fab.removeAttribute('data-cr-key');
+                    }
                     return;
                 }
 
-                const strAppId = String(appId);
+                const strAppId = appId ? String(appId) : '';
+                const currentKey = `${strAppId}:${shouldShowCloudRedirect ? 1 : 0}:${shouldShowTutorial ? 1 : 0}:${tutorial?.id || ''}`;
+                if (fab && fab.getAttribute('data-cr-key') === currentKey && fab.style.display !== 'none') {
+                    return;
+                }
 
                 if (!fab) {
                     fab = doc.createElement('div');
@@ -2481,65 +2560,6 @@ var PluginEntryPointMain = function () {
                             }
                         });
                     }
-                }
-
-                let tutorial = null;
-                if (patchWikiCache) {
-                    // 1. Match ONLY by exact Steam AppID with title validation
-                    if (strAppId && patchWikiCache[strAppId]) {
-                        const candidate = patchWikiCache[strAppId];
-                        if (isTutorialValidForGame(candidate, appId, gameTitle)) {
-                            tutorial = candidate;
-                        }
-                    }
-
-                    // 2. Strict fallback: Title search with validation
-                    if (!tutorial && gameTitle) {
-                        const normTitle = gameTitle.toLowerCase().replace(/[^a-z0-9]/g, '');
-                        const baseTitle = normTitle.replace(/(demo|prologue|playtest|beta|trial|teaser)$/, '');
-                        if (baseTitle.length >= 3) {
-                            for (const k of Object.keys(patchWikiCache)) {
-                                const tItem = patchWikiCache[k];
-                                if (!tItem) continue;
-                                if (isTutorialValidForGame(tItem, appId, gameTitle)) {
-                                    tutorial = tItem;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    loadPatchWikiData().then(() => {
-                        scheduleInjectionsForDoc(doc);
-                    }).catch(() => {});
-                }
-
-                if (!appStatusCache) {
-                    fetchPluginStatus().then(() => {
-                        scheduleInjectionsForDoc(doc);
-                    }).catch(() => {});
-                }
-
-                // Rule 1: Only show Tutorial button if available and verified for this game!
-                const shouldShowTutorial = Boolean(tutorial);
-
-                // Rule 2: Only show CloudRedirect button except own/free game at Steam!
-                const isFree = isAppFree(doc, appId, appDetails);
-                const isRedirected = isAppRedirected(appId, appDetails);
-                const hasPlayOrInstall = Boolean(doc.querySelector('div[class*=""PlayBar""], div[class*=""playbar""], div[class*=""PlayButton""], button[class*=""PlayButton""], button[class*=""playButton""], div[class*=""InstallButton""], button[class*=""InstallButton""], div[class*=""UpdateButton""]'));
-                const isGenuineOwned = Boolean(!isRedirected && (appDetails.isOwned || hasPlayOrInstall));
-                const shouldShowCloudRedirect = Boolean(!isFree && !isGenuineOwned && isRedirected);
-
-                // If neither button should be shown, hide FAB completely!
-                if (!shouldShowTutorial && !shouldShowCloudRedirect) {
-                    fab.style.display = 'none';
-                    fab.removeAttribute('data-cr-key');
-                    return;
-                }
-
-                const currentKey = `${strAppId}:${shouldShowCloudRedirect ? 1 : 0}:${shouldShowTutorial ? 1 : 0}:${tutorial?.id || ''}`;
-                if (fab.getAttribute('data-cr-key') === currentKey && fab.style.display !== 'none') {
-                    return;
                 }
 
                 fab.setAttribute('data-appid', strAppId);
