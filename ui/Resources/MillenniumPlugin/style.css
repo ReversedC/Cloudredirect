@@ -81,8 +81,8 @@
 /* Floating Action Bar (FAB) for Steam Library */
 .cr-fab-container {
     position: fixed !important;
-    bottom: 54px !important;
-    right: 28px !important;
+    bottom: 54px;
+    right: 28px;
     z-index: 99999 !important;
     display: inline-flex !important;
     align-items: center !important;
@@ -94,12 +94,16 @@
     border-radius: 24px !important;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.75), 0 0 16px rgba(102, 192, 244, 0.22) !important;
     user-select: none !important;
+    -webkit-user-select: none !important;
     font-family: "Motiva Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
     transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease !important;
     cursor: grab !important;
     max-width: calc(100vw - 32px) !important;
-    width: auto !important;
+    width: max-content !important;
+    height: auto !important;
+    white-space: nowrap !important;
     box-sizing: border-box !important;
+    touch-action: none !important;
 }
 
 .cr-fab-container:hover {
@@ -112,6 +116,7 @@
 .cr-fab-container.cr-fab-dragging * {
     cursor: grabbing !important;
     user-select: none !important;
+    -webkit-user-select: none !important;
     transition: none !important;
 }
 

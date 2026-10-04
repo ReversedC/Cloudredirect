@@ -154,8 +154,8 @@ var PluginEntryPointMain = function () {
                 /* Floating Action Bar (FAB) for Steam Library */
                 .cr-fab-container {
                     position: fixed !important;
-                    bottom: 54px !important;
-                    right: 28px !important;
+                    bottom: 54px;
+                    right: 28px;
                     z-index: 99999 !important;
                     display: inline-flex !important;
                     align-items: center !important;
@@ -167,12 +167,16 @@ var PluginEntryPointMain = function () {
                     border-radius: 24px !important;
                     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.75), 0 0 16px rgba(102, 192, 244, 0.22) !important;
                     user-select: none !important;
+                    -webkit-user-select: none !important;
                     font-family: "Motiva Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
                     transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease !important;
                     cursor: grab !important;
                     max-width: calc(100vw - 32px) !important;
-                    width: auto !important;
+                    width: max-content !important;
+                    height: auto !important;
+                    white-space: nowrap !important;
                     box-sizing: border-box !important;
+                    touch-action: none !important;
                 }
                 .cr-fab-container:hover {
                     border-color: #66c0f4 !important;
@@ -183,6 +187,7 @@ var PluginEntryPointMain = function () {
                 .cr-fab-container.cr-fab-dragging * {
                     cursor: grabbing !important;
                     user-select: none !important;
+                    -webkit-user-select: none !important;
                     transition: none !important;
                 }
                 .cr-fab-drag {
@@ -1337,6 +1342,11 @@ var PluginEntryPointMain = function () {
                     let initialLeft = 0;
                     let initialTop = 0;
 
+                    fab.ondragstart = (e) => {
+                        e.preventDefault();
+                        return false;
+                    };
+
                     fab.onmousedown = (e) => {
                         if (e.button !== 0) return; // Left click only
 
@@ -1348,6 +1358,10 @@ var PluginEntryPointMain = function () {
                         isDragging = true;
                         hasMoved = false;
 
+                        if (!e.target.closest('#cr-fab-cr-btn, #cr-fab-wiki-btn')) {
+                            e.preventDefault();
+                        }
+
                         function onMouseMove(ev) {
                             if (!isDragging) return;
                             const dx = ev.clientX - dragStartX;
@@ -1357,17 +1371,18 @@ var PluginEntryPointMain = function () {
                                 fab.classList.add('cr-fab-dragging');
                             }
                             if (hasMoved) {
+                                ev.preventDefault();
                                 const winW = doc.defaultView?.innerWidth || window.innerWidth || 1200;
                                 const winH = doc.defaultView?.innerHeight || window.innerHeight || 800;
-                                const maxLeft = winW - rect.width - 10;
-                                const maxTop = winH - rect.height - 10;
+                                const maxLeft = Math.max(10, winW - rect.width - 10);
+                                const maxTop = Math.max(10, winH - rect.height - 10);
                                 const newLeft = Math.max(10, Math.min(maxLeft, initialLeft + dx));
                                 const newTop = Math.max(10, Math.min(maxTop, initialTop + dy));
 
-                                fab.style.left = newLeft + 'px';
-                                fab.style.top = newTop + 'px';
-                                fab.style.right = 'auto';
-                                fab.style.bottom = 'auto';
+                                fab.style.setProperty('left', newLeft + 'px', 'important');
+                                fab.style.setProperty('top', newTop + 'px', 'important');
+                                fab.style.setProperty('right', 'auto', 'important');
+                                fab.style.setProperty('bottom', 'auto', 'important');
                             }
                         }
 
@@ -1377,7 +1392,7 @@ var PluginEntryPointMain = function () {
                                 fab.classList.remove('cr-fab-dragging');
                                 if (hasMoved) {
                                     fab.__wasJustDragged = true;
-                                    setTimeout(() => { fab.__wasJustDragged = false; }, 120);
+                                    setTimeout(() => { fab.__wasJustDragged = false; }, 150);
 
                                     // Auto-dock to nearest edges so resizing the Steam window keeps FAB in place
                                     const finalRect = fab.getBoundingClientRect();
@@ -1386,20 +1401,20 @@ var PluginEntryPointMain = function () {
 
                                     if (finalRect.left + finalRect.width / 2 > winW / 2) {
                                         const distRight = Math.max(10, winW - finalRect.right);
-                                        fab.style.right = distRight + 'px';
-                                        fab.style.left = 'auto';
+                                        fab.style.setProperty('right', distRight + 'px', 'important');
+                                        fab.style.setProperty('left', 'auto', 'important');
                                     } else {
-                                        fab.style.left = Math.max(10, finalRect.left) + 'px';
-                                        fab.style.right = 'auto';
+                                        fab.style.setProperty('left', Math.max(10, finalRect.left) + 'px', 'important');
+                                        fab.style.setProperty('right', 'auto', 'important');
                                     }
 
                                     if (finalRect.top + finalRect.height / 2 > winH / 2) {
                                         const distBottom = Math.max(10, winH - finalRect.bottom);
-                                        fab.style.bottom = distBottom + 'px';
-                                        fab.style.top = 'auto';
+                                        fab.style.setProperty('bottom', distBottom + 'px', 'important');
+                                        fab.style.setProperty('top', 'auto', 'important');
                                     } else {
-                                        fab.style.top = Math.max(10, finalRect.top) + 'px';
-                                        fab.style.bottom = 'auto';
+                                        fab.style.setProperty('top', Math.max(10, finalRect.top) + 'px', 'important');
+                                        fab.style.setProperty('bottom', 'auto', 'important');
                                     }
                                 }
                             }
@@ -1422,12 +1437,20 @@ var PluginEntryPointMain = function () {
                                 const winW = win.innerWidth || 1200;
                                 const winH = win.innerHeight || 800;
                                 if (rect.right > winW - 10) {
-                                    f.style.left = 'auto';
-                                    f.style.right = '16px';
+                                    f.style.setProperty('left', 'auto', 'important');
+                                    f.style.setProperty('right', '16px', 'important');
                                 }
                                 if (rect.bottom > winH - 10) {
-                                    f.style.top = 'auto';
-                                    f.style.bottom = '16px';
+                                    f.style.setProperty('top', 'auto', 'important');
+                                    f.style.setProperty('bottom', '16px', 'important');
+                                }
+                                if (rect.left < 10) {
+                                    f.style.setProperty('left', '10px', 'important');
+                                    f.style.setProperty('right', 'auto', 'important');
+                                }
+                                if (rect.top < 10) {
+                                    f.style.setProperty('top', '10px', 'important');
+                                    f.style.setProperty('bottom', 'auto', 'important');
                                 }
                             }
                         });
