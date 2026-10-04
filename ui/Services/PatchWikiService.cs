@@ -264,10 +264,13 @@ public sealed class PatchWikiService
             // Process AppIDs
             foreach (var item in list)
             {
-                var appId = ExtractAppId(item.Id, item.Title, item.Game);
-                if (appId.HasValue && appId.Value > 0)
+                if (item.AppId == 0)
                 {
-                    item.AppId = appId.Value;
+                    var appId = ExtractAppId(item.Id, item.Title, item.Game);
+                    if (appId.HasValue && appId.Value > 0)
+                    {
+                        item.AppId = appId.Value;
+                    }
                 }
             }
 

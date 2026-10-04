@@ -1093,7 +1093,7 @@ var PluginEntryPointMain = function () {
             const baseWithQuery = parts[0];
             const hash = parts.length > 1 ? '#' + parts.slice(1).join('#') : '';
             const separator = baseWithQuery.includes('?') ? '&' : '?';
-            return `${baseWithQuery}${separator}_v=${Date.now()}${hash}`;
+            return `${baseWithQuery}${separator}embed=steam&_v=${Date.now()}${hash}`;
         }
 
         // Opens the in-Steam CEF Mini Window Modal
