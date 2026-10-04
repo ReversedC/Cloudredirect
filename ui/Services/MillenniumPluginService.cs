@@ -1798,7 +1798,7 @@ var PluginEntryPointMain = function () {
             let isShortcut = null;
 
             // 1. Traverse React Fiber on targetEl (or active game details container) and its ancestors
-            const detailsEl = targetEl || (doc ? doc.querySelector('div[class*=""PlayBar""], div[class*=""playbar""], div[class*=""gameDetail""], div[class*=""GameDetail""], div[class*=""HeroContainer""], div[class*=""appDetails""], div[class*=""headerImageContainer""]') : null);
+            const detailsEl = targetEl || (doc ? doc.querySelector('div[class*=""PlayBar""], div[class*=""playbar""], div[class*=""PlayButton""], button[class*=""PlayButton""], div[class*=""InstallButton""], button[class*=""InstallButton""], div[class*=""AppDetails""], div[class*=""appDetails""], div[class*=""GameDetails""], div[class*=""gameDetails""], div[class*=""HeroContainer""], div[class*=""heroContainer""], div[class*=""headerImageContainer""]') : null);
             if (detailsEl) {
                 try {
                     let curr = detailsEl;
@@ -1811,7 +1811,7 @@ var PluginEntryPointMain = function () {
                                     const p = fiber.memoizedProps;
                                     if (p) {
                                         if (!appId) {
-                                            const rawId = p.appid || p.appId || p.overview?.appid || p.details?.unAppID || p.game?.appid || p.app?.appid || p.item?.appid;
+                                            const rawId = p.appid || p.appId || p.unAppId || p.unAppID || p.nAppId || p.overview?.appid || p.overview?.unAppID || p.details?.unAppID || p.details?.appid || p.game?.appid || p.app?.appid || p.item?.appid;
                                             if (rawId) {
                                                 const parsed = parseInt(rawId, 10);
                                                 if (parsed > 0) appId = parsed;
@@ -1827,7 +1827,8 @@ var PluginEntryPointMain = function () {
                                         }
                                         if (isFree === null) {
                                             const rawFree = p.overview?.m_bIsFree ?? p.overview?.bIsFree ?? p.overview?.is_free ?? p.details?.bFreeToPlay ?? p.details?.bIsFree ?? p.game?.is_free ?? p.app?.is_free;
-                                            if (rawFree !== undefined) isFree = Boolean(rawFree);
+                                            const isDemoType = (p.overview?.app_type === 8) || (p.overview?.app_type === 'demo') || (p.app?.app_type === 8) || (p.game?.app_type === 8);
+                                            if (rawFree !== undefined || isDemoType) isFree = Boolean(rawFree) || isDemoType;
                                         }
                                         if (isShortcut === null) {
                                             const rawShortcut = p.overview?.m_bIsShortcut ?? p.overview?.bIsShortcut ?? p.game?.is_shortcut ?? (p.overview?.app_type === 1073741824) ?? (p.overview?.rt_custom_game_id && p.overview?.rt_custom_game_id > 0);
@@ -1903,48 +1904,54 @@ var PluginEntryPointMain = function () {
                 } catch (e) { }
             }
 
-            // 3. Fallback: Check links in game details (Store Page, Community Hub, Discussions, Guides)
+            // 3. Fallback: Check links ONLY in active game details area (NEVER across entire doc)
             if (doc && !appId) {
                 try {
-                    const links = doc.querySelectorAll('a[href*=""/app/""], a[href*=""steam://store/""], a[href*=""steam://url/StoreAppPage/""]');
-                    for (const link of links) {
-                        const href = link.getAttribute('href') || '';
-                        const m = href.match(/(?:app|store|StoreAppPage)\/(\d{3,9})/i);
-                        if (m) {
-                            const parsed = parseInt(m[1], 10);
-                            if (parsed > 0) {
-                                appId = parsed;
-                                break;
+                    const gameContainer = doc.querySelector('div[class*=""AppDetails""], div[class*=""appDetails""], div[class*=""GameDetails""], div[class*=""gameDetails""], div[class*=""HeroContainer""], div[class*=""heroContainer""]');
+                    const links = (gameContainer || doc.querySelector('div[class*=""LinksRow""], div[class*=""linksRow""]'))?.querySelectorAll('a[href*=""/app/""], a[href*=""steam://store/""], a[href*=""steam://url/StoreAppPage/""]');
+                    if (links) {
+                        for (const link of links) {
+                            const href = link.getAttribute('href') || '';
+                            const m = href.match(/(?:app|store|StoreAppPage)\/(\d{3,9})/i);
+                            if (m) {
+                                const parsed = parseInt(m[1], 10);
+                                if (parsed > 0) {
+                                    appId = parsed;
+                                    break;
+                                }
                             }
                         }
                     }
                 } catch (e) { }
             }
 
-            // 4. Fallback: Hero / Banner / Logo image or background-image
+            // 4. Fallback: Hero / Banner / Logo image or background-image in active game area ONLY
             if (doc && !appId) {
                 try {
-                    const imgs = doc.querySelectorAll('img[src*=""/apps/""], img[src*=""/app/""]');
-                    for (const img of imgs) {
-                        const m = (img.getAttribute('src') || '').match(/(?:app|apps)\/(\d{3,9})/i);
-                        if (m) {
-                            const parsed = parseInt(m[1], 10);
-                            if (parsed > 0) {
-                                appId = parsed;
-                                break;
-                            }
-                        }
-                    }
-                    if (!appId) {
-                        const styledEls = doc.querySelectorAll('div[style*=""/apps/""], div[style*=""/app/""]');
-                        for (const el of styledEls) {
-                            const style = el.getAttribute('style') || '';
-                            const m = style.match(/(?:app|apps)\/(\d{3,9})/i);
+                    const gameContainer = doc.querySelector('div[class*=""AppDetails""], div[class*=""appDetails""], div[class*=""GameDetails""], div[class*=""gameDetails""], div[class*=""HeroContainer""], div[class*=""heroContainer""]');
+                    if (gameContainer) {
+                        const imgs = gameContainer.querySelectorAll('img[src*=""/apps/""], img[src*=""/app/""]');
+                        for (const img of imgs) {
+                            const m = (img.getAttribute('src') || '').match(/(?:app|apps)\/(\d{3,9})/i);
                             if (m) {
                                 const parsed = parseInt(m[1], 10);
                                 if (parsed > 0) {
                                     appId = parsed;
                                     break;
+                                }
+                            }
+                        }
+                        if (!appId) {
+                            const styledEls = gameContainer.querySelectorAll('div[style*=""/apps/""], div[style*=""/app/""]');
+                            for (const el of styledEls) {
+                                const style = el.getAttribute('style') || '';
+                                const m = style.match(/(?:app|apps)\/(\d{3,9})/i);
+                                if (m) {
+                                    const parsed = parseInt(m[1], 10);
+                                    if (parsed > 0) {
+                                        appId = parsed;
+                                        break;
+                                    }
                                 }
                             }
                         }
@@ -1977,9 +1984,13 @@ var PluginEntryPointMain = function () {
                 } catch (e) { }
             }
 
+            if (title && /\b(demo|prologue|playtest|beta|trial|teaser)\b/i.test(title)) {
+                isFree = true;
+            }
+
             // 7. Infer isOwned and isShortcut if not determined from fiber
             if (isOwned === null && doc) {
-                const hasPlayBar = doc.querySelector('div[class*=""PlayBar""], div[class*=""playbar""], div[class*=""PlayButton""], button[class*=""PlayButton""], button[class*=""playButton""], div[class*=""InstallButton""], div[class*=""UpdateButton""]');
+                const hasPlayBar = doc.querySelector('div[class*=""PlayBar""], div[class*=""playbar""], div[class*=""PlayButton""], button[class*=""PlayButton""], button[class*=""playButton""], div[class*=""InstallButton""], button[class*=""InstallButton""], div[class*=""UpdateButton""], button[class*=""UpdateButton""]');
                 if (hasPlayBar) {
                     isOwned = true;
                 }
@@ -2007,14 +2018,26 @@ var PluginEntryPointMain = function () {
 
         function isAppFree(doc, appId, appDetails) {
             if (appDetails && appDetails.isFree) return true;
+
+            const title = appDetails?.title;
+            if (title && /\b(demo|prologue|playtest|beta|trial|teaser)\b/i.test(title)) {
+                return true;
+            }
+
             if (!appId) return false;
             const numId = parseInt(appId, 10);
             if (knownFreeAppIds.has(numId)) return true;
             if (appDetailsFreeCache.has(numId)) return appDetailsFreeCache.get(numId);
 
             if (doc) {
-                const freeTag = doc.querySelector('a[href*=""/genre/Free""], a[href*=""/tag/113""], div[class*=""FreeToPlay""]');
-                if (freeTag) {
+                const freeOrDemoTag = doc.querySelector('div[class*=""DemoBanner""], div[class*=""demoBanner""], div[class*=""DemoBadge""], div[class*=""demoBadge""], div[class*=""DemoRibbon""], div[class*=""demoRibbon""], a[href*=""/genre/Free""], a[href*=""/tag/113""], div[class*=""FreeToPlay""]');
+                if (freeOrDemoTag) {
+                    appDetailsFreeCache.set(numId, true);
+                    return true;
+                }
+
+                const heroEl = doc.querySelector('div[class*=""HeroContainer""], div[class*=""heroContainer""], div[class*=""headerImageContainer""]');
+                if (heroEl && /\bDEMO\b/.test(heroEl.textContent || '')) {
                     appDetailsFreeCache.set(numId, true);
                     return true;
                 }
@@ -2025,7 +2048,8 @@ var PluginEntryPointMain = function () {
                 fetch(`https://store.steampowered.com/api/appdetails?appids=${numId}`)
                     .then(r => r.json())
                     .then(data => {
-                        const isFree = data && data[numId] && data[numId].data && data[numId].data.is_free === true;
+                        const appData = data && data[numId] && data[numId].data;
+                        const isFree = Boolean(appData && (appData.is_free === true || appData.type === 'demo'));
                         if (isFree) {
                             appDetailsFreeCache.set(numId, true);
                             getAllSteamDocuments().forEach(d => {
@@ -2261,6 +2285,38 @@ var PluginEntryPointMain = function () {
             injectionDebounceTimers.set(doc, timer);
         }
 
+        function isTutorialValidForGame(tut, activeAppId, activeTitle) {
+            if (!tut) return false;
+
+            const tutAppId = tut.appId ? String(tut.appId) : null;
+            const actAppId = activeAppId ? String(activeAppId) : null;
+
+            const cleanActive = (activeTitle || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            const cleanTutGame = (tut.game || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            const cleanTutTitle = (tut.title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+            if (cleanActive.length >= 3) {
+                // Strip demo/prologue/playtest/beta/trial/teaser suffixes for clean comparison
+                const baseActive = cleanActive.replace(/(demo|prologue|playtest|beta|trial|teaser)$/, '');
+                const baseTutGame = cleanTutGame.replace(/(demo|prologue|playtest|beta|trial|teaser)$/, '');
+
+                const titleMatches = (baseTutGame.length >= 3 && (baseActive.includes(baseTutGame) || baseTutGame.includes(baseActive))) ||
+                                     (cleanTutTitle.length >= 3 && cleanTutTitle.includes(baseActive)) ||
+                                     (baseActive.length >= 5 && cleanTutTitle.includes(baseActive.slice(0, 5)));
+
+                if (titleMatches) {
+                    return true;
+                }
+
+                // If active title exists but completely mismatches tutorial game/title, reject it even if an AppID matched
+                if (cleanTutGame.length >= 3) {
+                    return false;
+                }
+            }
+
+            return Boolean(tutAppId && actAppId && tutAppId === actAppId);
+        }
+
         // Floating Action Bar (FAB) for active Steam game details
         function injectGameFAB(doc) {
             if (!doc || !doc.body) return;
@@ -2429,18 +2485,23 @@ var PluginEntryPointMain = function () {
 
                 let tutorial = null;
                 if (patchWikiCache) {
-                    // Match ONLY by exact Steam AppID
+                    // 1. Match ONLY by exact Steam AppID with title validation
                     if (strAppId && patchWikiCache[strAppId]) {
-                        tutorial = patchWikiCache[strAppId];
-                    } else if (gameTitle) {
-                        // Strict fallback: ONLY if title exactly matches, with minimum 4 chars (NEVER substring/includes)
+                        const candidate = patchWikiCache[strAppId];
+                        if (isTutorialValidForGame(candidate, appId, gameTitle)) {
+                            tutorial = candidate;
+                        }
+                    }
+
+                    // 2. Strict fallback: Title search with validation
+                    if (!tutorial && gameTitle) {
                         const normTitle = gameTitle.toLowerCase().replace(/[^a-z0-9]/g, '');
-                        if (normTitle.length >= 4) {
+                        const baseTitle = normTitle.replace(/(demo|prologue|playtest|beta|trial|teaser)$/, '');
+                        if (baseTitle.length >= 3) {
                             for (const k of Object.keys(patchWikiCache)) {
                                 const tItem = patchWikiCache[k];
                                 if (!tItem) continue;
-                                const itemNorm = (tItem.game || tItem.title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-                                if (itemNorm.length >= 4 && itemNorm === normTitle) {
+                                if (isTutorialValidForGame(tItem, appId, gameTitle)) {
                                     tutorial = tItem;
                                     break;
                                 }
@@ -2459,14 +2520,15 @@ var PluginEntryPointMain = function () {
                     }).catch(() => {});
                 }
 
-                // Rule 1: Only show Tutorial button if available!
+                // Rule 1: Only show Tutorial button if available and verified for this game!
                 const shouldShowTutorial = Boolean(tutorial);
 
                 // Rule 2: Only show CloudRedirect button except own/free game at Steam!
                 const isFree = isAppFree(doc, appId, appDetails);
                 const isRedirected = isAppRedirected(appId, appDetails);
-                const isGenuineOwned = Boolean(appDetails.isOwned && !isRedirected && !appDetails.isShortcut);
-                const shouldShowCloudRedirect = !isFree && !isGenuineOwned;
+                const hasPlayOrInstall = Boolean(doc.querySelector('div[class*=""PlayBar""], div[class*=""playbar""], div[class*=""PlayButton""], button[class*=""PlayButton""], button[class*=""playButton""], div[class*=""InstallButton""], button[class*=""InstallButton""], div[class*=""UpdateButton""]'));
+                const isGenuineOwned = Boolean(!isRedirected && (appDetails.isOwned || hasPlayOrInstall));
+                const shouldShowCloudRedirect = Boolean(!isFree && !isGenuineOwned && isRedirected);
 
                 // If neither button should be shown, hide FAB completely!
                 if (!shouldShowTutorial && !shouldShowCloudRedirect) {
