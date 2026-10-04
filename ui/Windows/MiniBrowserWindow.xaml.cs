@@ -85,6 +85,7 @@ public partial class MiniBrowserWindow : Window
         InitializeComponent();
         RefreshGameContext();
         Loaded += MiniBrowserWindow_Loaded;
+        PatchWikiService.Instance.TutorialsUpdated += () => Dispatcher.Invoke(RefreshGameContext);
     }
 
     private async void MiniBrowserWindow_Loaded(object sender, RoutedEventArgs e)
@@ -99,11 +100,15 @@ public partial class MiniBrowserWindow : Window
         {
             ActiveGameNameText.Text = game.Name;
             ActiveGameBadge.Visibility = Visibility.Visible;
+            TutorialBookmarkBtn.Visibility = (game.AppId > 0 && PatchWikiService.Instance.HasTutorial(game.AppId))
+                ? Visibility.Visible
+                : Visibility.Collapsed;
         }
         else
         {
             ActiveGameNameText.Text = "Standalone";
             ActiveGameBadge.Visibility = Visibility.Collapsed;
+            TutorialBookmarkBtn.Visibility = Visibility.Collapsed;
         }
     }
 

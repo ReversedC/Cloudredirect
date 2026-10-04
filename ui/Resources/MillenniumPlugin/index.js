@@ -859,62 +859,98 @@ var PluginEntryPointMain = function () {
         }
 
         let patchWikiPromise = null;
+        let appStatusCache = null;
+
+        async function fetchPluginStatus() {
+            try {
+                const res = await __call_server_method__("get_status", {});
+                if (res && res.data) {
+                    const parsed = JSON.parse(res.data);
+                    if (parsed && typeof parsed === 'object') {
+                        appStatusCache = parsed;
+                    }
+                }
+            } catch (e) { }
+            return appStatusCache;
+        }
+
+        function buildPatchWikiMap(list) {
+            if (!Array.isArray(list)) return {};
+            const map = {};
+            for (const item of list) {
+                const appId = item.appId || extractAppIdFromMetadata(item.id, item.title, item.game);
+                const tObj = {
+                    id: item.id,
+                    title: item.title,
+                    game: item.game,
+                    desc: item.desc,
+                    tags: item.tags,
+                    author: item.author,
+                    date: item.date,
+                    appId: appId,
+                    url: `https://mirzaarsyad74-cmyk.github.io/patchwiki/?tutorial=${encodeURIComponent(item.id)}#read/${encodeURIComponent(item.id)}`
+                };
+                if (appId) {
+                    map[appId.toString()] = tObj;
+                }
+                if (item.game) {
+                    const norm = item.game.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    if (norm.length >= 3) {
+                        map['name:' + norm] = tObj;
+                    }
+                }
+            }
+            return map;
+        }
+
+        async function refreshPatchWikiData() {
+            try {
+                const resp = await fetch(`https://mirzaarsyad74-cmyk.github.io/patchwiki/index.json?_t=${Date.now()}`, { cache: "no-cache" });
+                if (resp.ok) {
+                    const list = await resp.json();
+                    if (Array.isArray(list) && list.length > 0) {
+                        patchWikiCache = buildPatchWikiMap(list);
+                        console.log(`[CloudRedirect] Guides auto-updated: ${list.length} tutorials loaded`);
+                        return patchWikiCache;
+                    }
+                }
+            } catch (e) {
+                console.warn('[CloudRedirect] refreshPatchWikiData error:', e);
+            }
+            return patchWikiCache;
+        }
 
         function loadPatchWikiData() {
             if (patchWikiCache && Object.keys(patchWikiCache).length > 0) {
+                refreshPatchWikiData().catch(() => {});
                 return Promise.resolve(patchWikiCache);
             }
             if (patchWikiPromise) return patchWikiPromise;
 
             patchWikiPromise = (async () => {
-                // 1. Try Backend Lua get_patchwiki_tutorials()
+                // 1. Try Backend Lua get_patchwiki_tutorials() for instant local load
                 try {
                     const res = await __call_server_method__("get_patchwiki_tutorials", {});
                     if (res && res.success && res.data) {
                         const parsed = JSON.parse(res.data);
                         if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
                             patchWikiCache = parsed;
-                            return patchWikiCache;
                         }
                     }
                 } catch (e) { }
 
-                // 2. Fetch directly from GitHub Pages index.json
+                // 2. Fetch directly from GitHub Pages index.json with cache-busting
                 try {
-                    const resp = await fetch("https://mirzaarsyad74-cmyk.github.io/patchwiki/index.json", { cache: "force-cache" });
+                    const resp = await fetch(`https://mirzaarsyad74-cmyk.github.io/patchwiki/index.json?_t=${Date.now()}`, { cache: "no-cache" });
                     if (resp.ok) {
                         const list = await resp.json();
-                        if (Array.isArray(list)) {
-                            const map = {};
-                            for (const item of list) {
-                                const appId = item.appId || extractAppIdFromMetadata(item.id, item.title, item.game);
-                                const tObj = {
-                                    id: item.id,
-                                    title: item.title,
-                                    game: item.game,
-                                    desc: item.desc,
-                                    tags: item.tags,
-                                    author: item.author,
-                                    date: item.date,
-                                    appId: appId,
-                                    url: `https://mirzaarsyad74-cmyk.github.io/patchwiki/?tutorial=${encodeURIComponent(item.id)}#read/${encodeURIComponent(item.id)}`
-                                };
-                                if (appId) {
-                                    map[appId.toString()] = tObj;
-                                }
-                                if (item.game) {
-                                    const norm = item.game.toLowerCase().replace(/[^a-z0-9]/g, '');
-                                    if (norm.length >= 3) {
-                                        map['name:' + norm] = tObj;
-                                    }
-                                }
-                            }
-                            patchWikiCache = map;
+                        if (Array.isArray(list) && list.length > 0) {
+                            patchWikiCache = buildPatchWikiMap(list);
                             return patchWikiCache;
                         }
                     }
                 } catch (e) {
-                    console.warn('[CloudRedirect] PatchWiki web fetch error:', e);
+                    console.warn('[CloudRedirect] PatchWiki initial web fetch error:', e);
                 }
 
                 patchWikiCache = patchWikiCache || {};
@@ -927,6 +963,9 @@ var PluginEntryPointMain = function () {
         function getAppDetails(doc, targetEl) {
             let appId = null;
             let title = null;
+            let isOwned = null;
+            let isFree = null;
+            let isShortcut = null;
 
             // 1. Traverse React Fiber on targetEl (or active game details container) and its ancestors
             const detailsEl = targetEl || (doc ? doc.querySelector('div[class*="PlayBar"], div[class*="gameDetail"], div[class*="GameDetail"], div[class*="HeroContainer"], div[class*="appDetails"], div[class*="headerImageContainer"]') : null);
@@ -952,7 +991,21 @@ var PluginEntryPointMain = function () {
                                             const rawTitle = p.overview?.display_name || p.details?.strDisplayName || p.game?.name || p.app?.name || p.item?.display_name || p.display_name || p.name;
                                             if (typeof rawTitle === 'string' && rawTitle.trim().length > 0) title = rawTitle.trim();
                                         }
-                                        if (appId && title) return { appId, title };
+                                        if (isOwned === null) {
+                                            const rawOwned = p.overview?.m_bOwned ?? p.overview?.bOwned ?? p.details?.bOwned ?? p.game?.bOwned ?? p.app?.bOwned;
+                                            if (rawOwned !== undefined) isOwned = Boolean(rawOwned);
+                                        }
+                                        if (isFree === null) {
+                                            const rawFree = p.overview?.m_bIsFree ?? p.overview?.bIsFree ?? p.overview?.is_free ?? p.details?.bFreeToPlay ?? p.details?.bIsFree ?? p.game?.is_free ?? p.app?.is_free;
+                                            if (rawFree !== undefined) isFree = Boolean(rawFree);
+                                        }
+                                        if (isShortcut === null) {
+                                            const rawShortcut = p.overview?.m_bIsShortcut ?? p.overview?.bIsShortcut ?? p.game?.is_shortcut ?? (p.overview?.app_type === 1073741824) ?? (p.overview?.rt_custom_game_id && p.overview?.rt_custom_game_id > 0);
+                                            if (rawShortcut !== undefined) isShortcut = Boolean(rawShortcut);
+                                        }
+                                        if (appId && title && isOwned !== null && isFree !== null) {
+                                            return { appId, title, isOwned: Boolean(isOwned), isFree: Boolean(isFree), isShortcut: Boolean(isShortcut) };
+                                        }
                                     }
                                     fiber = fiber.return;
                                 }
@@ -989,7 +1042,19 @@ var PluginEntryPointMain = function () {
                                                 const rawTitle = p.overview?.display_name || p.item?.display_name || p.game?.name || p.name;
                                                 if (typeof rawTitle === 'string' && rawTitle.trim().length > 0) title = rawTitle.trim();
                                             }
-                                            if (appId && title) return { appId, title };
+                                            if (isOwned === null) {
+                                                const rawOwned = p.overview?.m_bOwned ?? p.overview?.bOwned ?? p.game?.bOwned;
+                                                if (rawOwned !== undefined) isOwned = Boolean(rawOwned);
+                                            }
+                                            if (isFree === null) {
+                                                const rawFree = p.overview?.m_bIsFree ?? p.overview?.bIsFree ?? p.overview?.is_free ?? p.game?.is_free;
+                                                if (rawFree !== undefined) isFree = Boolean(rawFree);
+                                            }
+                                            if (isShortcut === null) {
+                                                const rawShortcut = p.overview?.m_bIsShortcut ?? p.overview?.bIsShortcut ?? p.game?.is_shortcut ?? (p.overview?.app_type === 1073741824);
+                                                if (rawShortcut !== undefined) isShortcut = Boolean(rawShortcut);
+                                            }
+                                            if (appId && title) return { appId, title, isOwned: Boolean(isOwned), isFree: Boolean(isFree), isShortcut: Boolean(isShortcut) };
                                         }
                                         fiber = fiber.return;
                                     }
@@ -1038,7 +1103,55 @@ var PluginEntryPointMain = function () {
                 } catch (e) { }
             }
 
-            return { appId, title };
+            return { appId, title, isOwned: Boolean(isOwned), isFree: Boolean(isFree), isShortcut: Boolean(isShortcut) };
+        }
+
+        const knownFreeAppIds = new Set([
+            730, 570, 440, 1172470, 578080, 230410, 1085660, 238960, 1938090, 252490, 1046930, 304930, 438100, 236390
+        ]);
+        const appDetailsFreeCache = new Map();
+
+        function isAppFree(doc, appId, appDetails) {
+            if (appDetails && appDetails.isFree) return true;
+            if (knownFreeAppIds.has(appId)) return true;
+            if (appDetailsFreeCache.has(appId)) return appDetailsFreeCache.get(appId);
+
+            if (doc) {
+                const freeTag = doc.querySelector('a[href*="/genre/Free"], a[href*="/tag/113"], div[class*="FreeToPlay"]');
+                if (freeTag) {
+                    appDetailsFreeCache.set(appId, true);
+                    return true;
+                }
+            }
+
+            if (!appDetailsFreeCache.has(appId)) {
+                appDetailsFreeCache.set(appId, false);
+                fetch(`https://store.steampowered.com/api/appdetails?appids=${appId}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        const isFree = data && data[appId] && data[appId].data && data[appId].data.is_free === true;
+                        if (isFree) {
+                            appDetailsFreeCache.set(appId, true);
+                            getAllSteamDocuments().forEach(d => {
+                                const f = d.getElementById('cr-library-fab');
+                                if (f && f.getAttribute('data-appid') === String(appId)) {
+                                    injectGameFAB(d);
+                                }
+                            });
+                        }
+                    })
+                    .catch(() => {});
+            }
+
+            return appDetailsFreeCache.get(appId) || false;
+        }
+
+        function isAppRedirected(appId, appDetails) {
+            if (appDetails && appDetails.isShortcut) return true;
+            if (appStatusCache && Array.isArray(appStatusCache.unlockedAppIds)) {
+                if (appStatusCache.unlockedAppIds.includes(appId)) return true;
+            }
+            return false;
         }
 
         function escapeHtml(text) {
@@ -1166,6 +1279,15 @@ var PluginEntryPointMain = function () {
             });
         }
 
+        function getBustedTutorialUrl(url) {
+            if (!url) return '';
+            const parts = url.split('#');
+            const baseWithQuery = parts[0];
+            const hash = parts.length > 1 ? '#' + parts.slice(1).join('#') : '';
+            const separator = baseWithQuery.includes('?') ? '&' : '?';
+            return `${baseWithQuery}${separator}_v=${Date.now()}${hash}`;
+        }
+
         // Opens the in-Steam CEF Mini Window Modal
         function openSteamPatchWikiMiniWindow(tutorial, doc) {
             if (!doc || !doc.body) doc = document;
@@ -1182,8 +1304,8 @@ var PluginEntryPointMain = function () {
                 if (textEl) textEl.title = tutorial.title;
 
                 const iframe = modal.querySelector('.cr-patchwiki-frame');
-                if (iframe && iframe.src !== tutorial.url) {
-                    iframe.src = tutorial.url;
+                if (iframe) {
+                    iframe.src = getBustedTutorialUrl(tutorial.url);
                 }
 
                 const extBtn = modal.querySelector('#cr-modal-open-external');
@@ -1222,6 +1344,8 @@ var PluginEntryPointMain = function () {
                             <button class="cr-tab-btn" data-tab="reader" title="Fast Offline Reader">📖 Reader</button>
                         </div>
 
+                        <button class="cr-modal-btn cr-btn-refresh" title="Refresh Guides (Auto-update)" id="cr-modal-refresh-btn">&#x21bb;</button>
+
                         <button class="cr-modal-btn cr-btn-external" title="Open in External Browser / Steam Overlay" id="cr-modal-open-external">
                             <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                                 <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
@@ -1240,7 +1364,7 @@ var PluginEntryPointMain = function () {
 
                 <div class="cr-modal-body">
                     <div class="cr-tab-pane cr-pane-web cr-pane-active">
-                        <iframe class="cr-patchwiki-frame" src="${tutorial.url}" allow="clipboard-read; clipboard-write; fullscreen"></iframe>
+                        <iframe class="cr-patchwiki-frame" src="${getBustedTutorialUrl(tutorial.url)}" allow="clipboard-read; clipboard-write; fullscreen"></iframe>
                     </div>
 
                     <div class="cr-tab-pane cr-pane-reader">
@@ -1333,6 +1457,33 @@ var PluginEntryPointMain = function () {
             });
 
             // 3. Control buttons
+            const refreshBtn = modal.querySelector('#cr-modal-refresh-btn');
+            if (refreshBtn) {
+                refreshBtn.onclick = async (e) => {
+                    e.stopPropagation();
+                    refreshBtn.style.transform = 'rotate(360deg)';
+                    refreshBtn.style.transition = 'transform 0.4s ease';
+                    setTimeout(() => { refreshBtn.style.transform = 'none'; refreshBtn.style.transition = 'none'; }, 400);
+
+                    await refreshPatchWikiData();
+                    const iframe = modal.querySelector('.cr-patchwiki-frame');
+                    if (iframe) {
+                        try {
+                            if (iframe.contentWindow) {
+                                iframe.contentWindow.postMessage({ type: 'CR_REFRESH_TUTORIALS' }, '*');
+                            }
+                        } catch (err) { }
+                        if (currentModalTutorial) {
+                            iframe.src = getBustedTutorialUrl(currentModalTutorial.url);
+                        }
+                    }
+                    const activeTab = modal.querySelector('.cr-tab-btn.cr-tab-active');
+                    if (activeTab && activeTab.getAttribute('data-tab') === 'reader' && currentModalTutorial) {
+                        loadReaderContent(modal, currentModalTutorial);
+                    }
+                };
+            }
+
             modal.querySelector('#cr-modal-open-external').onclick = (e) => {
                 e.stopPropagation();
                 try { window.open(currentModalTutorial.url, '_blank'); } catch (err) { }
@@ -1550,24 +1701,60 @@ var PluginEntryPointMain = function () {
                     }).catch(() => {});
                 }
 
-                const hasTutorial = Boolean(tutorial);
+                // Rule 1: Only show Tutorial button if available!
+                const shouldShowTutorial = Boolean(tutorial);
 
-                fab.innerHTML = `
-                    <div class="cr-fab-drag" title="Drag to reposition">⋮⋮</div>
-                    <div class="cr-fab-item cr-fab-cr" id="cr-fab-cr-btn" title="CloudRedirect Save Protection Active (Click to Open)">
-                        ${cloudSvg}
-                        <span class="cr-fab-label">CloudRedirect</span>
-                        <span class="cr-fab-check">&#10003;</span>
-                    </div>
-                    <div class="cr-fab-divider"></div>
-                    <div class="cr-fab-item cr-fab-wiki" id="cr-fab-wiki-btn" title="${tutorial ? ('Open Tutorial for ' + escapeHtml(tutorial.title || tutorial.game)) : ('Search Tutorials for ' + escapeHtml(gameTitle || ('App ' + appId)))}">
-                        <svg class="cr-patchwiki-svg" viewBox="0 0 24 24">
-                            <path d="M19 2H6c-1.2 0-2 .9-2 2v16c0 1.1.9 2 2 2h13c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4zm13 16H6c-.55 0-1-.45-1-1V5.5c.31.29.7.5 1.17.5H19v14z"/>
-                        </svg>
-                        <span class="cr-fab-label">Tutorial</span>
-                        <span class="cr-patchwiki-pill ${hasTutorial ? 'cr-pill-wiki' : 'cr-pill-search'}">${hasTutorial ? 'Guide' : 'Search'}</span>
-                    </div>
-                `;
+                // Rule 2: Only show CloudRedirect button except own/free game at Steam!
+                const isFree = isAppFree(doc, appId, appDetails);
+                const isRedirected = isAppRedirected(appId, appDetails);
+                const isGenuineOwned = Boolean(appDetails.isOwned && !isRedirected && !appDetails.isShortcut);
+                const shouldShowCloudRedirect = !isFree && !isGenuineOwned;
+
+                // If neither button should be shown, hide FAB completely!
+                if (!shouldShowTutorial && !shouldShowCloudRedirect) {
+                    fab.style.display = 'none';
+                    return;
+                }
+
+                const currentKey = `${strAppId}:${shouldShowCloudRedirect ? 1 : 0}:${shouldShowTutorial ? 1 : 0}`;
+                if (fab.getAttribute('data-cr-key') === currentKey) {
+                    fab.style.display = 'inline-flex';
+                    return;
+                }
+
+                fab.setAttribute('data-appid', strAppId);
+                fab.setAttribute('data-cr-key', currentKey);
+                fab.style.display = 'inline-flex';
+
+                let innerHtml = '<div class="cr-fab-drag" title="Drag to reposition">⋮⋮</div>';
+
+                if (shouldShowCloudRedirect) {
+                    innerHtml += `
+                        <div class="cr-fab-item cr-fab-cr" id="cr-fab-cr-btn" title="CloudRedirect Save Protection Active (Click to Open)">
+                            ${cloudSvg}
+                            <span class="cr-fab-label">CloudRedirect</span>
+                            <span class="cr-fab-check">&#10003;</span>
+                        </div>
+                    `;
+                }
+
+                if (shouldShowCloudRedirect && shouldShowTutorial) {
+                    innerHtml += '<div class="cr-fab-divider"></div>';
+                }
+
+                if (shouldShowTutorial) {
+                    innerHtml += `
+                        <div class="cr-fab-item cr-fab-wiki" id="cr-fab-wiki-btn" title="Open Tutorial for ${escapeHtml(tutorial.title || tutorial.game)}">
+                            <svg class="cr-patchwiki-svg" viewBox="0 0 24 24">
+                                <path d="M19 2H6c-1.2 0-2 .9-2 2v16c0 1.1.9 2 2 2h13c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4zm13 16H6c-.55 0-1-.45-1-1V5.5c.31.29.7.5 1.17.5H19v14z"/>
+                            </svg>
+                            <span class="cr-fab-label">Tutorial</span>
+                            <span class="cr-patchwiki-pill cr-pill-wiki">Guide</span>
+                        </div>
+                    `;
+                }
+
+                fab.innerHTML = innerHtml;
 
                 // Wire click events
                 const crBtn = fab.querySelector('#cr-fab-cr-btn');
@@ -1588,19 +1775,6 @@ var PluginEntryPointMain = function () {
                         e.preventDefault();
                         if (tutorial) {
                             openSteamPatchWikiMiniWindow(tutorial, doc);
-                        } else {
-                            const searchObj = {
-                                id: 'search-' + appId,
-                                appId: appId,
-                                game: gameTitle || ('App ' + appId),
-                                title: gameTitle ? `${gameTitle} - Community Guides` : `App ${appId} - Community Guides`,
-                                url: `https://mirzaarsyad74-cmyk.github.io/patchwiki/?search=${encodeURIComponent(gameTitle || appId)}&appid=${appId}`,
-                                tags: ['guide'],
-                                author: 'Community',
-                                date: new Date().toISOString().split('T')[0],
-                                desc: `Search community tutorials and guides for ${gameTitle || appId}`
-                            };
-                            openSteamPatchWikiMiniWindow(searchObj, doc);
                         }
                     };
                 }
@@ -1720,6 +1894,21 @@ var PluginEntryPointMain = function () {
         const index = async function PluginMain() {
             setupObserver();
             loadPatchWikiData().catch(() => {});
+            fetchPluginStatus().catch(() => {});
+
+            // Auto-refresh PatchWiki tutorials & status every 2.5 minutes so Steam guides are always live
+            setInterval(() => {
+                refreshPatchWikiData().then(() => {
+                    const docs = getAllSteamDocuments();
+                    for (const d of docs) {
+                        const fab = d.getElementById('cr-library-fab');
+                        if (fab && fab.style.display !== 'none') {
+                            injectGameFAB(d);
+                        }
+                    }
+                }).catch(() => {});
+                fetchPluginStatus().catch(() => {});
+            }, 150000);
 
             try {
                 if (typeof MILLENNIUM_BACKEND_IPC !== 'undefined' && MILLENNIUM_BACKEND_IPC.postMessage) {

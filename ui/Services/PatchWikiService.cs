@@ -119,16 +119,22 @@ public sealed class PatchWikiService
         // 1. Instant disk cache load
         LoadFromCache();
 
-        // 2. Background fresh sync
+        // 2. Background fresh sync + continuous auto-update loop
         _ = Task.Run(async () =>
         {
-            try
+            while (true)
             {
-                await SyncTutorialsFromWebAsync();
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[PatchWikiService] Web sync failed: {ex.Message}");
+                try
+                {
+                    await SyncTutorialsFromWebAsync();
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[PatchWikiService] Web sync failed: {ex.Message}");
+                }
+
+                // Auto-update every 10 minutes to pull newly published community guides
+                await Task.Delay(TimeSpan.FromMinutes(10));
             }
         });
     }
@@ -241,7 +247,10 @@ public sealed class PatchWikiService
     {
         try
         {
-            var response = await _httpClient.GetAsync(PatchWikiIndexUrl);
+            var url = $"{PatchWikiIndexUrl}?_t={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true, NoStore = true };
+            var response = await _httpClient.SendAsync(request);
             if (!response.IsSuccessStatusCode)
             {
                 Debug.WriteLine($"[PatchWikiService] Fetch returned status {response.StatusCode}");

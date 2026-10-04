@@ -78,6 +78,7 @@ public partial class GameSpaceOverlayWindow : Window
         };
 
         BackgroundAppFreezer.FreezeStateChanged += OnFreezeStateChanged;
+        PatchWikiService.Instance.TutorialsUpdated += () => Dispatcher.Invoke(RefreshGameContext);
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -182,6 +183,11 @@ public partial class GameSpaceOverlayWindow : Window
 
             // Load game notes
             GameNotesTextBox.Text = GameSpaceService.LoadGameNotes(game.Name);
+
+            // Tutorial button: ONLY show if tutorial is available for this game
+            TutorialBookmarkBtn.Visibility = (game.AppId > 0 && PatchWikiService.Instance.HasTutorial(game.AppId))
+                ? Visibility.Visible
+                : Visibility.Collapsed;
         }
         else
         {
@@ -193,6 +199,7 @@ public partial class GameSpaceOverlayWindow : Window
             GamePosterFallback.Visibility = Visibility.Visible;
             GamePosterImage.Source = null;
             GameNotesTextBox.Text = GameSpaceService.LoadGameNotes("Desktop");
+            TutorialBookmarkBtn.Visibility = Visibility.Collapsed;
         }
 
         ResetForceKillButton();

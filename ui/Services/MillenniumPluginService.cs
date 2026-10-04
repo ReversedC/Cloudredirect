@@ -100,12 +100,36 @@ public static class MillenniumPluginService
 
             var statusFile = Path.Combine(dir, "steam_plugin_status.json");
             var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.0";
+
+            var unlockedList = new HashSet<uint>();
+            try
+            {
+                var steam = SteamDetector.FindSteamPath();
+                if (!string.IsNullOrEmpty(steam))
+                {
+                    var stplugDir = Path.Combine(steam, "config", "stplug-in");
+                    if (Directory.Exists(stplugDir))
+                    {
+                        foreach (var f in Directory.GetFiles(stplugDir, "*.lua"))
+                        {
+                            var fname = Path.GetFileNameWithoutExtension(f);
+                            if (uint.TryParse(fname, out var id) && id > 0)
+                            {
+                                unlockedList.Add(id);
+                            }
+                        }
+                    }
+                }
+            }
+            catch { }
+
             var info = new
             {
                 isRunning = isRunning,
                 version = version,
                 activeGameCount = activeGameCount,
                 provider = provider,
+                unlockedAppIds = unlockedList.ToArray(),
                 lastUpdated = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                 appPath = AppUpdater.GetAppExecutablePath() ?? Environment.ProcessPath
             };
@@ -1106,9 +1130,8 @@ var PluginEntryPointMain = function () {
 
         function ensureStyles(doc) {
             if (!doc || !doc.head) return;
-            const existing = doc.getElementById('cr-millennium-styles');
-            if (existing) {
-                existing.remove();
+            if (doc.getElementById('cr-millennium-styles')) {
+                return;
             }
             const style = doc.createElement('style');
             style.id = 'cr-millennium-styles';
@@ -1174,32 +1197,131 @@ var PluginEntryPointMain = function () {
                     line-height: normal !important;
                 }
 
-                /* Bottom Bar Button (Next to Add Game / Steam Unlock) */
-                .cr-bottom-bar-btn {
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 6px;
-                    height: 28px;
-                    padding: 0 12px;
-                    background: #142230;
-                    border: 1px solid #274563;
-                    border-radius: 4px;
-                    color: #c6d4df;
-                    font-family: ""Motiva Sans"", -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, sans-serif;
-                    font-size: 12px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    user-select: none;
-                    transition: all 0.2s ease;
-                    margin: 0 6px;
-                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-                    z-index: 1000;
+                /* Floating Action Bar (FAB) for Steam Library */
+                .cr-fab-container {
+                    position: fixed !important;
+                    bottom: 54px !important;
+                    right: 28px !important;
+                    z-index: 99999 !important;
+                    display: inline-flex !important;
+                    align-items: center !important;
+                    gap: 6px !important;
+                    padding: 5px 12px 5px 8px !important;
+                    background: rgba(16, 26, 37, 0.94) !important;
+                    backdrop-filter: blur(14px) !important;
+                    border: 1px solid #2f5073 !important;
+                    border-radius: 24px !important;
+                    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.75), 0 0 16px rgba(102, 192, 244, 0.22) !important;
+                    user-select: none !important;
+                    font-family: ""Motiva Sans"", -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, sans-serif !important;
+                    transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease !important;
+                    cursor: grab !important;
+                    max-width: calc(100vw - 32px) !important;
+                    width: auto !important;
+                    box-sizing: border-box !important;
                 }
-                .cr-bottom-bar-btn:hover {
-                    background: #1c3247;
-                    border-color: #66c0f4;
-                    color: #ffffff;
-                    box-shadow: 0 0 10px rgba(102, 192, 244, 0.35);
+                .cr-fab-container:hover {
+                    border-color: #66c0f4 !important;
+                    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.85), 0 0 22px rgba(102, 192, 244, 0.4) !important;
+                    transform: translateY(-1px) !important;
+                }
+                .cr-fab-container.cr-fab-dragging,
+                .cr-fab-container.cr-fab-dragging * {
+                    cursor: grabbing !important;
+                    user-select: none !important;
+                    transition: none !important;
+                }
+                .cr-fab-drag {
+                    cursor: grab !important;
+                    color: #557599 !important;
+                    font-size: 13px !important;
+                    line-height: 1 !important;
+                    padding: 0 4px !important;
+                    letter-spacing: -1px !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    transition: color 0.15s ease !important;
+                }
+                .cr-fab-drag:hover {
+                    color: #66c0f4 !important;
+                }
+                .cr-fab-drag:active {
+                    cursor: grabbing !important;
+                }
+                .cr-fab-item {
+                    display: inline-flex !important;
+                    align-items: center !important;
+                    gap: 6px !important;
+                    height: 28px !important;
+                    padding: 0 11px !important;
+                    border-radius: 14px !important;
+                    font-size: 11px !important;
+                    font-weight: 600 !important;
+                    color: #c6d4df !important;
+                    cursor: pointer !important;
+                    transition: all 0.18s ease !important;
+                    box-sizing: border-box !important;
+                    white-space: nowrap !important;
+                }
+                .cr-fab-cr {
+                    background: rgba(22, 38, 54, 0.85) !important;
+                    border: 1px solid #2d4c6b !important;
+                }
+                .cr-fab-cr:hover {
+                    background: #233f5d !important;
+                    border-color: #66c0f4 !important;
+                    color: #ffffff !important;
+                }
+                .cr-fab-check {
+                    color: #a4d007 !important;
+                    font-weight: bold !important;
+                    font-size: 12px !important;
+                    line-height: 1 !important;
+                }
+                .cr-fab-divider {
+                    width: 1px !important;
+                    height: 16px !important;
+                    background: rgba(255, 255, 255, 0.18) !important;
+                    margin: 0 2px !important;
+                    flex-shrink: 0 !important;
+                }
+                .cr-fab-wiki {
+                    background: linear-gradient(135deg, rgba(28, 56, 82, 0.95), rgba(16, 34, 52, 0.95)) !important;
+                    border: 1px solid #3d6e99 !important;
+                    color: #66c0f4 !important;
+                }
+                .cr-fab-wiki:hover {
+                    background: linear-gradient(135deg, rgba(38, 76, 110, 1), rgba(24, 48, 72, 1)) !important;
+                    border-color: #66c0f4 !important;
+                    color: #ffffff !important;
+                    box-shadow: 0 0 10px rgba(102, 192, 244, 0.4) !important;
+                }
+                .cr-fab-label {
+                    line-height: 1 !important;
+                }
+                @media (max-width: 1200px) {
+                    .cr-fab-container {
+                        padding: 4px 10px 4px 6px !important;
+                        gap: 5px !important;
+                    }
+                    .cr-fab-item {
+                        height: 26px !important;
+                        padding: 0 9px !important;
+                        font-size: 10.5px !important;
+                    }
+                }
+                @media (max-width: 900px) {
+                    .cr-fab-container {
+                        padding: 3px 8px 3px 5px !important;
+                        gap: 4px !important;
+                        border-radius: 20px !important;
+                    }
+                    .cr-fab-item {
+                        height: 24px !important;
+                        padding: 0 7px !important;
+                        font-size: 10px !important;
+                    }
                 }
 
                 .cr-status-dot {
@@ -1221,60 +1343,78 @@ var PluginEntryPointMain = function () {
 
                 /* Game Detail Page Badge */
                 .cr-game-badge {
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 6px;
-                    background: rgba(22, 34, 46, 0.85);
-                    border: 1px solid #2d4c6b;
-                    border-radius: 14px;
-                    padding: 4px 10px;
-                    font-family: ""Motiva Sans"", -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, sans-serif;
-                    font-size: 11px;
-                    font-weight: 600;
-                    color: #c6d4df;
-                    cursor: pointer;
-                    transition: all 0.2s ease;
-                    user-select: none;
-                    margin-left: 10px;
-                    vertical-align: middle;
+                    display: inline-flex !important;
+                    align-items: center !important;
+                    gap: 6px !important;
+                    background: rgba(22, 34, 46, 0.9) !important;
+                    border: 1px solid #2d4c6b !important;
+                    border-radius: 4px !important;
+                    padding: 0 10px !important;
+                    height: 32px !important;
+                    min-height: 32px !important;
+                    max-height: 32px !important;
+                    line-height: 32px !important;
+                    white-space: nowrap !important;
+                    font-family: ""Motiva Sans"", -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, sans-serif !important;
+                    font-size: 11px !important;
+                    font-weight: 600 !important;
+                    color: #c6d4df !important;
+                    cursor: pointer !important;
+                    transition: all 0.2s ease !important;
+                    user-select: none !important;
+                    margin: 0 !important;
+                    vertical-align: middle !important;
+                    box-sizing: border-box !important;
+                    flex-shrink: 0 !important;
+                    z-index: 10 !important;
                 }
                 .cr-game-badge:hover {
-                    background: #233b52;
-                    border-color: #66c0f4;
-                    color: #ffffff;
-                    box-shadow: 0 0 10px rgba(102, 192, 244, 0.4);
+                    background: #233b52 !important;
+                    border-color: #66c0f4 !important;
+                    color: #ffffff !important;
+                    box-shadow: 0 0 10px rgba(102, 192, 244, 0.4) !important;
                 }
                 .cr-game-badge-check {
                     color: #a4d007;
                     font-weight: bold;
+                    font-size: 12px;
+                    line-height: 1;
                 }
 
                 /* Game Page Button: .cr-patchwiki-btn */
                 .cr-patchwiki-btn {
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 6px;
-                    background: linear-gradient(135deg, rgba(28, 52, 75, 0.95), rgba(16, 32, 48, 0.95));
-                    border: 1px solid #3d6e99;
-                    border-radius: 14px;
-                    padding: 4px 10px;
-                    font-family: ""Motiva Sans"", -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, sans-serif;
-                    font-size: 11px;
-                    font-weight: 600;
-                    color: #66c0f4;
-                    cursor: pointer;
-                    transition: all 0.2s ease;
-                    user-select: none;
-                    margin-left: 8px;
-                    vertical-align: middle;
-                    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+                    display: inline-flex !important;
+                    align-items: center !important;
+                    gap: 6px !important;
+                    background: linear-gradient(135deg, rgba(28, 52, 75, 0.95), rgba(16, 32, 48, 0.95)) !important;
+                    border: 1px solid #3d6e99 !important;
+                    border-radius: 4px !important;
+                    padding: 0 10px !important;
+                    height: 32px !important;
+                    min-height: 32px !important;
+                    max-height: 32px !important;
+                    line-height: 32px !important;
+                    white-space: nowrap !important;
+                    font-family: ""Motiva Sans"", -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, sans-serif !important;
+                    font-size: 11px !important;
+                    font-weight: 600 !important;
+                    color: #66c0f4 !important;
+                    cursor: pointer !important;
+                    transition: all 0.2s ease !important;
+                    user-select: none !important;
+                    margin: 0 !important;
+                    vertical-align: middle !important;
+                    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35) !important;
+                    box-sizing: border-box !important;
+                    flex-shrink: 0 !important;
+                    z-index: 10 !important;
                 }
                 .cr-patchwiki-btn:hover {
-                    background: linear-gradient(135deg, rgba(38, 72, 104, 1), rgba(24, 46, 68, 1));
-                    border-color: #66c0f4;
-                    color: #ffffff;
-                    box-shadow: 0 0 12px rgba(102, 192, 244, 0.5);
-                    transform: translateY(-1px);
+                    background: linear-gradient(135deg, rgba(38, 72, 104, 1), rgba(24, 46, 68, 1)) !important;
+                    border-color: #66c0f4 !important;
+                    color: #ffffff !important;
+                    box-shadow: 0 0 12px rgba(102, 192, 244, 0.5) !important;
+                    transform: translateY(-1px) !important;
                 }
                 .cr-patchwiki-svg {
                     width: 14px;
@@ -1292,6 +1432,14 @@ var PluginEntryPointMain = function () {
                     border-radius: 8px;
                     letter-spacing: 0.5px;
                     margin-left: 2px;
+                }
+                .cr-patchwiki-pill.cr-pill-wiki {
+                    background: #a4d007;
+                    color: #0d141b;
+                }
+                .cr-patchwiki-pill.cr-pill-search {
+                    background: #3878b5;
+                    color: #ffffff;
                 }
 
                 /* In-Steam PatchWiki Mini Window Modal */
@@ -1607,55 +1755,30 @@ var PluginEntryPointMain = function () {
 
         // Helper to locate the exact SuperNav tab bar container in doc
         function findSuperNavInfo(doc) {
-            const allEls = doc.querySelectorAll('div, a, span, button');
+            if (!doc || !doc.body) return null;
 
-            for (const el of allEls) {
-                const t = (el.textContent || '').trim().toUpperCase();
-                if (t === 'COMMUNITY' || t === 'STORE' || t === 'LIBRARY') {
-                    // Traverse up within 5 levels to locate the SuperNav container
-                    let curr = el;
-                    let depth = 0;
-                    while (curr && curr !== doc.body && depth < 5) {
-                        const parent = curr.parentElement;
-                        if (!parent) break;
-                        const pText = (parent.textContent || '').toUpperCase();
-                        if (pText.includes('STORE') && pText.includes('LIBRARY') && pText.includes('COMMUNITY')) {
-                            const children = Array.from(parent.children);
-                            let sampleTab = null;
-                            let lastNavTab = null;
-                            let passedCommunity = false;
+            // Fast targeted check: look for SuperNav container
+            const container = doc.querySelector('div[class*=""supernav_container""], nav[class*=""supernav""], div[class*=""SuperNavContainer""]');
+            if (container && container.children && container.children.length > 0) {
+                const tabs = Array.from(container.children);
+                return {
+                    container: container,
+                    sampleTab: tabs[0],
+                    insertAfter: tabs[tabs.length - 1]
+                };
+            }
 
-                            for (const child of children) {
-                                const cText = (child.textContent || '').trim().toUpperCase();
-                                if (cText.includes('COMMUNITY')) {
-                                    sampleTab = child;
-                                    lastNavTab = child;
-                                    passedCommunity = true;
-                                } else if (cText.includes('STORE') || cText.includes('LIBRARY')) {
-                                    if (!sampleTab) sampleTab = child;
-                                    if (!passedCommunity) lastNavTab = child;
-                                } else if (passedCommunity) {
-                                    if (cText.length > 0 && !cText.includes('HTTP') && !cText.includes('ðŸ”') && !cText.includes('SEARCH') && !cText.includes('âœ•')) {
-                                        lastNavTab = child;
-                                        sampleTab = child;
-                                    }
-                                    break;
-                                }
-                            }
-
-                            if (!sampleTab) sampleTab = lastNavTab;
-
-                            if (parent && lastNavTab) {
-                                return {
-                                    container: parent,
-                                    sampleTab: sampleTab,
-                                    insertAfter: lastNavTab
-                                };
-                            }
-                        }
-                        curr = parent;
-                        depth++;
-                    }
+            // Fast fallback: look specifically for community or store nav links
+            const navLink = doc.querySelector('a[href*=""steamcommunity.com""], a[href*=""store.steampowered.com""]');
+            if (navLink) {
+                const tab = navLink.closest('div[class*=""supernav_""], div[class*=""menuitem""], div') || navLink;
+                const parent = tab.parentElement;
+                if (parent && parent.children && parent.children.length > 0) {
+                    return {
+                        container: parent,
+                        sampleTab: tab,
+                        insertAfter: parent.lastElementChild || tab
+                    };
                 }
             }
 
@@ -1667,8 +1790,10 @@ var PluginEntryPointMain = function () {
             if (!doc || !doc.body) return;
 
             const existing = doc.getElementById('cloudredirect-supernav-item');
+            if (existing && existing.parentNode) {
+                return;
+            }
             if (existing) {
-                if (existing.parentNode) return;
                 existing.remove();
             }
 
@@ -1683,7 +1808,7 @@ var PluginEntryPointMain = function () {
             navItem.className = (sampleTab.className || '').replace(/\bactive\b/gi, '').trim() + ' cr-supernav-menu';
             navItem.setAttribute('role', 'button');
             navItem.setAttribute('tabindex', '0');
-            navItem.title = 'CloudRedirect v2.9.74 (Save Protection Active - Click to Open App)';
+            navItem.title = 'CloudRedirect (Save Protection Active - Click to Open App)';
 
             // Find child button / inner element if present in sampleTab
             const sampleInner = sampleTab.querySelector('div, a, span') || sampleTab;
@@ -1740,79 +1865,15 @@ var PluginEntryPointMain = function () {
             }
         }
 
-        // 1. Inject Button in Bottom Bar (next to Add Game / Steam Unlock)
-        function injectBottomBarButton(doc) {
+        // Clean up any stray buttons or old bottom bar artifacts
+        function cleanupStrayElements(doc) {
             if (!doc || !doc.body) return;
-            if (doc.getElementById('cloudredirect-bottom-btn')) return;
-
-            let targetSibling = null;
-            let parentContainer = null;
-
-            // Strategy 1: Find existing mod buttons like ""Steam Unlock""
-            const allElements = doc.querySelectorAll('button, div, a');
-            for (const el of allElements) {
-                const text = el.textContent || '';
-                if (text.includes('Steam Unlock') || (el.className && typeof el.className === 'string' && el.className.includes('activation'))) {
-                    targetSibling = el;
-                    parentContainer = el.parentNode;
-                    break;
-                }
-            }
-
-            // Strategy 2: Find ""+ Add a Game"" button
-            if (!targetSibling) {
-                for (const el of allElements) {
-                    const text = el.textContent || '';
-                    if (text.includes('Add a Game') || text.includes('Add Game')) {
-                        targetSibling = el;
-                        parentContainer = el.parentNode;
-                        break;
-                    }
-                }
-            }
-
-            // Strategy 3: Try standard selectors for Add a Game
-            if (!targetSibling) {
-                const addGameCandidates = doc.querySelectorAll('button[class*=""addgamebutton_""], div[class*=""addgamebutton_""], [class*=""AddGameButton""]');
-                for (const el of addGameCandidates) {
-                    if (el.offsetParent !== null || el.offsetWidth > 0) {
-                        targetSibling = el;
-                        parentContainer = el.parentNode;
-                        break;
-                    }
-                }
-            }
-
-            // Strategy 4: Fallback to bottom bar container
-            if (!parentContainer) {
-                parentContainer = doc.querySelector('div[class*=""bottombar_""], div[class*=""bottombarcontrols_""], footer, .bottom_bar');
-            }
-
-            if (!parentContainer) return;
-
-            const btn = doc.createElement('div');
-            btn.id = 'cloudredirect-bottom-btn';
-            btn.className = 'cr-bottom-bar-btn';
-            btn.title = 'CloudRedirect v2.9.74 (Save Protection Active - Click to Open App)';
-            btn.innerHTML = `
-                ${cloudSvg}
-                <span>CloudRedirect</span>
-                <span class=""cr-status-dot""></span>
-            `;
-
-            btn.onclick = (e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                launchApp(doc);
-            };
-
-            if (targetSibling && targetSibling.parentNode === parentContainer) {
-                targetSibling.parentNode.insertBefore(btn, targetSibling.nextSibling);
-            } else if (parentContainer.firstChild) {
-                parentContainer.insertBefore(btn, parentContainer.firstChild);
-            } else {
-                parentContainer.appendChild(btn);
-            }
+            try {
+                // Remove bottom bar artifacts that created the giant empty shelf in game details
+                doc.querySelectorAll('#cloudredirect-bottom-btn, .cr-bottom-bar-btn').forEach(el => el.remove());
+                doc.querySelectorAll('#cloudredirect-header-btn, .cr-nav-btn, .cr-dropdown-menu').forEach(el => el.remove());
+                doc.querySelectorAll('#cr-action-group, .cr-action-group, .cr-game-badge, .cr-patchwiki-btn').forEach(el => el.remove());
+            } catch (e) { }
         }
 
         // PatchWiki Cache and Manifest
@@ -1843,118 +1904,154 @@ var PluginEntryPointMain = function () {
             return null;
         }
 
-        async function loadPatchWikiData() {
-            if (patchWikiCache && Object.keys(patchWikiCache).length > 0) return patchWikiCache;
-            if (isFetchingPatchWiki) return null;
-            isFetchingPatchWiki = true;
+        let patchWikiPromise = null;
+        let appStatusCache = null;
 
-            // 1. Try Backend Lua get_patchwiki_tutorials()
+        async function fetchPluginStatus() {
             try {
-                const res = await __call_server_method__(""get_patchwiki_tutorials"", {});
-                if (res && res.success && res.data) {
+                const res = await __call_server_method__(""get_status"", {});
+                if (res && res.data) {
                     const parsed = JSON.parse(res.data);
-                    if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
-                        patchWikiCache = parsed;
-                        isFetchingPatchWiki = false;
-                        return patchWikiCache;
+                    if (parsed && typeof parsed === 'object') {
+                        appStatusCache = parsed;
                     }
                 }
             } catch (e) { }
+            return appStatusCache;
+        }
 
-            // 2. Fetch directly from GitHub Pages index.json
+        function buildPatchWikiMap(list) {
+            if (!Array.isArray(list)) return {};
+            const map = {};
+            for (const item of list) {
+                const appId = item.appId || extractAppIdFromMetadata(item.id, item.title, item.game);
+                const tObj = {
+                    id: item.id,
+                    title: item.title,
+                    game: item.game,
+                    desc: item.desc,
+                    tags: item.tags,
+                    author: item.author,
+                    date: item.date,
+                    appId: appId,
+                    url: `https://mirzaarsyad74-cmyk.github.io/patchwiki/?tutorial=${encodeURIComponent(item.id)}#read/${encodeURIComponent(item.id)}`
+                };
+                if (appId) {
+                    map[appId.toString()] = tObj;
+                }
+                if (item.game) {
+                    const norm = item.game.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    if (norm.length >= 3) {
+                        map['name:' + norm] = tObj;
+                    }
+                }
+            }
+            return map;
+        }
+
+        async function refreshPatchWikiData() {
             try {
-                const resp = await fetch(""https://mirzaarsyad74-cmyk.github.io/patchwiki/index.json"", { cache: ""force-cache"" });
+                const resp = await fetch(`https://mirzaarsyad74-cmyk.github.io/patchwiki/index.json?_t=${Date.now()}`, { cache: ""no-cache"" });
                 if (resp.ok) {
                     const list = await resp.json();
-                    if (Array.isArray(list)) {
-                        const map = {};
-                        for (const item of list) {
-                            const appId = extractAppIdFromMetadata(item.id, item.title, item.game);
-                            if (appId) {
-                                map[appId.toString()] = {
-                                    id: item.id,
-                                    title: item.title,
-                                    game: item.game,
-                                    desc: item.desc,
-                                    tags: item.tags,
-                                    author: item.author,
-                                    date: item.date,
-                                    appId: appId,
-                                    url: `https://mirzaarsyad74-cmyk.github.io/patchwiki/?tutorial=${encodeURIComponent(item.id)}#read/${encodeURIComponent(item.id)}`
-                                };
-                            }
-                        }
-                        patchWikiCache = map;
-                        isFetchingPatchWiki = false;
+                    if (Array.isArray(list) && list.length > 0) {
+                        patchWikiCache = buildPatchWikiMap(list);
+                        console.log(`[CloudRedirect] Guides auto-updated: ${list.length} tutorials loaded`);
                         return patchWikiCache;
                     }
                 }
             } catch (e) {
-                console.warn('[CloudRedirect] PatchWiki web fetch error:', e);
+                console.warn('[CloudRedirect] refreshPatchWikiData error:', e);
             }
-
-            isFetchingPatchWiki = false;
-            return patchWikiCache || {};
+            return patchWikiCache;
         }
 
-        function getCurrentAppId(doc, bar) {
-            // 1. Check bar and ancestors for data-appid
-            if (bar) {
-                const withData = bar.closest('[data-appid]') || bar.closest('[data-app-id]') || bar.closest('[data-gameid]');
-                if (withData) {
-                    const val = withData.getAttribute('data-appid') || withData.getAttribute('data-app-id') || withData.getAttribute('data-gameid');
-                    const num = parseInt(val, 10);
-                    if (num > 0) return num;
-                }
+        function loadPatchWikiData() {
+            if (patchWikiCache && Object.keys(patchWikiCache).length > 0) {
+                refreshPatchWikiData().catch(() => {});
+                return Promise.resolve(patchWikiCache);
             }
+            if (patchWikiPromise) return patchWikiPromise;
 
-            // 2. Check doc elements with data-appid
-            if (doc) {
-                const appDetailsEl = doc.querySelector('div[class*=""appdetails_""][data-appid], div[class*=""gameheader_""][data-appid], div[class*=""appdetailssection_""][data-appid], [class*=""AppDetails""][data-appid]');
-                if (appDetailsEl) {
-                    const val = appDetailsEl.getAttribute('data-appid');
-                    const num = parseInt(val, 10);
-                    if (num > 0) return num;
-                }
-                const anyAppIdEl = doc.querySelector('div[class*=""appdetails""] [data-appid], div[class*=""playbar""] [data-appid]');
-                if (anyAppIdEl) {
-                    const val = anyAppIdEl.getAttribute('data-appid');
-                    const num = parseInt(val, 10);
-                    if (num > 0) return num;
-                }
-            }
-
-            // 3. Search links in bar or doc
-            const searchContainers = [bar, doc].filter(Boolean);
-            for (const c of searchContainers) {
-                const links = c.querySelectorAll('a[href*=""/app/""], a[href*=""steam://nav/games/details/""], a[href*=""rungameid/""], a[href*=""appid=""]');
-                for (const a of links) {
-                    const href = a.getAttribute('href') || '';
-                    const m = href.match(/(?:app\/|details\/|rungameid\/|appid=)(\d{3,9})/i);
-                    if (m) {
-                        const num = parseInt(m[1], 10);
-                        if (num > 0) return num;
-                    }
-                }
-            }
-
-            // 4. React Fiber properties
-            if (bar) {
+            patchWikiPromise = (async () => {
+                // 1. Try Backend Lua get_patchwiki_tutorials() for instant local load
                 try {
-                    let curr = bar;
+                    const res = await __call_server_method__(""get_patchwiki_tutorials"", {});
+                    if (res && res.success && res.data) {
+                        const parsed = JSON.parse(res.data);
+                        if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
+                            patchWikiCache = parsed;
+                        }
+                    }
+                } catch (e) { }
+
+                // 2. Fetch directly from GitHub Pages index.json with cache-busting
+                try {
+                    const resp = await fetch(`https://mirzaarsyad74-cmyk.github.io/patchwiki/index.json?_t=${Date.now()}`, { cache: ""no-cache"" });
+                    if (resp.ok) {
+                        const list = await resp.json();
+                        if (Array.isArray(list) && list.length > 0) {
+                            patchWikiCache = buildPatchWikiMap(list);
+                            return patchWikiCache;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('[CloudRedirect] PatchWiki initial web fetch error:', e);
+                }
+
+                patchWikiCache = patchWikiCache || {};
+                return patchWikiCache;
+            })();
+
+            return patchWikiPromise;
+        }
+
+        function getAppDetails(doc, targetEl) {
+            let appId = null;
+            let title = null;
+            let isOwned = null;
+            let isFree = null;
+            let isShortcut = null;
+
+            // 1. Traverse React Fiber on targetEl (or active game details container) and its ancestors
+            const detailsEl = targetEl || (doc ? doc.querySelector('div[class*=""PlayBar""], div[class*=""gameDetail""], div[class*=""GameDetail""], div[class*=""HeroContainer""], div[class*=""appDetails""], div[class*=""headerImageContainer""]') : null);
+            if (detailsEl) {
+                try {
+                    let curr = detailsEl;
                     let depth = 0;
-                    while (curr && depth < 12) {
+                    while (curr && depth < 20) {
                         for (const k of Object.keys(curr)) {
                             if (k.startsWith('__reactFiber$') || k.startsWith('__reactInternalInstance$')) {
                                 let fiber = curr[k];
-                                for (let i = 0; fiber && i < 20; i++) {
+                                for (let i = 0; fiber && i < 35; i++) {
                                     const p = fiber.memoizedProps;
                                     if (p) {
-                                        if (typeof p.appid === 'number' && p.appid > 0) return p.appid;
-                                        if (typeof p.appId === 'number' && p.appId > 0) return p.appId;
-                                        if (p.overview && typeof p.overview.appid === 'number' && p.overview.appid > 0) return p.overview.appid;
-                                        if (p.game && typeof p.game.appid === 'number' && p.game.appid > 0) return p.game.appid;
-                                        if (p.app && typeof p.app.appid === 'number' && p.app.appid > 0) return p.app.appid;
+                                        if (!appId) {
+                                            const rawId = p.appid || p.appId || p.overview?.appid || p.details?.unAppID || p.game?.appid || p.app?.appid || p.item?.appid;
+                                            if (rawId) {
+                                                const parsed = parseInt(rawId, 10);
+                                                if (parsed > 0) appId = parsed;
+                                            }
+                                        }
+                                        if (!title) {
+                                            const rawTitle = p.overview?.display_name || p.details?.strDisplayName || p.game?.name || p.app?.name || p.item?.display_name || p.display_name || p.name;
+                                            if (typeof rawTitle === 'string' && rawTitle.trim().length > 0) title = rawTitle.trim();
+                                        }
+                                        if (isOwned === null) {
+                                            const rawOwned = p.overview?.m_bOwned ?? p.overview?.bOwned ?? p.details?.bOwned ?? p.game?.bOwned ?? p.app?.bOwned;
+                                            if (rawOwned !== undefined) isOwned = Boolean(rawOwned);
+                                        }
+                                        if (isFree === null) {
+                                            const rawFree = p.overview?.m_bIsFree ?? p.overview?.bIsFree ?? p.overview?.is_free ?? p.details?.bFreeToPlay ?? p.details?.bIsFree ?? p.game?.is_free ?? p.app?.is_free;
+                                            if (rawFree !== undefined) isFree = Boolean(rawFree);
+                                        }
+                                        if (isShortcut === null) {
+                                            const rawShortcut = p.overview?.m_bIsShortcut ?? p.overview?.bIsShortcut ?? p.game?.is_shortcut ?? (p.overview?.app_type === 1073741824) ?? (p.overview?.rt_custom_game_id && p.overview?.rt_custom_game_id > 0);
+                                            if (rawShortcut !== undefined) isShortcut = Boolean(rawShortcut);
+                                        }
+                                        if (appId && title && isOwned !== null && isFree !== null) {
+                                            return { appId, title, isOwned: Boolean(isOwned), isFree: Boolean(isFree), isShortcut: Boolean(isShortcut) };
+                                        }
                                     }
                                     fiber = fiber.return;
                                 }
@@ -1966,17 +2063,141 @@ var PluginEntryPointMain = function () {
                 } catch (e) { }
             }
 
-            // 5. URL or Hash
-            try {
-                const loc = doc?.location?.href || window.location.href || '';
-                const m = loc.match(/(?:app|details|games\/details)\/(\d{3,9})/i);
-                if (m) {
-                    const num = parseInt(m[1], 10);
-                    if (num > 0) return num;
-                }
-            } catch (e) { }
+            // 2. Check selected game in library list sidebar (class _1UBpAXP408Ez_L_mXhW5Q9 / Selected)
+            if (doc && (!appId || !title)) {
+                try {
+                    const selected = doc.querySelector('div[class*=""_1UBpAXP408Ez_L_mXhW5Q9""], div[class*=""Selected""], div[class*=""selected_""]');
+                    if (selected) {
+                        let curr = selected;
+                        let depth = 0;
+                        while (curr && depth < 10) {
+                            for (const k of Object.keys(curr)) {
+                                if (k.startsWith('__reactFiber$') || k.startsWith('__reactInternalInstance$')) {
+                                    let fiber = curr[k];
+                                    for (let i = 0; fiber && i < 25; i++) {
+                                        const p = fiber.memoizedProps;
+                                        if (p) {
+                                            if (!appId) {
+                                                const rawId = p.appid || p.appId || p.overview?.appid || p.item?.appid || p.game?.appid;
+                                                if (rawId) {
+                                                    const parsed = parseInt(rawId, 10);
+                                                    if (parsed > 0) appId = parsed;
+                                                }
+                                            }
+                                            if (!title) {
+                                                const rawTitle = p.overview?.display_name || p.item?.display_name || p.game?.name || p.name;
+                                                if (typeof rawTitle === 'string' && rawTitle.trim().length > 0) title = rawTitle.trim();
+                                            }
+                                            if (isOwned === null) {
+                                                const rawOwned = p.overview?.m_bOwned ?? p.overview?.bOwned ?? p.game?.bOwned;
+                                                if (rawOwned !== undefined) isOwned = Boolean(rawOwned);
+                                            }
+                                            if (isFree === null) {
+                                                const rawFree = p.overview?.m_bIsFree ?? p.overview?.bIsFree ?? p.overview?.is_free ?? p.game?.is_free;
+                                                if (rawFree !== undefined) isFree = Boolean(rawFree);
+                                            }
+                                            if (isShortcut === null) {
+                                                const rawShortcut = p.overview?.m_bIsShortcut ?? p.overview?.bIsShortcut ?? p.game?.is_shortcut ?? (p.overview?.app_type === 1073741824);
+                                                if (rawShortcut !== undefined) isShortcut = Boolean(rawShortcut);
+                                            }
+                                            if (appId && title) return { appId, title, isOwned: Boolean(isOwned), isFree: Boolean(isFree), isShortcut: Boolean(isShortcut) };
+                                        }
+                                        fiber = fiber.return;
+                                    }
+                                }
+                            }
+                            curr = curr.parentElement;
+                            depth++;
+                        }
 
-            return null;
+                        if (!title) {
+                            const nameEl = selected.querySelector('div[class*=""_2SXJM0PeFEi3gbC7V3S5pE""], div[class*=""GameListEntryName""], span');
+                            if (nameEl && nameEl.textContent) title = nameEl.textContent.trim();
+                        }
+                    }
+                } catch (e) { }
+            }
+
+            // 3. Fallback: URL check
+            if (!appId) {
+                try {
+                    const href = doc.defaultView?.location?.href || window.location?.href || '';
+                    const m = href.match(/(?:app|details)\/(\d{3,9})/i);
+                    if (m) appId = parseInt(m[1], 10);
+                } catch (e) { }
+            }
+
+            // 4. Fallback: Hero / Banner image
+            if (doc && !appId) {
+                try {
+                    const hero = doc.querySelector('div[class*=""Hero""], div[class*=""header""], div[class*=""Banner""]');
+                    const img = (hero || doc).querySelector('img[src*=""/apps/""], img[src*=""/app/""]');
+                    if (img) {
+                        const m = (img.getAttribute('src') || '').match(/(?:app|apps)\/(\d{3,9})/i);
+                        if (m) appId = parseInt(m[1], 10);
+                    }
+                } catch (e) { }
+            }
+
+            // 5. Fallback: doc.title for Title
+            if (!title && doc && doc.title) {
+                try {
+                    let clean = doc.title.replace(/^Steam\s*[-–]\s*/i, '').replace(/\s*[-–]\s*Steam$/i, '').trim();
+                    if (clean && !clean.toLowerCase().includes('library') && !clean.toLowerCase().includes('steam')) {
+                        title = clean;
+                    }
+                } catch (e) { }
+            }
+
+            return { appId, title, isOwned: Boolean(isOwned), isFree: Boolean(isFree), isShortcut: Boolean(isShortcut) };
+        }
+
+        const knownFreeAppIds = new Set([
+            730, 570, 440, 1172470, 578080, 230410, 1085660, 238960, 1938090, 252490, 1046930, 304930, 438100, 236390
+        ]);
+        const appDetailsFreeCache = new Map();
+
+        function isAppFree(doc, appId, appDetails) {
+            if (appDetails && appDetails.isFree) return true;
+            if (knownFreeAppIds.has(appId)) return true;
+            if (appDetailsFreeCache.has(appId)) return appDetailsFreeCache.get(appId);
+
+            if (doc) {
+                const freeTag = doc.querySelector('a[href*=""/genre/Free""], a[href*=""/tag/113""], div[class*=""FreeToPlay""]');
+                if (freeTag) {
+                    appDetailsFreeCache.set(appId, true);
+                    return true;
+                }
+            }
+
+            if (!appDetailsFreeCache.has(appId)) {
+                appDetailsFreeCache.set(appId, false);
+                fetch(`https://store.steampowered.com/api/appdetails?appids=${appId}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        const isFree = data && data[appId] && data[appId].data && data[appId].data.is_free === true;
+                        if (isFree) {
+                            appDetailsFreeCache.set(appId, true);
+                            getAllSteamDocuments().forEach(d => {
+                                const f = d.getElementById('cr-library-fab');
+                                if (f && f.getAttribute('data-appid') === String(appId)) {
+                                    injectGameFAB(d);
+                                }
+                            });
+                        }
+                    })
+                    .catch(() => {});
+            }
+
+            return appDetailsFreeCache.get(appId) || false;
+        }
+
+        function isAppRedirected(appId, appDetails) {
+            if (appDetails && appDetails.isShortcut) return true;
+            if (appStatusCache && Array.isArray(appStatusCache.unlockedAppIds)) {
+                if (appStatusCache.unlockedAppIds.includes(appId)) return true;
+            }
+            return false;
         }
 
         function escapeHtml(text) {
@@ -2035,15 +2256,15 @@ var PluginEntryPointMain = function () {
             container.innerHTML = `
                 <div class=""cr-reader-summary-card"">
                     <div class=""cr-reader-meta-row"">
-                        ${tutorial.author ? `<span class=""cr-meta-item"">ðŸ‘¤ <b>Author:</b> ${escapeHtml(tutorial.author)}</span>` : ''}
-                        ${tutorial.date ? `<span class=""cr-meta-item"">ðŸ“… <b>Updated:</b> ${escapeHtml(tutorial.date)}</span>` : ''}
-                        ${tutorial.appId ? `<span class=""cr-meta-item"">ðŸ†” <b>AppID:</b> ${escapeHtml(tutorial.appId.toString())}</span>` : ''}
+                        ${tutorial.author ? `<span class=""cr-meta-item"">👤 <b>Author:</b> ${escapeHtml(tutorial.author)}</span>` : ''}
+                        ${tutorial.date ? `<span class=""cr-meta-item"">📅 <b>Updated:</b> ${escapeHtml(tutorial.date)}</span>` : ''}
+                        ${tutorial.appId ? `<span class=""cr-meta-item"">🆔 <b>AppID:</b> ${escapeHtml(tutorial.appId.toString())}</span>` : ''}
                     </div>
                     ${tagsHtml ? `<div class=""cr-reader-tags-row"">${tagsHtml}</div>` : ''}
                     ${tutorial.desc ? `<p class=""cr-reader-desc-text"">${escapeHtml(tutorial.desc)}</p>` : ''}
                 </div>
                 <div class=""cr-reader-body-markdown"">
-                    <div class=""cr-reader-loading"">â³ Loading full tutorial guide content...</div>
+                    <div class=""cr-reader-loading"">⏳ Loading full tutorial guide content...</div>
                 </div>
             `;
 
@@ -2080,7 +2301,7 @@ var PluginEntryPointMain = function () {
                                     if (navigator.clipboard) {
                                         navigator.clipboard.writeText(code);
                                         const orig = btn.textContent;
-                                        btn.textContent = 'âœ“ Copied!';
+                                        btn.textContent = '✓ Copied!';
                                         setTimeout(() => btn.textContent = orig, 2000);
                                     }
                                 };
@@ -2096,12 +2317,21 @@ var PluginEntryPointMain = function () {
             bodyArea.innerHTML = `
                 <div class=""cr-reader-fallback-box"">
                     <p>Full interactive guide available in Web View.</p>
-                    <button class=""cr-switch-to-web-btn"">Switch to ðŸŒ Web View</button>
+                    <button class=""cr-switch-to-web-btn"">Switch to 🌐 Web View</button>
                 </div>
             `;
             bodyArea.querySelector('.cr-switch-to-web-btn')?.addEventListener('click', () => {
                 modal.querySelector('.cr-tab-btn[data-tab=""web""]')?.click();
             });
+        }
+
+        function getBustedTutorialUrl(url) {
+            if (!url) return '';
+            const parts = url.split('#');
+            const baseWithQuery = parts[0];
+            const hash = parts.length > 1 ? '#' + parts.slice(1).join('#') : '';
+            const separator = baseWithQuery.includes('?') ? '&' : '?';
+            return `${baseWithQuery}${separator}_v=${Date.now()}${hash}`;
         }
 
         // Opens the in-Steam CEF Mini Window Modal
@@ -2120,8 +2350,8 @@ var PluginEntryPointMain = function () {
                 if (textEl) textEl.title = tutorial.title;
 
                 const iframe = modal.querySelector('.cr-patchwiki-frame');
-                if (iframe && iframe.src !== tutorial.url) {
-                    iframe.src = tutorial.url;
+                if (iframe) {
+                    iframe.src = getBustedTutorialUrl(tutorial.url);
                 }
 
                 const extBtn = modal.querySelector('#cr-modal-open-external');
@@ -2130,9 +2360,13 @@ var PluginEntryPointMain = function () {
                 const deepLink = modal.querySelector('#cr-footer-deep-link');
                 if (deepLink) deepLink.textContent = tutorial.id;
 
-                const activeTab = modal.querySelector('.cr-tab-btn.cr-tab-active');
-                if (activeTab && activeTab.getAttribute('data-tab') === 'reader') {
-                    loadReaderContent(modal, tutorial);
+                if (tutorial.id && tutorial.id.startsWith('search-')) {
+                    modal.querySelector('.cr-tab-btn[data-tab=""web""]')?.click();
+                } else {
+                    const activeTab = modal.querySelector('.cr-tab-btn.cr-tab-active');
+                    if (activeTab && activeTab.getAttribute('data-tab') === 'reader') {
+                        loadReaderContent(modal, tutorial);
+                    }
                 }
                 return;
             }
@@ -2143,18 +2377,20 @@ var PluginEntryPointMain = function () {
             modal.innerHTML = `
                 <div class=""cr-modal-header"" id=""cr-modal-drag-handle"">
                     <div class=""cr-modal-title-left"">
-                        <span class=""cr-modal-icon"">ðŸ› ï¸</span>
+                        <span class=""cr-modal-icon"">🛠️</span>
                         <div class=""cr-modal-title-text"" title=""${escapeHtml(tutorial.title)}"">
                             <span class=""cr-modal-app-name"">${escapeHtml(tutorial.game || tutorial.title)}</span>
-                            <span class=""cr-modal-guide-badge"">PatchWiki</span>
+                            <span class=""cr-modal-guide-badge"">Tutorial</span>
                         </div>
                     </div>
 
                     <div class=""cr-modal-actions"">
                         <div class=""cr-modal-tabs"">
-                            <button class=""cr-tab-btn cr-tab-active"" data-tab=""web"" title=""Interactive Web View"">ðŸŒ Web</button>
-                            <button class=""cr-tab-btn"" data-tab=""reader"" title=""Fast Offline Reader"">ðŸ“– Reader</button>
+                            <button class=""cr-tab-btn cr-tab-active"" data-tab=""web"" title=""Interactive Web View"">🌐 Web</button>
+                            <button class=""cr-tab-btn"" data-tab=""reader"" title=""Fast Offline Reader"">📖 Reader</button>
                         </div>
+
+                        <button class=""cr-modal-btn cr-btn-refresh"" title=""Refresh Guides (Auto-update)"" id=""cr-modal-refresh-btn"">&#x21bb;</button>
 
                         <button class=""cr-modal-btn cr-btn-external"" title=""Open in External Browser / Steam Overlay"" id=""cr-modal-open-external"">
                             <svg viewBox=""0 0 24 24"" width=""14"" height=""14"" fill=""currentColor"">
@@ -2168,13 +2404,13 @@ var PluginEntryPointMain = function () {
                             </svg>
                         </button>
 
-                        <button class=""cr-modal-btn cr-btn-close"" title=""Close"" id=""cr-modal-close-btn"">âœ•</button>
+                        <button class=""cr-modal-btn cr-btn-close"" title=""Close"" id=""cr-modal-close-btn"">✕</button>
                     </div>
                 </div>
 
                 <div class=""cr-modal-body"">
                     <div class=""cr-tab-pane cr-pane-web cr-pane-active"">
-                        <iframe class=""cr-patchwiki-frame"" src=""${tutorial.url}"" allow=""clipboard-read; clipboard-write; fullscreen""></iframe>
+                        <iframe class=""cr-patchwiki-frame"" src=""${getBustedTutorialUrl(tutorial.url)}"" allow=""clipboard-read; clipboard-write; fullscreen""></iframe>
                     </div>
 
                     <div class=""cr-tab-pane cr-pane-reader"">
@@ -2185,7 +2421,7 @@ var PluginEntryPointMain = function () {
                 </div>
 
                 <div class=""cr-modal-footer"">
-                    <span class=""cr-footer-status"">âœ“ Steam CEF In-Client Mini Window â€¢ PatchWiki Community</span>
+                    <span class=""cr-footer-status"">✓ Steam CEF In-Client Mini Window • Tutorial Community</span>
                     <span class=""cr-footer-link"" id=""cr-footer-deep-link"">${escapeHtml(tutorial.id)}</span>
                 </div>
             `;
@@ -2267,6 +2503,33 @@ var PluginEntryPointMain = function () {
             });
 
             // 3. Control buttons
+            const refreshBtn = modal.querySelector('#cr-modal-refresh-btn');
+            if (refreshBtn) {
+                refreshBtn.onclick = async (e) => {
+                    e.stopPropagation();
+                    refreshBtn.style.transform = 'rotate(360deg)';
+                    refreshBtn.style.transition = 'transform 0.4s ease';
+                    setTimeout(() => { refreshBtn.style.transform = 'none'; refreshBtn.style.transition = 'none'; }, 400);
+
+                    await refreshPatchWikiData();
+                    const iframe = modal.querySelector('.cr-patchwiki-frame');
+                    if (iframe) {
+                        try {
+                            if (iframe.contentWindow) {
+                                iframe.contentWindow.postMessage({ type: 'CR_REFRESH_TUTORIALS' }, '*');
+                            }
+                        } catch (err) { }
+                        if (currentModalTutorial) {
+                            iframe.src = getBustedTutorialUrl(currentModalTutorial.url);
+                        }
+                    }
+                    const activeTab = modal.querySelector('.cr-tab-btn.cr-tab-active');
+                    if (activeTab && activeTab.getAttribute('data-tab') === 'reader' && currentModalTutorial) {
+                        loadReaderContent(modal, currentModalTutorial);
+                    }
+                };
+            }
+
             modal.querySelector('#cr-modal-open-external').onclick = (e) => {
                 e.stopPropagation();
                 try { window.open(currentModalTutorial.url, '_blank'); } catch (err) { }
@@ -2289,120 +2552,306 @@ var PluginEntryPointMain = function () {
             doc.body.appendChild(modal);
         }
 
-        // Injects PatchWiki button into game action bar if AppID found in PatchWiki
-        function injectPatchWikiButtonForBar(doc, bar) {
-            if (!doc || !bar) return;
+        let isInjecting = false;
+        let injectionDebounceTimers = new WeakMap();
 
-            const appId = getCurrentAppId(doc, bar);
-            if (!appId || !patchWikiCache) {
-                if (!patchWikiCache) {
-                    loadPatchWikiData().then(() => {
-                        if (doc && bar) injectPatchWikiButtonForBar(doc, bar);
-                    });
-                }
-                return;
+        function scheduleInjectionsForDoc(doc) {
+            if (!doc || !doc.body) return;
+            if (injectionDebounceTimers.has(doc)) {
+                clearTimeout(injectionDebounceTimers.get(doc));
             }
 
-            const tutorial = patchWikiCache[appId.toString()];
-            const existingBtn = bar.querySelector('.cr-patchwiki-btn');
-
-            if (!tutorial) {
-                if (existingBtn) existingBtn.remove();
-                return;
-            }
-
-            if (existingBtn) {
-                if (existingBtn.getAttribute('data-appid') === appId.toString()) {
-                    return;
-                }
-                existingBtn.remove();
-            }
-
-            const pwBtn = doc.createElement('div');
-            pwBtn.className = 'cr-patchwiki-btn';
-            pwBtn.setAttribute('data-appid', appId.toString());
-            pwBtn.title = `Open PatchWiki Tutorial for ${tutorial.title || tutorial.game} (In-Steam Mini Window)`;
-            pwBtn.innerHTML = `
-                <svg class=""cr-patchwiki-svg"" viewBox=""0 0 24 24"">
-                    <path d=""M19 2H6c-1.2 0-2 .9-2 2v16c0 1.1.9 2 2 2h13c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4zm13 16H6c-.55 0-1-.45-1-1V5.5c.31.29.7.5 1.17.5H19v14z""/>
-                </svg>
-                <span>PatchWiki Guide</span>
-                <span class=""cr-patchwiki-pill"">Wiki</span>
-            `;
-
-            pwBtn.onclick = (e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                openSteamPatchWikiMiniWindow(tutorial, doc);
-            };
-
-            const badge = bar.querySelector('.cr-game-badge');
-            if (badge && badge.nextSibling) {
-                bar.insertBefore(pwBtn, badge.nextSibling);
-            } else {
-                bar.appendChild(pwBtn);
-            }
+            const timer = setTimeout(() => {
+                injectionDebounceTimers.delete(doc);
+                runInjectionsForDoc(doc);
+            }, 120);
+            injectionDebounceTimers.set(doc, timer);
         }
 
-        // 2. Inject Game Details Page Badge and PatchWiki Button
-        function injectGameBadge(doc) {
+        // Floating Action Bar (FAB) for active Steam game details
+        function injectGameFAB(doc) {
             if (!doc || !doc.body) return;
-            const gameActionBars = doc.querySelectorAll('div[class*=""playbar_""], div[class*=""appactionandstats_""], div[class*=""appdetailsheader_""], div[class*=""gameheader_""], div[class*=""headerbuttons_""]');
-            gameActionBars.forEach(bar => {
-                if (!bar.querySelector('.cr-game-badge')) {
-                    const badge = doc.createElement('div');
-                    badge.className = 'cr-game-badge';
-                    badge.title = 'Game save files are actively redirected and backed up by CloudRedirect (Click to Open)';
-                    badge.innerHTML = `
-                        ${cloudSvg}
-                        <span>CloudRedirect</span>
-                        <span class=""cr-game-badge-check"">âœ“</span>
+
+            try {
+                // Remove any old in-line badges or stray buttons from previous versions
+                doc.querySelectorAll('#cr-action-group, .cr-action-group, .cr-game-badge, .cr-patchwiki-btn').forEach(el => el.remove());
+
+                const appDetails = getAppDetails(doc, null);
+                const appId = appDetails?.appId;
+                const gameTitle = appDetails?.title;
+
+                let fab = doc.getElementById('cr-library-fab');
+
+                // Check if currently browsing Store or Community
+                const href = doc.defaultView?.location?.href || '';
+                if (href.includes('store.steampowered.com') || href.includes('steamcommunity.com')) {
+                    if (fab) fab.style.display = 'none';
+                    return;
+                }
+
+                const activeNav = doc.querySelector('div[class*=""supernav_container""] [class*=""active""], nav[class*=""supernav""] [class*=""active""], div[class*=""SuperNav""] [class*=""Active""]');
+                if (activeNav) {
+                    const navText = (activeNav.textContent || '').trim().toUpperCase();
+                    if (navText.includes('STORE') || navText.includes('COMMUNITY') || navText.includes('POINTS SHOP')) {
+                        if (fab) fab.style.display = 'none';
+                        return;
+                    }
+                }
+
+                if (!appId) {
+                    if (fab) fab.style.display = 'none';
+                    return;
+                }
+
+                const strAppId = String(appId);
+
+                // If FAB already exists for this exact AppID, make sure it's visible and return
+                if (fab && fab.getAttribute('data-appid') === strAppId) {
+                    fab.style.display = 'inline-flex';
+                    return;
+                }
+
+                if (!fab) {
+                    fab = doc.createElement('div');
+                    fab.id = 'cr-library-fab';
+                    fab.className = 'cr-fab-container';
+                    doc.body.appendChild(fab);
+
+                    // Smooth ""When drag just drag"" anywhere on the FAB with auto-resize docking
+                    let isDragging = false;
+                    let hasMoved = false;
+                    let dragStartX = 0;
+                    let dragStartY = 0;
+                    let initialLeft = 0;
+                    let initialTop = 0;
+
+                    fab.onmousedown = (e) => {
+                        if (e.button !== 0) return; // Left click only
+
+                        const rect = fab.getBoundingClientRect();
+                        dragStartX = e.clientX;
+                        dragStartY = e.clientY;
+                        initialLeft = rect.left;
+                        initialTop = rect.top;
+                        isDragging = true;
+                        hasMoved = false;
+
+                        function onMouseMove(ev) {
+                            if (!isDragging) return;
+                            const dx = ev.clientX - dragStartX;
+                            const dy = ev.clientY - dragStartY;
+                            if (!hasMoved && Math.hypot(dx, dy) > 4) {
+                                hasMoved = true;
+                                fab.classList.add('cr-fab-dragging');
+                            }
+                            if (hasMoved) {
+                                const winW = doc.defaultView?.innerWidth || window.innerWidth || 1200;
+                                const winH = doc.defaultView?.innerHeight || window.innerHeight || 800;
+                                const maxLeft = winW - rect.width - 10;
+                                const maxTop = winH - rect.height - 10;
+                                const newLeft = Math.max(10, Math.min(maxLeft, initialLeft + dx));
+                                const newTop = Math.max(10, Math.min(maxTop, initialTop + dy));
+
+                                fab.style.left = newLeft + 'px';
+                                fab.style.top = newTop + 'px';
+                                fab.style.right = 'auto';
+                                fab.style.bottom = 'auto';
+                            }
+                        }
+
+                        function onMouseUp() {
+                            if (isDragging) {
+                                isDragging = false;
+                                fab.classList.remove('cr-fab-dragging');
+                                if (hasMoved) {
+                                    fab.__wasJustDragged = true;
+                                    setTimeout(() => { fab.__wasJustDragged = false; }, 120);
+
+                                    // Auto-dock to nearest edges so resizing the Steam window keeps FAB in place
+                                    const finalRect = fab.getBoundingClientRect();
+                                    const winW = doc.defaultView?.innerWidth || window.innerWidth || 1200;
+                                    const winH = doc.defaultView?.innerHeight || window.innerHeight || 800;
+
+                                    if (finalRect.left + finalRect.width / 2 > winW / 2) {
+                                        const distRight = Math.max(10, winW - finalRect.right);
+                                        fab.style.right = distRight + 'px';
+                                        fab.style.left = 'auto';
+                                    } else {
+                                        fab.style.left = Math.max(10, finalRect.left) + 'px';
+                                        fab.style.right = 'auto';
+                                    }
+
+                                    if (finalRect.top + finalRect.height / 2 > winH / 2) {
+                                        const distBottom = Math.max(10, winH - finalRect.bottom);
+                                        fab.style.bottom = distBottom + 'px';
+                                        fab.style.top = 'auto';
+                                    } else {
+                                        fab.style.top = Math.max(10, finalRect.top) + 'px';
+                                        fab.style.bottom = 'auto';
+                                    }
+                                }
+                            }
+                            doc.removeEventListener('mousemove', onMouseMove);
+                            doc.removeEventListener('mouseup', onMouseUp);
+                        }
+
+                        doc.addEventListener('mousemove', onMouseMove);
+                        doc.addEventListener('mouseup', onMouseUp);
+                    };
+
+                    // Auto-resize / reposition listener when Steam CEF window resizes
+                    const win = doc.defaultView || window;
+                    if (win && !win.__cr_fab_resize_attached) {
+                        win.__cr_fab_resize_attached = true;
+                        win.addEventListener('resize', () => {
+                            const f = doc.getElementById('cr-library-fab');
+                            if (f && f.style.display !== 'none') {
+                                const rect = f.getBoundingClientRect();
+                                const winW = win.innerWidth || 1200;
+                                const winH = win.innerHeight || 800;
+                                if (rect.right > winW - 10) {
+                                    f.style.left = 'auto';
+                                    f.style.right = '16px';
+                                }
+                                if (rect.bottom > winH - 10) {
+                                    f.style.top = 'auto';
+                                    f.style.bottom = '16px';
+                                }
+                            }
+                        });
+                    }
+                }
+
+                fab.setAttribute('data-appid', strAppId);
+                fab.style.display = 'inline-flex';
+
+                let tutorial = null;
+                if (patchWikiCache) {
+                    tutorial = patchWikiCache[strAppId];
+                    if (!tutorial && gameTitle) {
+                        const normTitle = gameTitle.toLowerCase().replace(/[^a-z0-9]/g, '');
+                        if (normTitle.length >= 3) {
+                            for (const k of Object.keys(patchWikiCache)) {
+                                const tItem = patchWikiCache[k];
+                                const itemNorm = (tItem.game || tItem.title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                                if (itemNorm.includes(normTitle) || normTitle.includes(itemNorm)) {
+                                    tutorial = tItem;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    loadPatchWikiData().then(() => {
+                        scheduleInjectionsForDoc(doc);
+                    }).catch(() => {});
+                }
+
+                // Rule 1: Only show Tutorial button if available!
+                const shouldShowTutorial = Boolean(tutorial);
+
+                // Rule 2: Only show CloudRedirect button except own/free game at Steam!
+                const isFree = isAppFree(doc, appId, appDetails);
+                const isRedirected = isAppRedirected(appId, appDetails);
+                const isGenuineOwned = Boolean(appDetails.isOwned && !isRedirected && !appDetails.isShortcut);
+                const shouldShowCloudRedirect = !isFree && !isGenuineOwned;
+
+                // If neither button should be shown, hide FAB completely!
+                if (!shouldShowTutorial && !shouldShowCloudRedirect) {
+                    fab.style.display = 'none';
+                    return;
+                }
+
+                const currentKey = `${strAppId}:${shouldShowCloudRedirect ? 1 : 0}:${shouldShowTutorial ? 1 : 0}`;
+                if (fab.getAttribute('data-cr-key') === currentKey) {
+                    fab.style.display = 'inline-flex';
+                    return;
+                }
+
+                fab.setAttribute('data-appid', strAppId);
+                fab.setAttribute('data-cr-key', currentKey);
+                fab.style.display = 'inline-flex';
+
+                let innerHtml = '<div class=""cr-fab-drag"" title=""Drag to reposition"">⋮⋮</div>';
+
+                if (shouldShowCloudRedirect) {
+                    innerHtml += `
+                        <div class=""cr-fab-item cr-fab-cr"" id=""cr-fab-cr-btn"" title=""CloudRedirect Save Protection Active (Click to Open)"">
+                            ${cloudSvg}
+                            <span class=""cr-fab-label"">CloudRedirect</span>
+                            <span class=""cr-fab-check"">&#10003;</span>
+                        </div>
                     `;
-                    badge.onclick = (e) => {
+                }
+
+                if (shouldShowCloudRedirect && shouldShowTutorial) {
+                    innerHtml += '<div class=""cr-fab-divider""></div>';
+                }
+
+                if (shouldShowTutorial) {
+                    innerHtml += `
+                        <div class=""cr-fab-item cr-fab-wiki"" id=""cr-fab-wiki-btn"" title=""Open Tutorial for ${escapeHtml(tutorial.title || tutorial.game)}"">
+                            <svg class=""cr-patchwiki-svg"" viewBox=""0 0 24 24"">
+                                <path d=""M19 2H6c-1.2 0-2 .9-2 2v16c0 1.1.9 2 2 2h13c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4zm13 16H6c-.55 0-1-.45-1-1V5.5c.31.29.7.5 1.17.5H19v14z""/>
+                            </svg>
+                            <span class=""cr-fab-label"">Tutorial</span>
+                            <span class=""cr-patchwiki-pill cr-pill-wiki"">Guide</span>
+                        </div>
+                    `;
+                }
+
+                fab.innerHTML = innerHtml;
+
+                // Wire click events
+                const crBtn = fab.querySelector('#cr-fab-cr-btn');
+                if (crBtn) {
+                    crBtn.onclick = (e) => {
+                        if (fab.__wasJustDragged) return;
                         e.stopPropagation();
                         e.preventDefault();
                         launchApp(doc);
                     };
-
-                    bar.appendChild(badge);
                 }
 
-                injectPatchWikiButtonForBar(doc, bar);
-            });
+                const wikiBtn = fab.querySelector('#cr-fab-wiki-btn');
+                if (wikiBtn) {
+                    wikiBtn.onclick = (e) => {
+                        if (fab.__wasJustDragged) return;
+                        e.stopPropagation();
+                        e.preventDefault();
+                        if (tutorial) {
+                            openSteamPatchWikiMiniWindow(tutorial, doc);
+                        }
+                    };
+                }
+            } catch (err) {
+                console.warn('[CloudRedirect] injectGameFAB error:', err);
+            }
         }
 
         function runInjectionsForDoc(doc) {
-            if (!doc || !doc.body) return;
+            if (!doc || !doc.body || isInjecting) return;
+            isInjecting = true;
 
-            // Remove any legacy header buttons or clipped dropdown menus
-            const legacyBtn = doc.getElementById('cloudredirect-header-btn');
-            if (legacyBtn) legacyBtn.remove();
-            doc.querySelectorAll('.cr-nav-btn, [id*=""cloudredirect-header""], .cr-dropdown-menu').forEach(el => el.remove());
-
-            // If supernav item has old classes or wrong height/display, replace it
-            const superItem = doc.getElementById('cloudredirect-supernav-item');
-            if (superItem) {
-                if (superItem.style.height || superItem.style.display || superItem.querySelector('.cr-supernav-btn')?.style.height) {
-                    superItem.remove();
-                } else if (superItem.classList.contains('cr-active')) {
-                    superItem.classList.remove('cr-active');
-                }
+            try {
+                cleanupStrayElements(doc);
+                ensureStyles(doc);
+                injectSuperNavTab(doc);
+                injectGameFAB(doc);
+            } finally {
+                // Keep guard active across microtasks to ignore mutations caused by our own DOM inserts
+                setTimeout(() => {
+                    isInjecting = false;
+                }, 60);
             }
-
-            ensureStyles(doc);
-            injectSuperNavTab(doc);
-            injectBottomBarButton(doc);
-            injectGameBadge(doc);
         }
 
         function runInjections() {
             const docs = getAllSteamDocuments();
             for (const doc of docs) {
                 try {
-                    runInjectionsForDoc(doc);
-                } catch (e) {
-                    console.warn('[CloudRedirect] Injection error:', e);
-                }
+                    scheduleInjectionsForDoc(doc);
+                } catch (e) { }
             }
         }
 
@@ -2414,8 +2863,50 @@ var PluginEntryPointMain = function () {
                 if (!d || !d.body || observedDocs.has(d)) return;
                 observedDocs.add(d);
                 try {
-                    const observer = new MutationObserver(() => {
-                        runInjectionsForDoc(d);
+                    const observer = new MutationObserver((mutations) => {
+                        if (isInjecting) return;
+
+                        // Verify if any mutation was caused by elements outside CloudRedirect
+                        let relevantMutation = false;
+                        for (let i = 0; i < mutations.length; i++) {
+                            const m = mutations[i];
+                            const t = m.target;
+                            if (t && t.nodeType === 1) {
+                                if (t.id === 'cr-patchwiki-modal' ||
+                                    t.id === 'cr-library-fab' ||
+                                    t.id === 'cloudredirect-supernav-item' ||
+                                    t.id === 'cloudredirect-bottom-btn' ||
+                                    t.id === 'cr-millennium-styles' ||
+                                    t.classList?.contains('cr-fab-container') ||
+                                    t.classList?.contains('cr-fab-item') ||
+                                    t.classList?.contains('cr-action-group') ||
+                                    t.classList?.contains('cr-game-badge') ||
+                                    t.classList?.contains('cr-patchwiki-btn') ||
+                                    t.closest?.('#cr-library-fab, #cr-patchwiki-modal, #cloudredirect-supernav-item, #cr-millennium-styles, .cr-fab-container')) {
+                                    continue;
+                                }
+                            }
+                            if (m.addedNodes && m.addedNodes.length > 0) {
+                                let allOurs = true;
+                                for (let j = 0; j < m.addedNodes.length; j++) {
+                                    const n = m.addedNodes[j];
+                                    if (n.nodeType === 1) {
+                                        if (n.id === 'cr-library-fab' || n.id === 'cr-patchwiki-modal' || n.id === 'cloudredirect-supernav-item' || n.classList?.contains('cr-fab-container')) {
+                                            continue;
+                                        }
+                                    }
+                                    allOurs = false;
+                                    break;
+                                }
+                                if (allOurs) continue;
+                            }
+                            relevantMutation = true;
+                            break;
+                        }
+
+                        if (relevantMutation) {
+                            scheduleInjectionsForDoc(d);
+                        }
                     });
                     observer.observe(d.body, {
                         childList: true,
@@ -2424,20 +2915,19 @@ var PluginEntryPointMain = function () {
                 } catch (e) { }
             }
 
-            // Periodically check all windows (including after page transitions)
+            // Periodically check all windows lightly
             setInterval(() => {
                 const docs = getAllSteamDocuments();
                 for (const d of docs) {
                     registerDocObserver(d);
                 }
                 runInjections();
-            }, 800);
+            }, 3500);
 
             try {
                 if (typeof Millennium !== 'undefined' && typeof Millennium.AddWindowCreateHook === 'function') {
                     Millennium.AddWindowCreateHook((popup) => {
-                        setTimeout(() => runInjections(), 300);
-                        setTimeout(() => runInjections(), 1500);
+                        setTimeout(() => runInjections(), 400);
                     });
                 }
             } catch (e) { }
@@ -2450,6 +2940,21 @@ var PluginEntryPointMain = function () {
         const index = async function PluginMain() {
             setupObserver();
             loadPatchWikiData().catch(() => {});
+            fetchPluginStatus().catch(() => {});
+
+            // Auto-refresh PatchWiki tutorials & status every 2.5 minutes so Steam guides are always live
+            setInterval(() => {
+                refreshPatchWikiData().then(() => {
+                    const docs = getAllSteamDocuments();
+                    for (const d of docs) {
+                        const fab = d.getElementById('cr-library-fab');
+                        if (fab && fab.style.display !== 'none') {
+                            injectGameFAB(d);
+                        }
+                    }
+                }).catch(() => {});
+                fetchPluginStatus().catch(() => {});
+            }, 150000);
 
             try {
                 if (typeof MILLENNIUM_BACKEND_IPC !== 'undefined' && MILLENNIUM_BACKEND_IPC.postMessage) {
@@ -2476,14 +2981,15 @@ var PluginEntryPointMain = function () {
                         try {
                             const modal = d.getElementById('cr-patchwiki-modal');
                             if (modal) modal.remove();
-                            d.querySelectorAll('.cr-patchwiki-btn').forEach(el => el.remove());
+                            const fab = d.getElementById('cr-library-fab');
+                            if (fab) fab.remove();
+                            d.querySelectorAll('#cr-action-group, .cr-action-group, .cr-game-badge, .cr-patchwiki-btn').forEach(el => el.remove());
                             const superTab = d.getElementById('cloudredirect-supernav-item');
                             if (superTab) superTab.remove();
                             const topBtn = d.getElementById('cloudredirect-header-btn');
                             if (topBtn) topBtn.remove();
                             d.querySelectorAll('.cr-nav-btn, [id*=""cloudredirect-header""], .cr-dropdown-menu').forEach(el => el.remove());
-                            const btmBtn = d.getElementById('cloudredirect-bottom-btn');
-                            if (btmBtn) btmBtn.remove();
+                            d.querySelectorAll('#cloudredirect-bottom-btn, .cr-bottom-bar-btn').forEach(el => el.remove());
                             const style = d.getElementById('cr-millennium-styles');
                             if (style) style.remove();
                         } catch (e) { }

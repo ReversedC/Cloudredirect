@@ -432,7 +432,7 @@
 
                                 <!-- Direct Bookmark Quick Launchers -->
                                 <WrapPanel>
-                                    <Button Click="BookmarkPatchWiki_Click" Style="{StaticResource SteamButtonStyle}" Padding="6,3" Margin="0,0,4,4" ToolTip="Open Game Guides &amp; Tutorials">
+                                    <Button x:Name="TutorialBookmarkBtn" Click="BookmarkPatchWiki_Click" Style="{StaticResource SteamButtonStyle}" Padding="6,3" Margin="0,0,4,4" ToolTip="Open Game Guides &amp; Tutorials" Visibility="Collapsed">
                                         <TextBlock Text="🛠️ Tutorial ↗" FontSize="10" Foreground="#A4D007" FontWeight="Bold" />
                                     </Button>
                                     <Button Click="BookmarkMapGenie_Click" Style="{StaticResource SteamButtonStyle}" Padding="6,3" Margin="0,0,4,4">
