@@ -1,8 +1,6 @@
 #pragma once
 #include <string>
-#include <algorithm>
 
-namespace AutoCloudUtil {
 namespace AutoCloudPathResolver {
 
 // Maps a Windows AutoCloud root identifier to an appropriate Linux root equivalent
@@ -17,11 +15,7 @@ inline std::string WindowsRootToLinux(const std::string& winRoot) {
     if (winRoot == "WinAppDataRoaming") {
         return "LinuxXdgConfigHome";
     }
-    if (winRoot == "LinuxHome" || winRoot == "LinuxXdgDataHome" || winRoot == "LinuxXdgConfigHome") {
-        return winRoot;
-    }
     return winRoot;
 }
 
 } // namespace AutoCloudPathResolver
-} // namespace AutoCloudUtil

@@ -25,6 +25,7 @@
 #define _stricmp strcasecmp
 #define _strnicmp strncasecmp
 #define _wcsicmp wcscasecmp
+#include "autocloud_path_resolver.h"
 #endif
 
 namespace AutoCloudUtil {
@@ -330,11 +331,6 @@ inline bool IsLinuxOS(const std::string& osName) {
     return lower == "linux";
 }
 
-#ifndef _WIN32
-// See autocloud_path_resolver.h for Linux path resolution.
-#include "autocloud_path_resolver.h"
-#endif
-
 // Current Windows version detection
 
 inline int CurrentWindowsVersionRank() {
@@ -417,7 +413,7 @@ inline void ApplyRootOverridesForPlatform(AutoCloudRuleNative& rule,
 
 #ifndef _WIN32
     if (platform != AutoCloudEffectivePlatform::Windows) {
-        std::string linuxRoot = AutoCloudPathResolver::WindowsRootToLinux(rule.root);
+        std::string linuxRoot = ::AutoCloudPathResolver::WindowsRootToLinux(rule.root);
         if (!linuxRoot.empty()) {
             rule.root = linuxRoot;
         } else if (!rule.root.empty() && rule.root != "GameInstall" && rule.root[0] != '%') {
