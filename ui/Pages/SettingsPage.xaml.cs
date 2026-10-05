@@ -122,8 +122,6 @@ public partial class SettingsPage : Page
             AutoCommunityDbToggle.IsChecked = AppSettings.AutoCommunityDatabase;
             if (CommunityDbFeedPanel != null)
                 CommunityDbFeedPanel.Visibility = AppSettings.AutoCommunityDatabase ? Visibility.Visible : Visibility.Collapsed;
-            if (CommunityDbUrlTextBox != null)
-                CommunityDbUrlTextBox.Text = AppSettings.CommunityDatabaseUrl;
             UpdateCommunityDbStatsDisplay();
 
             InitializeSettingsLanguageSelector();
@@ -318,12 +316,6 @@ public partial class SettingsPage : Page
             : $"• {builtIn} built-in game signatures";
     }
 
-    private void CommunityDbUrlTextBox_TextChanged(object sender, TextChangedEventArgs e)
-    {
-        if (_syncLoading || CommunityDbUrlTextBox == null) return;
-        AppSettings.CommunityDatabaseUrl = CommunityDbUrlTextBox.Text?.Trim() ?? "";
-    }
-
     private async void CommunityDbSyncButton_Click(object sender, RoutedEventArgs e)
     {
         var btn = CommunityDbSyncButton;
@@ -331,13 +323,9 @@ public partial class SettingsPage : Page
 
         try
         {
-            var url = CommunityDbUrlTextBox?.Text?.Trim() ?? "";
-            if (string.IsNullOrWhiteSpace(url))
-            {
-                await Services.Dialog.ShowWarningAsync("Community Database",
-                    "Please enter a valid raw JSON URL or GitHub Gist link first (e.g. https://gist.githubusercontent.com/.../raw/saves.json).");
-                return;
-            }
+            var url = !string.IsNullOrWhiteSpace(AppSettings.CommunityDatabaseUrl)
+                ? AppSettings.CommunityDatabaseUrl
+                : LudusaviManifestParser.DefaultManifestUrl;
 
             CommunityDbStatusText.Text = "Syncing from remote feed...";
             CommunityDbStatusText.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x66, 0xC0, 0xF4));
@@ -353,7 +341,7 @@ public partial class SettingsPage : Page
             else
             {
                 await Services.Dialog.ShowWarningAsync("Update Failed",
-                    $"Could not update from remote URL:\n{message}\n\nPlease verify that the URL is public, accessible, and returns valid JSON.");
+                    $"Could not update from remote feed:\n{message}");
             }
         }
         catch (Exception ex)
@@ -363,21 +351,6 @@ public partial class SettingsPage : Page
         finally
         {
             if (btn != null) btn.IsEnabled = true;
-        }
-    }
-
-    private async void CommunityDbCopyTemplateButton_Click(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            var json = Services.GameSaveAutoDetector.ExportDatabaseToJson();
-            Clipboard.SetText(json);
-            await Services.Dialog.ShowInfoAsync("Template Copied",
-                "The complete Community Database JSON template has been copied to your clipboard!\n\nYou can now create a new GitHub Gist, paste this content, save it, and click 'Raw' to copy its URL into CloudRedirect.");
-        }
-        catch (Exception ex)
-        {
-            await Services.Dialog.ShowErrorAsync("Copy Failed", ex.Message);
         }
     }
 

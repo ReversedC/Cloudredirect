@@ -214,7 +214,7 @@
                 <ItemsControl x:Name="GamesItemsControl">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Border Style="{StaticResource GameCardBorderStyle}">
+                        <Border Style="{StaticResource GameCardBorderStyle}" Cursor="Hand" MouseLeftButtonUp="GameCard_MouseLeftButtonUp">
                             <Border.ContextMenu>
                                 <ContextMenu Background="#1A2634" BorderBrush="#2F4259">
                                     <MenuItem Header="{res:Loc UniversalSaves_MenuSyncNow}" Click="SyncNow_Click" Tag="{Binding}">

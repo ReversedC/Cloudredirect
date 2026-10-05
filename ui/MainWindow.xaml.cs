@@ -144,9 +144,27 @@ public partial class MainWindow : FluentWindow
                 ApplyMode(mode);
 
 
-                App.LogStartup("Loaded: NavigateTo DashboardPage");
-                NavigateTo(typeof(Pages.DashboardPage));
-                App.LogStartup("Loaded: DashboardPage navigation succeeded");
+                // Check if Google Drive credentials exist and are authenticated
+                var config = Services.SteamDetector.ReadConfig();
+                var configDir = Services.SteamDetector.GetConfigDir();
+                var tokenPath = config?.TokenPath ?? Path.Combine(configDir, "gdrive_tokens.json");
+                if (!File.Exists(tokenPath))
+                {
+                    var legacyGoogle = Path.Combine(configDir, "google_tokens.json");
+                    if (File.Exists(legacyGoogle)) tokenPath = legacyGoogle;
+                }
+                var isAuthed = Services.OAuthService.CheckTokenStatus(tokenPath).IsAuthenticated;
+
+                if (!isAuthed)
+                {
+                    App.LogStartup("Loaded: Google Drive credentials not found/authenticated. Navigating to SetupWizardPage");
+                    NavigateTo(typeof(Pages.SetupWizardPage));
+                }
+                else
+                {
+                    App.LogStartup("Loaded: NavigateTo DashboardPage");
+                    NavigateTo(typeof(Pages.DashboardPage));
+                }
 
                 if (App.StartMinimized)
                 {
@@ -410,7 +428,7 @@ public partial class MainWindow : FluentWindow
             var page = Activator.CreateInstance(pageType);
             RootFrame.Navigate(page);
 
-            bool isDashboard = pageType == typeof(Pages.DashboardPage);
+            bool isDashboard = pageType == typeof(Pages.DashboardPage) || pageType == typeof(Pages.SetupWizardPage);
             TopNavHeader.Visibility = isDashboard ? Visibility.Collapsed : Visibility.Visible;
             if (!isDashboard)
             {
@@ -426,6 +444,7 @@ public partial class MainWindow : FluentWindow
                     nameof(Pages.UniversalSavesPage) => S.Get("Nav_UniversalSaves"),
                     nameof(Pages.LuaSyncPage) => S.Get("Nav_LuaSync"),
                     nameof(Pages.SuoRemotePage) => "SUO Remote",
+                    nameof(Pages.SetupWizardPage) => S.Get("Nav_SetupWizard"),
                     _ => ""
                 };
             }

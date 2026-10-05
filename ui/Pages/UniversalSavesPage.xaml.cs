@@ -114,21 +114,17 @@ public partial class UniversalSavesPage : Page
 
         if (availablePresets.Count == 0)
         {
-            var msg = new Wpf.Ui.Controls.MessageBox
-            {
-                Title = "Popular Presets",
-                Content = "All built-in presets have already been added to your library!",
-                CloseButtonText = "OK"
-            };
-            await msg.ShowDialogAsync();
+            await Services.Dialog.ShowInfoAsync("Popular Presets", "All built-in presets have already been added to your library!");
             return;
         }
 
-        var stack = new StackPanel();
+        var stack = new StackPanel { MinWidth = 320 };
+        var primaryBrush = (System.Windows.Media.Brush)FindResource("SteamTextPrimaryBrush");
         stack.Children.Add(new TextBlock
         {
             Text = "Select a game preset to add to Universal Cloud Saves:",
             FontSize = 13,
+            Foreground = primaryBrush,
             Margin = new Thickness(0, 0, 0, 8)
         });
 
@@ -141,17 +137,14 @@ public partial class UniversalSavesPage : Page
         };
         stack.Children.Add(combo);
 
-        var box = new Wpf.Ui.Controls.MessageBox
-        {
-            Title = "Add Game Preset",
-            Content = stack,
-            PrimaryButtonText = "Add Game",
-            PrimaryButtonAppearance = Wpf.Ui.Controls.ControlAppearance.Primary,
-            CloseButtonText = "Cancel"
-        };
+        bool confirmed = await Services.Dialog.ShowCustomAsync(
+            "Add Game Preset",
+            stack,
+            primaryText: "Add Game",
+            secondaryText: "Cancel",
+            theme: Dialogs.SteamMessageBoxDialog.ButtonTheme.PlayGreen);
 
-        var result = await box.ShowDialogAsync();
-        if (result == Wpf.Ui.Controls.MessageBoxResult.Primary && combo.SelectedIndex >= 0)
+        if (confirmed && combo.SelectedIndex >= 0)
         {
             var selectedPreset = availablePresets[combo.SelectedIndex];
             UniversalSaveWatcherService.AddProfile(new UniversalGameProfile
@@ -187,13 +180,7 @@ public partial class UniversalSavesPage : Page
             details += "All eligible games are already monitored and up to date!";
         }
 
-        var msg = new Wpf.Ui.Controls.MessageBox
-        {
-            Title = "Steam Library Scan Results",
-            Content = details,
-            CloseButtonText = "OK"
-        };
-        await msg.ShowDialogAsync();
+        await Services.Dialog.ShowInfoAsync("Steam Library Scan Results", details);
     }
 
     private async void AutoScan_Click(object sender, RoutedEventArgs e)
@@ -208,22 +195,17 @@ public partial class UniversalSavesPage : Page
 
         if (newlyFound.Count == 0)
         {
-            var msg = new Wpf.Ui.Controls.MessageBox
-            {
-                Title = "Auto-Scan Game Saves",
-                Content = "No new unmonitored game saves were detected on this PC. All existing saves are already added or none were found.",
-                CloseButtonText = "OK"
-            };
-            await msg.ShowDialogAsync();
+            await Services.Dialog.ShowInfoAsync("Auto-Scan Game Saves", "No new unmonitored game saves were detected on this PC. All existing saves are already added or none were found.");
             return;
         }
 
-        var stack = new StackPanel();
+        var stack = new StackPanel { MinWidth = 420 };
         stack.Children.Add(new TextBlock
         {
             Text = $"Found {newlyFound.Count} game save location(s) on your PC! Select games to add:",
             FontSize = 13,
             FontWeight = FontWeights.SemiBold,
+            Foreground = (System.Windows.Media.Brush)FindResource("SteamTextPrimaryBrush"),
             Margin = new Thickness(0, 0, 0, 10)
         });
 
@@ -282,17 +264,14 @@ public partial class UniversalSavesPage : Page
         scroll.Content = listStack;
         stack.Children.Add(scroll);
 
-        var box = new Wpf.Ui.Controls.MessageBox
-        {
-            Title = "Auto-Detected Game Saves",
-            Content = stack,
-            PrimaryButtonText = $"Add Selected ({newlyFound.Count})",
-            PrimaryButtonAppearance = Wpf.Ui.Controls.ControlAppearance.Primary,
-            CloseButtonText = "Cancel"
-        };
+        bool confirmed = await Services.Dialog.ShowCustomAsync(
+            "Auto-Detected Game Saves",
+            stack,
+            primaryText: $"Add Selected ({newlyFound.Count})",
+            secondaryText: "Cancel",
+            theme: Dialogs.SteamMessageBoxDialog.ButtonTheme.PlayGreen);
 
-        var res = await box.ShowDialogAsync();
-        if (res == Wpf.Ui.Controls.MessageBoxResult.Primary)
+        if (confirmed)
         {
             int added = 0;
             var steamPath = SteamDetector.FindSteamPath();
@@ -330,40 +309,44 @@ public partial class UniversalSavesPage : Page
 
     private async void AddCustomGame_Click(object sender, RoutedEventArgs e)
     {
-        var stack = new StackPanel();
+        var stack = new StackPanel { MinWidth = 380 };
+
+        var labelBrush = (System.Windows.Media.Brush)FindResource("SteamTextSecondaryBrush");
 
         // 1-Click Auto-Detect from Running Game
-        var autoDetectBtn = new Wpf.Ui.Controls.Button
+        var autoDetectBtn = new System.Windows.Controls.Button
         {
             Content = "⚡ Auto-Detect from Currently Running Game",
-            Appearance = Wpf.Ui.Controls.ControlAppearance.Primary,
-            Margin = new Thickness(0, 0, 0, 14),
-            HorizontalAlignment = HorizontalAlignment.Stretch
+            Style = (Style)FindResource("SteamBlueButtonStyle"),
+            Margin = new Thickness(0, 0, 0, 16),
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            Padding = new Thickness(14, 8, 14, 8)
         };
         stack.Children.Add(autoDetectBtn);
 
-        stack.Children.Add(new TextBlock { Text = "Game Name:", FontSize = 12, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 4) });
-        var nameBox = new Wpf.Ui.Controls.TextBox { PlaceholderText = "e.g. My Custom Game", Margin = new Thickness(0, 0, 0, 8) };
+        stack.Children.Add(new TextBlock { Text = "Game Name:", FontSize = 12, FontWeight = FontWeights.SemiBold, Foreground = labelBrush, Margin = new Thickness(0, 0, 0, 4) });
+        var nameBox = new Wpf.Ui.Controls.TextBox { PlaceholderText = "e.g. My Custom Game", Margin = new Thickness(0, 0, 0, 10) };
         stack.Children.Add(nameBox);
 
-        stack.Children.Add(new TextBlock { Text = "Process Executable Name:", FontSize = 12, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 4) });
-        var procBox = new Wpf.Ui.Controls.TextBox { PlaceholderText = "e.g. game.exe (without path)", Margin = new Thickness(0, 0, 0, 8) };
+        stack.Children.Add(new TextBlock { Text = "Process Executable Name:", FontSize = 12, FontWeight = FontWeights.SemiBold, Foreground = labelBrush, Margin = new Thickness(0, 0, 0, 4) });
+        var procBox = new Wpf.Ui.Controls.TextBox { PlaceholderText = "e.g. game.exe (without path)", Margin = new Thickness(0, 0, 0, 10) };
         stack.Children.Add(procBox);
 
-        stack.Children.Add(new TextBlock { Text = "Save Folder Path (supports %APPDATA%, %USERPROFILE%):", FontSize = 12, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 4) });
+        stack.Children.Add(new TextBlock { Text = "Save Folder Path (supports %APPDATA%, %USERPROFILE%):", FontSize = 12, FontWeight = FontWeights.SemiBold, Foreground = labelBrush, Margin = new Thickness(0, 0, 0, 4) });
 
-        var pathGrid = new Grid { Margin = new Thickness(0, 0, 0, 8) };
+        var pathGrid = new Grid { Margin = new Thickness(0, 0, 0, 12) };
         pathGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         pathGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
         var pathBox = new Wpf.Ui.Controls.TextBox { PlaceholderText = @"e.g. %APPDATA%\MyGame\Saves" };
         Grid.SetColumn(pathBox, 0);
 
-        var browseBtn = new Wpf.Ui.Controls.Button
+        var browseBtn = new System.Windows.Controls.Button
         {
             Content = "Browse...",
-            Appearance = Wpf.Ui.Controls.ControlAppearance.Secondary,
-            Margin = new Thickness(6, 0, 0, 0)
+            Style = (Style)FindResource("SteamSecondaryButtonStyle"),
+            Margin = new Thickness(8, 0, 0, 0),
+            Padding = new Thickness(14, 6, 14, 6)
         };
         Grid.SetColumn(browseBtn, 1);
         browseBtn.Click += (_, _) =>
@@ -383,8 +366,9 @@ public partial class UniversalSavesPage : Page
         stack.Children.Add(pathGrid);
 
         // Auto-detect button logic
-        autoDetectBtn.Click += (_, _) =>
+        autoDetectBtn.Click += async (_, _) =>
         {
+            // 1. Check verified running game saves
             var runningGames = GameSaveAutoDetector.DetectFromRunningProcesses();
             if (runningGames.Count > 0)
             {
@@ -395,43 +379,53 @@ public partial class UniversalSavesPage : Page
                 return;
             }
 
-            var runningProcs = System.Diagnostics.Process.GetProcesses()
-                .Where(p => !string.IsNullOrEmpty(p.MainWindowTitle) && !GameSaveAutoDetector.IsSystemProcess(p.ProcessName))
-                .ToList();
-            if (runningProcs.Count > 0)
+            // 2. Search running processes for verified game candidates (strictly excluding system and Windows apps)
+            var candidates = new List<(string Name, string Exe, string? Path)>();
+            try
             {
-                var p = runningProcs[0];
-                nameBox.Text = p.MainWindowTitle;
-                procBox.Text = p.ProcessName + ".exe";
-                var detected = GameSaveAutoDetector.DetectSaveFolder(p.MainWindowTitle, p.ProcessName);
-                if (!string.IsNullOrEmpty(detected))
+                var procs = System.Diagnostics.Process.GetProcesses();
+                foreach (var p in procs)
                 {
-                    pathBox.Text = detected;
+                    try
+                    {
+                        if (string.IsNullOrWhiteSpace(p.MainWindowTitle)) continue;
+                        if (GameSaveAutoDetector.IsSystemProcess(p.ProcessName, p)) continue;
+                        if (p.MainWindowHandle == IntPtr.Zero) continue;
+
+                        var detected = GameSaveAutoDetector.DetectSaveFolder(p.MainWindowTitle, p.ProcessName);
+                        if (!string.IsNullOrEmpty(detected) && Directory.Exists(detected))
+                        {
+                            candidates.Add((p.MainWindowTitle, p.ProcessName + ".exe", detected));
+                        }
+                    }
+                    catch { }
                 }
+            }
+            catch { }
+
+            if (candidates.Count > 0)
+            {
+                var match = candidates[0];
+                nameBox.Text = match.Name;
+                procBox.Text = match.Exe;
+                pathBox.Text = match.Path;
             }
             else
             {
-                var alert = new Wpf.Ui.Controls.MessageBox
-                {
-                    Title = "Auto-Detect",
-                    Content = "No active game processes were detected. Make sure your game is launched and running.",
-                    CloseButtonText = "OK"
-                };
-                _ = alert.ShowDialogAsync();
+                await Services.Dialog.ShowWarningAsync(
+                    "No Running Game Detected",
+                    "No active game processes were detected on your system.\n\nPlease start your game first before clicking Auto-Detect, or manually fill in the Game Name and Save Folder Path.");
             }
         };
 
-        var box = new Wpf.Ui.Controls.MessageBox
-        {
-            Title = "Add Custom Game",
-            Content = stack,
-            PrimaryButtonText = "Add Game",
-            PrimaryButtonAppearance = Wpf.Ui.Controls.ControlAppearance.Primary,
-            CloseButtonText = "Cancel"
-        };
+        bool confirmed = await Services.Dialog.ShowCustomAsync(
+            "Add Custom Game",
+            stack,
+            primaryText: "Add Game",
+            secondaryText: "Cancel",
+            theme: Dialogs.SteamMessageBoxDialog.ButtonTheme.PlayGreen);
 
-        var result = await box.ShowDialogAsync();
-        if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
+        if (confirmed)
         {
             var name = nameBox.Text.Trim();
             var proc = procBox.Text.Trim();
@@ -439,13 +433,9 @@ public partial class UniversalSavesPage : Page
 
             if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(path))
             {
-                var errBox = new Wpf.Ui.Controls.MessageBox
-                {
-                    Title = "Invalid Input",
-                    Content = "Please provide at least a Game Name and Save Folder Path.",
-                    CloseButtonText = "OK"
-                };
-                await errBox.ShowDialogAsync();
+                await Services.Dialog.ShowWarningAsync(
+                    "Invalid Input",
+                    "Please provide at least a Game Name and Save Folder Path.");
                 return;
             }
 
@@ -528,22 +518,46 @@ public partial class UniversalSavesPage : Page
     {
         if (sender is FrameworkElement fe && fe.Tag is UniversalGameProfile profile)
         {
-            var box = new Wpf.Ui.Controls.MessageBox
-            {
-                Title = "Remove Game",
-                Content = $"Stop monitoring '{profile.GameName}'? Existing backups will not be deleted.",
-                PrimaryButtonText = "Remove",
-                PrimaryButtonAppearance = Wpf.Ui.Controls.ControlAppearance.Danger,
-                CloseButtonText = "Cancel"
-            };
+            bool confirmed = await Services.Dialog.ConfirmDangerAsync(
+                "Remove Game",
+                $"Stop monitoring '{profile.GameName}'? Existing backups will not be deleted.");
 
-            var res = await box.ShowDialogAsync();
-            if (res == Wpf.Ui.Controls.MessageBoxResult.Primary)
+            if (confirmed)
             {
                 UniversalSaveWatcherService.RemoveProfile(profile.Id);
                 RefreshList();
             }
         }
+    }
+
+    private void GameCard_MouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        // Don't trigger if clicked on child button or interactive control
+        if (e.OriginalSource is DependencyObject dep)
+        {
+            var btn = FindVisualParent<System.Windows.Controls.Button>(dep) ?? (DependencyObject?)FindVisualParent<Wpf.Ui.Controls.Button>(dep);
+            if (btn != null) return;
+        }
+
+        if (sender is FrameworkElement fe && fe.DataContext is UniversalGameProfile profile)
+        {
+            var appId = profile.SteamAppId > 0 ? profile.SteamAppId.ToString() : null;
+            var dialog = new SaveHistoryDialog(profile.GameName, profile.ExpandedSavePath, appId)
+            {
+                Owner = Window.GetWindow(this)
+            };
+            dialog.ShowDialog();
+        }
+    }
+
+    private static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject
+    {
+        while (child != null)
+        {
+            if (child is T parent) return parent;
+            child = System.Windows.Media.VisualTreeHelper.GetParent(child);
+        }
+        return null;
     }
 
     private void OpenFolder_Click(object sender, RoutedEventArgs e)

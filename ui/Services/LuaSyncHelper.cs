@@ -112,16 +112,6 @@ public static class LuaSyncHelper
 
                 totalBackedUp = luaFiles.Length;
 
-                // If folder provider is active, also copy to sync folder
-                var cfg = SteamDetector.ReadConfig();
-                if (cfg != null && cfg.IsFolder && !string.IsNullOrEmpty(cfg.SyncPath) && Directory.Exists(cfg.SyncPath))
-                {
-                    var acctName = Path.GetFileName(acct);
-                    var cloudZero = Path.Combine(cfg.SyncPath, acctName, "0");
-                    Directory.CreateDirectory(cloudZero);
-                    File.Copy(zipPath, Path.Combine(cloudZero, "LuaArchive.zip"), true);
-                    File.Copy(manifestPath, Path.Combine(cloudZero, "LuaManifest.json"), true);
-                }
             }
             catch (Exception ex)
             {
@@ -151,14 +141,6 @@ public static class LuaSyncHelper
         var storageBase = Path.Combine(steamPath, "cloud_redirect", "storage");
         string? zipSource = null;
 
-        // Check folder provider first if configured
-        var cfg = SteamDetector.ReadConfig();
-        if (cfg != null && cfg.IsFolder && !string.IsNullOrEmpty(cfg.SyncPath) && Directory.Exists(cfg.SyncPath))
-        {
-            var cloudZips = Directory.GetFiles(cfg.SyncPath, "LuaArchive.zip", SearchOption.AllDirectories);
-            if (cloudZips.Length > 0)
-                zipSource = cloudZips[0];
-        }
 
         // Check local cloud_redirect storage
         if (zipSource == null && Directory.Exists(storageBase))

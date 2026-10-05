@@ -278,39 +278,6 @@ public partial class SetupPage : Page
         }
     }
 
-    /// <summary>
-    /// Writes a default config.json that uses the folder provider with
-    /// &lt;steamdir&gt;/localcloud as the sync path.
-    /// </summary>
-    private async Task WriteDefaultLocalConfig()
-    {
-        var configDir = Services.SteamDetector.GetConfigDir();
-
-        try
-        {
-            Directory.CreateDirectory(configDir);
-
-            var localCloudPath = Path.Combine(_steamPath ?? "", "localcloud");
-            Directory.CreateDirectory(localCloudPath);
-
-            var configPath = Path.Combine(configDir, "config.json");
-
-            await Task.Run(() => Services.ConfigHelper.SaveConfig(configPath,
-                new[] { "provider", "sync_path" },
-                writer =>
-                {
-                    writer.WriteString("provider", "folder");
-                    writer.WriteString("sync_path", localCloudPath);
-                }));
-
-            Log($"Default config written - saves will sync to: {localCloudPath}");
-            Log("You can change this later on the Cloud Provider page.");
-        }
-        catch (Exception ex)
-        {
-            Log($"WARNING: Failed to write default config: {ex.Message}");
-        }
-    }
 
     private async void RunAll_Click(object sender, RoutedEventArgs e)
     {
@@ -413,40 +380,24 @@ public partial class SetupPage : Page
             bool providerReady = false;
             var existingConfig = Services.SteamDetector.ReadConfig();
             if (existingConfig != null &&
-                existingConfig.Provider is "gdrive" or "onedrive" &&
+                existingConfig.Provider == "gdrive" &&
                 !string.IsNullOrEmpty(existingConfig.TokenPath))
             {
                 var tokenStatus = Services.OAuthService.CheckTokenStatus(existingConfig.TokenPath);
                 providerReady = tokenStatus.IsAuthenticated;
             }
-            else if (existingConfig != null &&
-                     existingConfig.Provider is "r2" or "s3" &&
-                     !string.IsNullOrEmpty(existingConfig.TokenPath) &&
-                     File.Exists(existingConfig.TokenPath))
-            {
-                providerReady = true;
-            }
 
             if (!providerReady)
             {
-                var statusText = S.Get("Setup_AllPatchesApplied");
-                string message = existingConfig != null
-                    ? S.Format("Setup_ConfigureProviderExisting", statusText, existingConfig.DisplayName)
-                    : S.Format("Setup_ConfigureProviderNew", statusText);
-
                 var wantsConfigure = await Services.Dialog.ChoiceAsync(
-                    S.Get("Setup_ConfigureProviderTitle"),
-                    message,
-                    S.Get("Setup_ConfigureProvider"),
-                    S.Get("Setup_UseLocalStorage"));
+                    "Google Drive Setup Required",
+                    "Steam Cloud redirection requires Google Drive authentication. Would you like to launch the Setup Wizard to connect your Google Drive account now?",
+                    "Launch Wizard",
+                    "Later");
 
                 if (wantsConfigure)
                 {
-                    NavigateToCloudProvider();
-                }
-                else if (existingConfig == null)
-                {
-                    await WriteDefaultLocalConfig();
+                    (Window.GetWindow(this) as MainWindow)?.NavigateTo(typeof(SetupWizardPage));
                 }
             }
 

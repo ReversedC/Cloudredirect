@@ -43,6 +43,8 @@ void RecordExitSyncState(uint32_t accountId, uint32_t appId,
 std::vector<Entry> LoadPending(uint32_t accountId, uint32_t appId);
 std::optional<Entry> LoadCurrentSession(uint32_t accountId, uint32_t appId);
 bool HasPendingUpload(uint32_t accountId, uint32_t appId);
+// UploadInProgress or UploadPending; covers the mid-batch crash window.
+bool HasInterruptedUpload(uint32_t accountId, uint32_t appId);
 void ClearUploadPending(uint32_t accountId, uint32_t appId);
 void ClearPending(uint32_t accountId, uint32_t appId);
 

@@ -359,6 +359,13 @@
 
                         <!-- Action Buttons Bar -->
                         <StackPanel Grid.Row="2" Orientation="Horizontal">
+                            <ui:Button Content="{res:Loc Nav_SetupWizard}"
+                                       Appearance="Primary"
+                                       Icon="{ui:SymbolIcon Sparkle24}"
+                                       Padding="10,4" FontSize="11"
+                                       Margin="0,0,8,0"
+                                       Cursor="Hand"
+                                       Click="SetupWizardCard_Click" />
                             <ui:Button Content="{res:Loc Dashboard_AppsSyncing}"
                                        Appearance="Secondary"
                                        Icon="{ui:SymbolIcon Games24}"
@@ -366,10 +373,11 @@
                                        Margin="0,0,8,0"
                                        Cursor="Hand"
                                        Click="AppsSyncingCard_Click" />
-                            <ui:Button Content="Cloud Settings"
+                            <ui:Button Content="{res:Loc Nav_CloudProvider}"
                                        Appearance="Secondary"
                                        Icon="{ui:SymbolIcon Settings24}"
                                        Padding="10,4" FontSize="11"
+                                       Margin="0,0,8,0"
                                        Cursor="Hand"
                                        Click="CloudProviderCard_Click" />
                         </StackPanel>
@@ -595,12 +603,12 @@
                                    Cursor="Hand"
                                    Click="StatsAction_Click" />
 
-                        <ui:Button Content="{res:Loc Nav_Migration}"
-                                   Icon="{ui:SymbolIcon ArrowSync24}"
+                        <ui:Button Content="{res:Loc Nav_SetupWizard}"
+                                   Icon="{ui:SymbolIcon Sparkle24}"
                                    Padding="14,6"
                                    Margin="0,0,8,6"
                                    Cursor="Hand"
-                                   Click="MigrationAction_Click" />
+                                   Click="SetupWizardCard_Click" />
 
                         <ui:Button Content="{res:Loc Nav_Changelog}"
                                    Icon="{ui:SymbolIcon History24}"

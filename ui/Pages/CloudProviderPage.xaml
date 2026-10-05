@@ -22,13 +22,22 @@
                        Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                        Margin="0,0,0,6" />
 
-            <ComboBox x:Name="ProviderCombo"
-                      Width="300"
-                      HorizontalAlignment="Left"
-                      Margin="0,0,0,16"
-                      SelectionChanged="ProviderCombo_SelectionChanged">
-                <ComboBoxItem Content="{res:Loc CloudProvider_GoogleDrive}" Tag="gdrive" />
-                <ComboBoxItem Content="{res:Loc CloudProvider_FolderMappedDrive}" Tag="folder" />
+            <!-- Google Drive Active Badge + Wizard Button -->
+            <Border Background="#16293A" BorderBrush="#254F70" BorderThickness="1"
+                    CornerRadius="8" Padding="16,12" HorizontalAlignment="Left" Margin="0,0,0,16">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <ui:SymbolIcon Symbol="CloudSync24" FontSize="24" Foreground="#66C0F4" Margin="0,0,12,0" VerticalAlignment="Center" />
+                    <StackPanel VerticalAlignment="Center" Margin="0,0,24,0">
+                        <TextBlock Text="Google Drive" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                        <TextBlock Text="Primary cloud save storage for all Steam games" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                    <ui:Button Content="Open Setup Wizard" Appearance="Primary" Icon="{ui:SymbolIcon Sparkle24}" Click="OpenWizard_Click" VerticalAlignment="Center" />
+                </StackPanel>
+            </Border>
+
+            <!-- Hidden ProviderCombo with single gdrive item for backward compatibility -->
+            <ComboBox x:Name="ProviderCombo" Visibility="Collapsed">
+                <ComboBoxItem Content="Google Drive" Tag="gdrive" IsSelected="True" />
             </ComboBox>
 
             <TextBlock x:Name="PathLabel"
@@ -60,162 +69,6 @@
                        TextWrapping="Wrap"
                        Visibility="Collapsed"
                        Margin="0,-16,0,24" />
-
-            <!-- R2 Credential Entry (visible only when R2 is selected) -->
-            <StackPanel x:Name="R2CredentialsPanel" Visibility="Collapsed" Margin="0,0,0,24">
-                <TextBlock Text="{res:Loc CloudProvider_R2CredTitle}"
-                           FontWeight="SemiBold"
-                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                           Margin="0,0,0,8" />
-                <TextBlock Text="{res:Loc CloudProvider_R2CredDescription}"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                           TextWrapping="Wrap"
-                           Margin="0,0,0,16" />
-
-                <TextBlock Text="{res:Loc CloudProvider_R2AccountId}"
-                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                           Margin="0,0,0,4" />
-                <ui:TextBox x:Name="R2AccountIdBox"
-                            PlaceholderText="e.g. a1b2c3d4e5f6..."
-                            Margin="0,0,0,12" />
-
-                <TextBlock Text="{res:Loc CloudProvider_R2AccessKeyId}"
-                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                           Margin="0,0,0,4" />
-                <ui:TextBox x:Name="R2AccessKeyBox"
-                            PlaceholderText="e.g. AKIAIOSFODNN7EXAMPLE"
-                            Margin="0,0,0,12" />
-
-                <TextBlock Text="{res:Loc CloudProvider_R2SecretKey}"
-                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                           Margin="0,0,0,4" />
-                <PasswordBox x:Name="R2SecretKeyBox"
-                             Margin="0,0,0,12" />
-
-                <TextBlock Text="{res:Loc CloudProvider_R2Bucket}"
-                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                           Margin="0,0,0,4" />
-                <ui:TextBox x:Name="R2BucketBox"
-                            PlaceholderText="e.g. my-saves"
-                            Margin="0,0,0,16" />
-
-                <TextBlock Text="{res:Loc CloudProvider_R2Advanced}"
-                           FontWeight="SemiBold"
-                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                           Margin="0,0,0,8" />
-
-                <TextBlock Text="{res:Loc CloudProvider_R2KeyPrefix}"
-                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                           Margin="0,0,0,4" />
-                <ui:TextBox x:Name="R2KeyPrefixBox"
-                            PlaceholderText="e.g. cloudredirect/"
-                            Margin="0,0,0,12" />
-
-                <TextBlock Text="{res:Loc CloudProvider_R2Endpoint}"
-                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                           Margin="0,0,0,4" />
-                <ui:TextBox x:Name="R2EndpointBox"
-                            PlaceholderText="leave blank for &lt;account&gt;.r2.cloudflarestorage.com"
-                            Margin="0,0,0,16" />
-
-                <ui:Button x:Name="R2SaveCredsButton"
-                           Content="{res:Loc CloudProvider_R2SaveCreds}"
-                           Appearance="Primary"
-                           Icon="{ui:SymbolIcon Save24}"
-                           Click="R2SaveCreds_Click" />
-            </StackPanel>
-
-            <!-- S3-Compatible Credential Entry (visible only when S3 is selected) -->
-            <StackPanel x:Name="S3CredentialsPanel" Visibility="Collapsed" Margin="0,0,0,24">
-                <TextBlock Text="{res:Loc CloudProvider_S3CredTitle}"
-                           FontWeight="SemiBold"
-                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                           Margin="0,0,0,8" />
-                <TextBlock Text="{res:Loc CloudProvider_S3CredDescription}"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                           TextWrapping="Wrap"
-                           Margin="0,0,0,16" />
-
-                <TextBlock Text="{res:Loc CloudProvider_S3Endpoint}"
-                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                           Margin="0,0,0,4" />
-                <ui:TextBox x:Name="S3EndpointBox"
-                            PlaceholderText="e.g. s3.us-east-1.amazonaws.com or minio.example.com:9000"
-                            Margin="0,0,0,12" />
-
-                <TextBlock Text="{res:Loc CloudProvider_S3AccessKeyId}"
-                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                           Margin="0,0,0,4" />
-                <ui:TextBox x:Name="S3AccessKeyBox"
-                            PlaceholderText="access key id"
-                            Margin="0,0,0,12" />
-
-                <TextBlock Text="{res:Loc CloudProvider_S3SecretKey}"
-                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                           Margin="0,0,0,4" />
-                <PasswordBox x:Name="S3SecretKeyBox"
-                             Margin="0,0,0,12" />
-
-                <TextBlock Text="{res:Loc CloudProvider_S3Bucket}"
-                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                           Margin="0,0,0,4" />
-                <ui:TextBox x:Name="S3BucketBox"
-                            PlaceholderText="bucket name"
-                            Margin="0,0,0,12" />
-
-                <TextBlock Text="{res:Loc CloudProvider_S3Region}"
-                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                           Margin="0,0,0,4" />
-                <ui:TextBox x:Name="S3RegionBox"
-                            PlaceholderText="e.g. us-east-1"
-                            Margin="0,0,0,16" />
-
-                <TextBlock Text="{res:Loc CloudProvider_R2Advanced}"
-                           FontWeight="SemiBold"
-                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                           Margin="0,0,0,8" />
-
-                <TextBlock Text="{res:Loc CloudProvider_S3KeyPrefix}"
-                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                           Margin="0,0,0,4" />
-                <ui:TextBox x:Name="S3KeyPrefixBox"
-                            PlaceholderText="e.g. cloudredirect/"
-                            Margin="0,0,0,12" />
-
-                <CheckBox x:Name="S3SignPayloadCheck"
-                          Content="{res:Loc CloudProvider_S3SignPayload}"
-                          Margin="0,0,0,4" />
-                <CheckBox x:Name="S3InsecureHttpCheck"
-                          Content="{res:Loc CloudProvider_S3AllowInsecureHttp}"
-                          Margin="0,0,0,4" />
-                <CheckBox x:Name="S3InsecureTlsCheck"
-                          Content="{res:Loc CloudProvider_S3AllowInsecureTls}"
-                          Margin="0,0,0,12" />
-
-                <TextBlock Text="{res:Loc CloudProvider_S3CaCertPath}"
-                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                           Margin="0,0,0,4" />
-                <Grid Margin="0,0,0,16">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBox x:Name="S3CaCertBox"
-                                Grid.Column="0"
-                                PlaceholderText="e.g. C:\path\to\ca.pem" />
-                    <ui:Button x:Name="S3BrowseCaCertButton"
-                               Grid.Column="1"
-                               Content="{res:Loc CloudProvider_Browse}"
-                               Margin="8,0,0,0"
-                               Click="S3BrowseCaCert_Click" />
-                </Grid>
-
-                <ui:Button x:Name="S3SaveCredsButton"
-                           Content="{res:Loc CloudProvider_R2SaveCreds}"
-                           Appearance="Primary"
-                           Icon="{ui:SymbolIcon Save24}"
-                           Click="S3SaveCreds_Click" />
-            </StackPanel>
 
             <TextBlock Text="{res:Loc CloudProvider_Authentication}"
                        FontWeight="SemiBold"
@@ -331,20 +184,36 @@
                             </Grid.ColumnDefinitions>
 
                             <!-- QR Code Frame -->
-                            <Border Grid.Column="0"
-                                    Background="White"
-                                    CornerRadius="6"
-                                    Padding="6"
-                                    Width="134"
-                                    Height="134"
-                                    VerticalAlignment="Top"
-                                    Margin="0,0,16,0">
-                                <Image x:Name="QrCodeImage"
-                                       Width="122"
-                                       Height="122"
-                                       Stretch="Uniform"
-                                       RenderOptions.BitmapScalingMode="NearestNeighbor" />
-                            </Border>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Top" Margin="0,0,16,0" HorizontalAlignment="Center">
+                                <Border Background="White"
+                                        CornerRadius="6"
+                                        Padding="6"
+                                        Width="134"
+                                        Height="134"
+                                        BorderBrush="#3877A8"
+                                        BorderThickness="1.5"
+                                        Cursor="Hand"
+                                        ToolTip="{res:Loc Wizard_Step2_QrClickToEnlarge}"
+                                        MouseLeftButtonDown="QrImage_MouseLeftButtonDown">
+                                    <Image x:Name="QrCodeImage"
+                                           Width="122"
+                                           Height="122"
+                                           Stretch="Uniform"
+                                           RenderOptions.BitmapScalingMode="NearestNeighbor" />
+                                </Border>
+                                <Button Style="{StaticResource SteamSecondaryButtonStyle}"
+                                        FontSize="11"
+                                        Padding="10,3"
+                                        Margin="0,6,0,0"
+                                        HorizontalAlignment="Center"
+                                        ToolTip="{res:Loc Wizard_Step2_QrClickToEnlarge}"
+                                        Click="EnlargeQr_Click">
+                                    <StackPanel Orientation="Horizontal">
+                                        <ui:SymbolIcon Symbol="ZoomIn24" FontSize="13" Foreground="#66C0F4" Margin="0,0,4,0" VerticalAlignment="Center" />
+                                        <TextBlock Text="{res:Loc Wizard_Step2_EnlargeQr}" FontSize="11" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
 
                             <!-- QR Description & Mode Selector -->
                             <StackPanel Grid.Column="1" VerticalAlignment="Center">

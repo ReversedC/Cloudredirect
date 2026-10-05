@@ -1,11 +1,7 @@
 #include "cloud_storage.h"
 #include "app_state.h"
 #include "local_storage.h"
-#include "local_disk_provider.h"
 #include "google_drive_provider.h"
-#include "onedrive_provider.h"
-#include "s3_provider.h"
-#include "r2_provider.h"
 #include "cloud_metadata_paths.h"
 #include "cloud_staging.h"
 #include "file_util.h"
@@ -3138,38 +3134,13 @@ std::vector<uint32_t> SyncAllFromCloud(uint32_t accountId) {
 } // namespace CloudStorage
 
 // Factory implementation (declared in cloud_provider.h)
-std::unique_ptr<ICloudProvider> CreateCloudProvider(const std::string& name) {
-    // case-insensitive compare
-    std::string lower = name;
-    for (auto& c : lower) c = (char)tolower((unsigned char)c);
-
-    if (lower == "local" || lower == "folder") {
-        return std::make_unique<LocalDiskProvider>();
-    }
-    // R2 and generic S3 use static access-key credentials with per-request
-    // SigV4 signing, not OAuth token refresh, so they need no auth-failure
-    // callback. R2 is the Cloudflare-specialized subclass of S3Provider.
-    if (lower == "r2") {
-        return std::make_unique<R2Provider>();
-    }
-    if (lower == "s3") {
-        return std::make_unique<S3Provider>();
-    }
+std::unique_ptr<ICloudProvider> CreateCloudProvider(const std::string& /*name*/) {
+    // Google Drive is the sole supported cloud provider.
     // Wire the auth-failure callback at construction so CloudProviderBase
     // doesn't reverse-depend on CloudStorage.
-    auto wireAuthCallback = [](std::unique_ptr<CloudProviderBase> p)
-        -> std::unique_ptr<ICloudProvider> {
-        p->SetAuthFailureCallback(&CloudStorage::NotifyAuthFailure);
-        return p;
-    };
-    if (lower == "gdrive") {
-        return wireAuthCallback(std::make_unique<GoogleDriveProvider>());
-    }
-    if (lower == "onedrive") {
-        return wireAuthCallback(std::make_unique<OneDriveProvider>());
-    }
-    LOG("[CloudStorage] CreateCloudProvider: unknown provider '%s'", name.c_str());
-    return nullptr;
+    auto p = std::make_unique<GoogleDriveProvider>();
+    p->SetAuthFailureCallback(&CloudStorage::NotifyAuthFailure);
+    return p;
 }
 
 std::string ResolveProviderTokenPath(const std::string& configDir,
@@ -3197,11 +3168,15 @@ std::string ResolveProviderTokenPath(const std::string& configDir,
     // 3) Convention-based fallback. Must match the exact default filenames the
     //    UI writes so a first run works before Settings has persisted an
     //    explicit token_paths entry. Windows and Linux use different names.
-    if (provider == "r2")       return configDir + "r2_credentials.json";
-    if (provider == "s3")       return configDir + "s3_credentials.json";
+    if (provider == "gdrive" || provider.empty()) {
 #ifdef _WIN32
-    if (provider == "gdrive")   return configDir + "google_tokens.json";
-    if (provider == "onedrive") return configDir + "onedrive_tokens.json";
+        if (std::filesystem::exists(configDir + "gdrive_tokens.json")) {
+            return configDir + "gdrive_tokens.json";
+        }
+        return configDir + "google_tokens.json";
+#else
+        return configDir + "google_tokens.json";
 #endif
-    return configDir + "tokens_" + provider + ".json";
+    }
+    return configDir + "google_tokens.json";
 }

@@ -417,46 +417,6 @@ public static class LuaCloudSyncService
                 }
             }
         }
-        else if (config.IsFolder || config.IsLocal || !string.IsNullOrEmpty(config.SyncPath))
-        {
-            var syncPath = config.SyncPath ?? "";
-            if (Directory.Exists(syncPath))
-            {
-                var cloudDir = Path.Combine(syncPath, CloudFolderName);
-                if (Directory.Exists(cloudDir))
-                {
-                    foreach (var f in Directory.GetFiles(cloudDir, "*.crlua"))
-                    {
-                        var fname = Path.GetFileNameWithoutExtension(f);
-                        if (uint.TryParse(fname, out var appId))
-                        {
-                            var fi = new FileInfo(f);
-                            dict[appId] = new CloudFileInfo(f, Path.GetFileName(f), fi.Length, fi.LastWriteTimeUtc);
-                        }
-                    }
-                }
-
-                // Also check sync folder archives if present
-                foreach (var z in Directory.GetFiles(syncPath, "LuaArchive.zip", SearchOption.AllDirectories))
-                {
-                    try
-                    {
-                        using var zip = ZipFile.OpenRead(z);
-                        foreach (var entry in zip.Entries)
-                        {
-                            if (uint.TryParse(Path.GetFileNameWithoutExtension(entry.Name), out var appId))
-                            {
-                                if (!dict.ContainsKey(appId))
-                                {
-                                    dict[appId] = new CloudFileInfo($"archive:{z}:{entry.Name}", entry.Name, entry.Length, entry.LastWriteTime.UtcDateTime);
-                                }
-                            }
-                        }
-                    }
-                    catch { }
-                }
-            }
-        }
 
         return dict;
     }
@@ -526,35 +486,6 @@ public static class LuaCloudSyncService
                     item.CloudModifiedUtc = DateTime.UtcNow;
                     succeeded++;
                 }
-            }
-        }
-        else if (config != null && (config.IsFolder || config.IsLocal || !string.IsNullOrEmpty(config.SyncPath)))
-        {
-            var syncPath = config.SyncPath ?? "";
-            var cloudDir = Path.Combine(syncPath, CloudFolderName);
-            if (!Directory.Exists(cloudDir)) Directory.CreateDirectory(cloudDir);
-
-            for (int i = 0; i < total; i++)
-            {
-                ct.ThrowIfCancellationRequested();
-                var item = itemList[i];
-                progress?.Invoke(i + 1, total, item.GameName);
-
-                var localPath = Path.Combine(localDir, $"{item.AppId}.lua");
-                if (!File.Exists(localPath)) continue;
-
-                byte[] plainBytes = await File.ReadAllBytesAsync(localPath, ct);
-                byte[] encryptedBytes = LuaCrypto.Encrypt(plainBytes);
-
-                var destPath = Path.Combine(cloudDir, $"{item.AppId}.crlua");
-                await File.WriteAllBytesAsync(destPath, encryptedBytes, ct);
-
-                item.IsCloud = true;
-                item.IsEncrypted = true;
-                item.CloudFileId = destPath;
-                item.CloudSizeBytes = encryptedBytes.Length;
-                item.CloudModifiedUtc = DateTime.UtcNow;
-                succeeded++;
             }
         }
 
@@ -836,15 +767,6 @@ public static class LuaCloudSyncService
                     }
                 }
 
-                // 4. Remove from folder provider sync path if configured
-                if (config != null && !string.IsNullOrEmpty(config.SyncPath) && Directory.Exists(config.SyncPath))
-                {
-                    var crlua = Path.Combine(config.SyncPath, CloudFolderName, $"{item.AppId}.crlua");
-                    if (File.Exists(crlua))
-                    {
-                        try { File.Delete(crlua); deleted = true; } catch { }
-                    }
-                }
 
                 if (deleted || !string.IsNullOrEmpty(item.CloudFileId))
                 {

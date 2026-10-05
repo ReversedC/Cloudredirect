@@ -1618,6 +1618,12 @@ Tem certeza?</value>
   <data name="Nav_UniversalSaves" xml:space="preserve">
     <value>Nuvem Universal de Jogos</value>
   </data>
+  <data name="Nav_Changelog" xml:space="preserve">
+    <value>Histórico de Mudanças</value>
+  </data>
+  <data name="Nav_SetupWizard" xml:space="preserve">
+    <value>Assistente de Configuração</value>
+  </data>
   <data name="Settings_Experimental" xml:space="preserve">
     <value>Recursos experimentais</value>
   </data>
@@ -2675,5 +2681,251 @@ Deseja reiniciar a Steam agora para limpar o erro "Não foi possível sincroniza
   </data>
   <data name="Settings_UpdateBranch_RestartContent" xml:space="preserve">
     <value>Mudar para o canal {0} requer reiniciar o CloudRedirect para verificar e aplicar atualizações. Deseja reiniciar agora?</value>
+  </data>
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- SetupWizardPage                                                     -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <data name="Wizard_Title" xml:space="preserve">
+    <value>Assistente de Configuração do CloudRedirect</value>
+  </data>
+  <data name="Wizard_Badge" xml:space="preserve">
+    <value>Edição Google Drive</value>
+  </data>
+  <data name="Wizard_Subtitle" xml:space="preserve">
+    <value>Siga estas etapas para conectar seu Google Drive e ativar a sincronização automática de saves da Steam Cloud.</value>
+  </data>
+  <data name="Wizard_Step1_Pill" xml:space="preserve">
+    <value>Verificação da Steam</value>
+  </data>
+  <data name="Wizard_Step2_Pill" xml:space="preserve">
+    <value>Login do Google</value>
+  </data>
+  <data name="Wizard_Step3_Pill" xml:space="preserve">
+    <value>Pronto para Jogar</value>
+  </data>
+  <data name="Wizard_Step1_Title" xml:space="preserve">
+    <value>Preparação do Sistema e da Steam</value>
+  </data>
+  <data name="Wizard_Step1_Desc" xml:space="preserve">
+    <value>Verificando se a instalação da Steam e o núcleo de redirecionamento estão prontos para sincronização.</value>
+  </data>
+  <data name="Wizard_Step1_SteamHeader" xml:space="preserve">
+    <value>Instalação da Steam</value>
+  </data>
+  <data name="Wizard_Step1_Detecting" xml:space="preserve">
+    <value>Detectando...</value>
+  </data>
+  <data name="Wizard_Step1_SteamNotFound" xml:space="preserve">
+    <value>Diretório da Steam não encontrado.</value>
+  </data>
+  <data name="Wizard_Step1_CoreDllHeader" xml:space="preserve">
+    <value>Motor de Redirecionamento (cloud_redirect.dll)</value>
+  </data>
+  <data name="Wizard_Step1_DllCurrent" xml:space="preserve">
+    <value>Implantado e atualizado.</value>
+  </data>
+  <data name="Wizard_Step1_DllAutoDeploy" xml:space="preserve">
+    <value>Será implantado automaticamente ao iniciar.</value>
+  </data>
+  <data name="Wizard_Step1_DbHeader" xml:space="preserve">
+    <value>Detector Automático de Saves (Banco Comunitário)</value>
+  </data>
+  <data name="Wizard_Step1_DbDesc" xml:space="preserve">
+    <value>Banco de dados offline carregado (mais de 14.500 jogos compatíveis).</value>
+  </data>
+  <data name="Wizard_Step1_Continue" xml:space="preserve">
+    <value>Continuar para o Login do Google</value>
+  </data>
+  <data name="Wizard_Step2_Title" xml:space="preserve">
+    <value>Conecte sua Conta do Google</value>
+  </data>
+  <data name="Wizard_Step2_Desc" xml:space="preserve">
+    <value>Faça login na sua conta do Google. O CloudRedirect salvará e recuperará seus saves com segurança diretamente no seu Google Drive.</value>
+  </data>
+  <data name="Wizard_Step2_AuthCardTitle" xml:space="preserve">
+    <value>Autenticação Google em Um Clique</value>
+  </data>
+  <data name="Wizard_Step2_AuthCardDesc" xml:space="preserve">
+    <value>Clique abaixo para abrir seu navegador padrão e conceder permissões de backup de saves.</value>
+  </data>
+  <data name="Wizard_Step2_SignInBrowser" xml:space="preserve">
+    <value>Entrar com o Navegador</value>
+  </data>
+  <data name="Wizard_Step2_SignInPhone" xml:space="preserve">
+    <value>Entrar com o Celular (QR)</value>
+  </data>
+  <data name="Wizard_Step2_Cancel" xml:space="preserve">
+    <value>Cancelar</value>
+  </data>
+  <data name="Wizard_Step2_SignInAgain" xml:space="preserve">
+    <value>Entrar Novamente</value>
+  </data>
+  <data name="Wizard_Step2_QrTitle" xml:space="preserve">
+    <value>Escanear com a Câmera do Celular</value>
+  </data>
+  <data name="Wizard_Step2_QrDesc" xml:space="preserve">
+    <value>Escaneie este código QR com a câmera do seu celular para concluir o login do Google diretamente pelo telefone.</value>
+  </data>
+  <data name="Wizard_Step2_QrWifi" xml:space="preserve">
+    <value>Wi-Fi Local (Recomendado)</value>
+  </data>
+  <data name="Wizard_Step2_QrDirect" xml:space="preserve">
+    <value>Link Direto</value>
+  </data>
+  <data name="Wizard_Step2_StatusReadyTitle" xml:space="preserve">
+    <value>Status: Pronto para conectar</value>
+  </data>
+  <data name="Wizard_Step2_StatusReadyDesc" xml:space="preserve">
+    <value>Clique em 'Entrar com o Navegador' ou 'Entrar com o Celular (QR)' para começar.</value>
+  </data>
+  <data name="Wizard_Step2_OpeningBrowser" xml:space="preserve">
+    <value>Abrindo o navegador...</value>
+  </data>
+  <data name="Wizard_Step2_WaitingPhone" xml:space="preserve">
+    <value>Aguardando escaneamento pelo celular...</value>
+  </data>
+  <data name="Wizard_Step2_OpeningBrowserDesc" xml:space="preserve">
+    <value>Conclua o login no navegador ou escaneie o código QR abaixo com o celular.</value>
+  </data>
+  <data name="Wizard_Step2_WaitingPhoneDesc" xml:space="preserve">
+    <value>Escaneie o código QR abaixo com a câmera do smartphone para fazer login.</value>
+  </data>
+  <data name="Wizard_Step2_ConnectedTitle" xml:space="preserve">
+    <value>Conectado ao Google Drive!</value>
+  </data>
+  <data name="Wizard_Step2_NotConnectedTitle" xml:space="preserve">
+    <value>Não conectado</value>
+  </data>
+  <data name="Wizard_Step2_AuthSuccess" xml:space="preserve">
+    <value>Autenticado com sucesso!</value>
+  </data>
+  <data name="Wizard_Step2_AuthIncomplete" xml:space="preserve">
+    <value>O login não foi concluído. Tente novamente.</value>
+  </data>
+  <data name="Wizard_Step2_AuthCancelled" xml:space="preserve">
+    <value>Login cancelado.</value>
+  </data>
+  <data name="Wizard_Step2_AuthFailed" xml:space="preserve">
+    <value>Falha no login: {0}</value>
+  </data>
+  <data name="Wizard_Step2_ExpanderHeader" xml:space="preserve">
+    <value>Opções Manuais / Token Offline (Caso o navegador não abra)</value>
+  </data>
+  <data name="Wizard_Step2_ManualDesc" xml:space="preserve">
+    <value>Se o navegador não abriu automaticamente ou você está usando o CloudRedirect em um PC secundário:</value>
+  </data>
+  <data name="Wizard_Step2_OptionA" xml:space="preserve">
+    <value>Opção A: Copiar URL de Autorização</value>
+  </data>
+  <data name="Wizard_Step2_CopyUrlBtn" xml:space="preserve">
+    <value>Copiar Link de Login para a Área de Transferência</value>
+  </data>
+  <data name="Wizard_Step2_OptionB" xml:space="preserve">
+    <value>Opção B: Colar URL de Redirecionamento ou Código</value>
+  </data>
+  <data name="Wizard_Step2_PastePlaceholder" xml:space="preserve">
+    <value>Cole a URL de retorno completa da barra de endereços do navegador...</value>
+  </data>
+  <data name="Wizard_Step2_SubmitCodeBtn" xml:space="preserve">
+    <value>Enviar Código</value>
+  </data>
+  <data name="Wizard_Step2_OptionC" xml:space="preserve">
+    <value>Opção C: Importar arquivo de token existente</value>
+  </data>
+  <data name="Wizard_Step2_BrowseFileBtn" xml:space="preserve">
+    <value>Procurar por gdrive_tokens.json / google_tokens.json...</value>
+  </data>
+  <data name="Wizard_Step2_LinkCopied" xml:space="preserve">
+    <value>Link copiado! Cole-o em qualquer navegador para autorizar.</value>
+  </data>
+  <data name="Wizard_Step2_ClickSignInFirst" xml:space="preserve">
+    <value>Clique primeiro em 'Entrar com o Navegador' para gerar seu link de autorização.</value>
+  </data>
+  <data name="Wizard_Step2_PasteFirst" xml:space="preserve">
+    <value>Cole a URL ou código de redirecionamento primeiro.</value>
+  </data>
+  <data name="Wizard_Step2_CodeSubmitted" xml:space="preserve">
+    <value>Código enviado! Verificando...</value>
+  </data>
+  <data name="Wizard_Step2_ClickSignInBeforeSubmit" xml:space="preserve">
+    <value>Clique em 'Entrar com o Navegador' antes de enviar o código.</value>
+  </data>
+  <data name="Wizard_Step2_SelectFileTitle" xml:space="preserve">
+    <value>Selecionar Arquivo de Token do Google Drive</value>
+  </data>
+  <data name="Wizard_Step2_ImportSuccess" xml:space="preserve">
+    <value>Arquivo de token importado com sucesso!</value>
+  </data>
+  <data name="Wizard_Step2_ImportFail" xml:space="preserve">
+    <value>Falha ao copiar arquivo de token: {0}</value>
+  </data>
+  <data name="Wizard_Step2_InvalidToken" xml:space="preserve">
+    <value>Arquivo de token inválido: {0}</value>
+  </data>
+  <data name="Wizard_Step2_Back" xml:space="preserve">
+    <value>Voltar</value>
+  </data>
+  <data name="Wizard_Step2_Next" xml:space="preserve">
+    <value>Avançar: Pronto para Jogar</value>
+  </data>
+  <data name="Wizard_Step3_Title" xml:space="preserve">
+    <value>Google Drive Conectado com Sucesso!</value>
+  </data>
+  <data name="Wizard_Step3_Desc" xml:space="preserve">
+    <value>Seus saves agora serão sincronizados automaticamente com o seu Google Drive pessoal em segundo plano.</value>
+  </data>
+  <data name="Wizard_Step3_SummaryHeader" xml:space="preserve">
+    <value>Resumo da Configuração Ativa</value>
+  </data>
+  <data name="Wizard_Step3_StorageProvider" xml:space="preserve">
+    <value>Provedor de Armazenamento</value>
+  </data>
+  <data name="Wizard_Step3_StorageProviderDesc" xml:space="preserve">
+    <value>Google Drive (Armazenamento em nuvem criptografado)</value>
+  </data>
+  <data name="Wizard_Step3_RemoteDest" xml:space="preserve">
+    <value>Destino Remoto</value>
+  </data>
+  <data name="Wizard_Step3_RemoteDestDesc" xml:space="preserve">
+    <value>cloudredirect_saves / [SteamAccountID] / [AppID]</value>
+  </data>
+  <data name="Wizard_Step3_Protection" xml:space="preserve">
+    <value>Proteção Contra Perda de Dados</value>
+  </data>
+  <data name="Wizard_Step3_ProtectionDesc" xml:space="preserve">
+    <value>Proteção contra upload interrompido e verificação remota ativas.</value>
+  </data>
+  <data name="Wizard_Step3_FinishBtn" xml:space="preserve">
+    <value>Concluir Configuração e Abrir Painel</value>
+  </data>
+  <data name="Wizard_Step2_EnlargeQr" xml:space="preserve">
+    <value>Ampliar QR</value>
+  </data>
+  <data name="Wizard_Step2_QrClickToEnlarge" xml:space="preserve">
+    <value>Clique para abrir o código QR em tamanho real</value>
+  </data>
+  <data name="Wizard_Step2_QrSizeLabel" xml:space="preserve">
+    <value>Tamanho de exibição:</value>
+  </data>
+  <data name="Wizard_Step2_QrSizeNormal" xml:space="preserve">
+    <value>Padrão</value>
+  </data>
+  <data name="Wizard_Step2_QrSizeLarge" xml:space="preserve">
+    <value>Grande (Fácil Leitura)</value>
+  </data>
+  <data name="QrDialog_Title" xml:space="preserve">
+    <value>ESCANEAR CÓDIGO QR</value>
+  </data>
+  <data name="QrDialog_Instructions" xml:space="preserve">
+    <value>Aponte a câmera do seu celular para este código QR para concluir a autorização.</value>
+  </data>
+  <data name="QrDialog_Copied" xml:space="preserve">
+    <value>Link Copiado!</value>
+  </data>
+  <data name="QrDialog_CopyLink" xml:space="preserve">
+    <value>Copiar Link</value>
+  </data>
+  <data name="QrDialog_Close" xml:space="preserve">
+    <value>Fechar</value>
   </data>
 </root>

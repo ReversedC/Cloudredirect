@@ -76,6 +76,12 @@
   <data name="Nav_UniversalSaves" xml:space="preserve">
     <value>범용 클라우드 세이브 (안전 모드)</value>
   </data>
+  <data name="Nav_Changelog" xml:space="preserve">
+    <value>변경 내역</value>
+  </data>
+  <data name="Nav_SetupWizard" xml:space="preserve">
+    <value>설정 마법사</value>
+  </data>
   <data name="Stats_Hint" xml:space="preserve">
     <value>주입된 앱의 현재 클라우드 도전 과제/플레이 시간 데이터를 확인합니다.</value>
   </data>
@@ -2720,5 +2726,251 @@ Steam의 '동기화할 수 없음' 오류를 지우기 위해 지금 Steam을 �
   </data>
   <data name="Settings_UpdateBranch_RestartContent" xml:space="preserve">
     <value>{0} 채널로 전환하려면 업데이트를 확인하고 적용하기 위해 CloudRedirect를 다시 시작해야 합니다. 지금 다시 시작하시겠습니까?</value>
+  </data>
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- SetupWizardPage                                                     -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <data name="Wizard_Title" xml:space="preserve">
+    <value>CloudRedirect 설정 마법사</value>
+  </data>
+  <data name="Wizard_Badge" xml:space="preserve">
+    <value>Google Drive 에디션</value>
+  </data>
+  <data name="Wizard_Subtitle" xml:space="preserve">
+    <value>다음 단계를 따라 Google Drive를 연결하고 자동 Steam 클라우드 세이브 동기화를 활성화하세요.</value>
+  </data>
+  <data name="Wizard_Step1_Pill" xml:space="preserve">
+    <value>Steam 확인</value>
+  </data>
+  <data name="Wizard_Step2_Pill" xml:space="preserve">
+    <value>Google 로그인</value>
+  </data>
+  <data name="Wizard_Step3_Pill" xml:space="preserve">
+    <value>플레이 준비 완료</value>
+  </data>
+  <data name="Wizard_Step1_Title" xml:space="preserve">
+    <value>시스템 및 Steam 준비 상태</value>
+  </data>
+  <data name="Wizard_Step1_Desc" xml:space="preserve">
+    <value>동기화를 위해 Steam 설치 및 리디렉션 코어가 준비되었는지 확인합니다.</value>
+  </data>
+  <data name="Wizard_Step1_SteamHeader" xml:space="preserve">
+    <value>Steam 설치</value>
+  </data>
+  <data name="Wizard_Step1_Detecting" xml:space="preserve">
+    <value>감지 중...</value>
+  </data>
+  <data name="Wizard_Step1_SteamNotFound" xml:space="preserve">
+    <value>Steam 디렉터리를 찾을 수 없습니다.</value>
+  </data>
+  <data name="Wizard_Step1_CoreDllHeader" xml:space="preserve">
+    <value>리디렉션 엔진 (cloud_redirect.dll)</value>
+  </data>
+  <data name="Wizard_Step1_DllCurrent" xml:space="preserve">
+    <value>배포 완료 및 최신 상태입니다.</value>
+  </data>
+  <data name="Wizard_Step1_DllAutoDeploy" xml:space="preserve">
+    <value>시작 시 자동으로 배포됩니다.</value>
+  </data>
+  <data name="Wizard_Step1_DbHeader" xml:space="preserve">
+    <value>세이브 자동 감지기 (커뮤니티 데이터베이스)</value>
+  </data>
+  <data name="Wizard_Step1_DbDesc" xml:space="preserve">
+    <value>오프라인 데이터베이스 로드 완료 (14,500개 이상의 게임 지원).</value>
+  </data>
+  <data name="Wizard_Step1_Continue" xml:space="preserve">
+    <value>Google 로그인으로 계속</value>
+  </data>
+  <data name="Wizard_Step2_Title" xml:space="preserve">
+    <value>Google 계정 연결</value>
+  </data>
+  <data name="Wizard_Step2_Desc" xml:space="preserve">
+    <value>Google 계정으로 로그인하세요. CloudRedirect가 게임 세이브를 Google Drive에 안전하게 보관하고 복원합니다.</value>
+  </data>
+  <data name="Wizard_Step2_AuthCardTitle" xml:space="preserve">
+    <value>원클릭 Google 인증</value>
+  </data>
+  <data name="Wizard_Step2_AuthCardDesc" xml:space="preserve">
+    <value>아래 버튼을 클릭하여 기본 브라우저를 열고 세이브 백업 권한을 허용하세요.</value>
+  </data>
+  <data name="Wizard_Step2_SignInBrowser" xml:space="preserve">
+    <value>브라우저로 로그인</value>
+  </data>
+  <data name="Wizard_Step2_SignInPhone" xml:space="preserve">
+    <value>스마트폰으로 로그인 (QR)</value>
+  </data>
+  <data name="Wizard_Step2_Cancel" xml:space="preserve">
+    <value>취소</value>
+  </data>
+  <data name="Wizard_Step2_SignInAgain" xml:space="preserve">
+    <value>다시 로그인</value>
+  </data>
+  <data name="Wizard_Step2_QrTitle" xml:space="preserve">
+    <value>스마트폰 카메라로 스캔</value>
+  </data>
+  <data name="Wizard_Step2_QrDesc" xml:space="preserve">
+    <value>스마트폰 카메라로 QR 코드를 스캔하여 휴대폰에서 직접 Google 로그인을 완료하세요.</value>
+  </data>
+  <data name="Wizard_Step2_QrWifi" xml:space="preserve">
+    <value>로컬 Wi-Fi (권장)</value>
+  </data>
+  <data name="Wizard_Step2_QrDirect" xml:space="preserve">
+    <value>다이렉트 링크</value>
+  </data>
+  <data name="Wizard_Step2_StatusReadyTitle" xml:space="preserve">
+    <value>상태: 연결 준비 완료</value>
+  </data>
+  <data name="Wizard_Step2_StatusReadyDesc" xml:space="preserve">
+    <value>'브라우저로 로그인' 또는 '스마트폰으로 로그인 (QR)'을 클릭하여 시작하세요.</value>
+  </data>
+  <data name="Wizard_Step2_OpeningBrowser" xml:space="preserve">
+    <value>브라우저 여는 중...</value>
+  </data>
+  <data name="Wizard_Step2_WaitingPhone" xml:space="preserve">
+    <value>스마트폰 스캔 대기 중...</value>
+  </data>
+  <data name="Wizard_Step2_OpeningBrowserDesc" xml:space="preserve">
+    <value>브라우저에서 로그인을 완료하거나 아래 QR 코드를 휴대폰으로 스캔하세요.</value>
+  </data>
+  <data name="Wizard_Step2_WaitingPhoneDesc" xml:space="preserve">
+    <value>스마트폰 카메라로 아래 QR 코드를 스캔하여 로그인하세요.</value>
+  </data>
+  <data name="Wizard_Step2_ConnectedTitle" xml:space="preserve">
+    <value>Google Drive에 연결되었습니다!</value>
+  </data>
+  <data name="Wizard_Step2_NotConnectedTitle" xml:space="preserve">
+    <value>연결되지 않음</value>
+  </data>
+  <data name="Wizard_Step2_AuthSuccess" xml:space="preserve">
+    <value>인증이 완료되었습니다!</value>
+  </data>
+  <data name="Wizard_Step2_AuthIncomplete" xml:space="preserve">
+    <value>로그인이 완료되지 않았습니다. 다시 시도해 주세요.</value>
+  </data>
+  <data name="Wizard_Step2_AuthCancelled" xml:space="preserve">
+    <value>로그인이 취소되었습니다.</value>
+  </data>
+  <data name="Wizard_Step2_AuthFailed" xml:space="preserve">
+    <value>로그인 실패: {0}</value>
+  </data>
+  <data name="Wizard_Step2_ExpanderHeader" xml:space="preserve">
+    <value>수동 로그인 / 오프라인 토큰 옵션 (브라우저가 열리지 않는 경우)</value>
+  </data>
+  <data name="Wizard_Step2_ManualDesc" xml:space="preserve">
+    <value>브라우저가 자동으로 열리지 않거나 다른 PC에서 CloudRedirect를 사용하는 경우:</value>
+  </data>
+  <data name="Wizard_Step2_OptionA" xml:space="preserve">
+    <value>옵션 A: 인증 URL 복사</value>
+  </data>
+  <data name="Wizard_Step2_CopyUrlBtn" xml:space="preserve">
+    <value>로그인 링크 클립보드에 복사</value>
+  </data>
+  <data name="Wizard_Step2_OptionB" xml:space="preserve">
+    <value>옵션 B: 리디렉션 URL 또는 인증 코드 붙여넣기</value>
+  </data>
+  <data name="Wizard_Step2_PastePlaceholder" xml:space="preserve">
+    <value>브라우저 주소창의 전체 콜백 URL을 붙여넣으세요...</value>
+  </data>
+  <data name="Wizard_Step2_SubmitCodeBtn" xml:space="preserve">
+    <value>코드 제출</value>
+  </data>
+  <data name="Wizard_Step2_OptionC" xml:space="preserve">
+    <value>옵션 C: 기존 토큰 파일 가져오기</value>
+  </data>
+  <data name="Wizard_Step2_BrowseFileBtn" xml:space="preserve">
+    <value>gdrive_tokens.json / google_tokens.json 찾기...</value>
+  </data>
+  <data name="Wizard_Step2_LinkCopied" xml:space="preserve">
+    <value>링크가 복사되었습니다! 웹 브라우저에 붙여넣어 인증하세요.</value>
+  </data>
+  <data name="Wizard_Step2_ClickSignInFirst" xml:space="preserve">
+    <value>인증 링크를 생성하려면 먼저 '브라우저로 로그인'을 클릭하세요.</value>
+  </data>
+  <data name="Wizard_Step2_PasteFirst" xml:space="preserve">
+    <value>리디렉션 URL 또는 코드를 먼저 붙여넣으세요.</value>
+  </data>
+  <data name="Wizard_Step2_CodeSubmitted" xml:space="preserve">
+    <value>코드가 제출되었습니다! 확인 중...</value>
+  </data>
+  <data name="Wizard_Step2_ClickSignInBeforeSubmit" xml:space="preserve">
+    <value>코드를 제출하기 전에 먼저 '브라우저로 로그인'을 클릭하세요.</value>
+  </data>
+  <data name="Wizard_Step2_SelectFileTitle" xml:space="preserve">
+    <value>Google Drive 토큰 파일 선택</value>
+  </data>
+  <data name="Wizard_Step2_ImportSuccess" xml:space="preserve">
+    <value>토큰 파일을 성공적으로 가져왔습니다!</value>
+  </data>
+  <data name="Wizard_Step2_ImportFail" xml:space="preserve">
+    <value>토큰 파일 복사 실패: {0}</value>
+  </data>
+  <data name="Wizard_Step2_InvalidToken" xml:space="preserve">
+    <value>유효하지 않은 토큰 파일: {0}</value>
+  </data>
+  <data name="Wizard_Step2_Back" xml:space="preserve">
+    <value>뒤로</value>
+  </data>
+  <data name="Wizard_Step2_Next" xml:space="preserve">
+    <value>다음: 플레이 준비 완료</value>
+  </data>
+  <data name="Wizard_Step3_Title" xml:space="preserve">
+    <value>Google Drive 연결 성공!</value>
+  </data>
+  <data name="Wizard_Step3_Desc" xml:space="preserve">
+    <value>이제 백그라운드에서 개인 Google Drive로 세이브가 자동 동기화됩니다.</value>
+  </data>
+  <data name="Wizard_Step3_SummaryHeader" xml:space="preserve">
+    <value>활성 설정 요약</value>
+  </data>
+  <data name="Wizard_Step3_StorageProvider" xml:space="preserve">
+    <value>스토리지 제공자</value>
+  </data>
+  <data name="Wizard_Step3_StorageProviderDesc" xml:space="preserve">
+    <value>Google Drive (암호화된 클라우드 세이브 저장소)</value>
+  </data>
+  <data name="Wizard_Step3_RemoteDest" xml:space="preserve">
+    <value>원격 대상 경로</value>
+  </data>
+  <data name="Wizard_Step3_RemoteDestDesc" xml:space="preserve">
+    <value>cloudredirect_saves / [SteamAccountID] / [AppID]</value>
+  </data>
+  <data name="Wizard_Step3_Protection" xml:space="preserve">
+    <value>데이터 손실 방지</value>
+  </data>
+  <data name="Wizard_Step3_ProtectionDesc" xml:space="preserve">
+    <value>중단된 업로드 보호 및 원격 목록 검증 활성화됨.</value>
+  </data>
+  <data name="Wizard_Step3_FinishBtn" xml:space="preserve">
+    <value>설정 완료 및 대시보드 열기</value>
+  </data>
+  <data name="Wizard_Step2_EnlargeQr" xml:space="preserve">
+    <value>QR 코드 확대</value>
+  </data>
+  <data name="Wizard_Step2_QrClickToEnlarge" xml:space="preserve">
+    <value>전체 크기 QR 코드를 열려면 클릭하세요</value>
+  </data>
+  <data name="Wizard_Step2_QrSizeLabel" xml:space="preserve">
+    <value>표시 크기:</value>
+  </data>
+  <data name="Wizard_Step2_QrSizeNormal" xml:space="preserve">
+    <value>표준</value>
+  </data>
+  <data name="Wizard_Step2_QrSizeLarge" xml:space="preserve">
+    <value>크게 (스캔 용이)</value>
+  </data>
+  <data name="QrDialog_Title" xml:space="preserve">
+    <value>QR 코드 스캔</value>
+  </data>
+  <data name="QrDialog_Instructions" xml:space="preserve">
+    <value>휴대폰 카메라를 QR 코드에 대고 인증을 완료하세요.</value>
+  </data>
+  <data name="QrDialog_Copied" xml:space="preserve">
+    <value>링크 복사됨!</value>
+  </data>
+  <data name="QrDialog_CopyLink" xml:space="preserve">
+    <value>링크 복사</value>
+  </data>
+  <data name="QrDialog_Close" xml:space="preserve">
+    <value>닫기</value>
   </data>
 </root>

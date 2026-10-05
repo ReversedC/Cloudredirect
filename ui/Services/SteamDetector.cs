@@ -1466,17 +1466,8 @@ public sealed record LastBackupInfo(
 /// </summary>
 public record CloudConfig(string Provider, string? TokenPath, string? SyncPath)
 {
-    public string DisplayName => Provider switch
-    {
-        "gdrive" => S.Get("Provider_GoogleDrive"),
-        "onedrive" => S.Get("Provider_OneDrive"),
-        "r2" => S.Get("Provider_R2"),
-        "s3" => S.Get("Provider_S3"),
-        "folder" => S.Get("Provider_FolderNetworkDrive"),
-        "local" => S.Get("Provider_LocalOnly"),
-        _ => Provider
-    };
+    public string DisplayName => S.Get("Provider_GoogleDrive");
 
-    public bool IsFolder => Provider == "folder";
-    public bool IsLocal => Provider == "local";
+    public bool IsFolder => false;
+    public bool IsLocal => false;
 }

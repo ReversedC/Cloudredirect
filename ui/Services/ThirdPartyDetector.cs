@@ -8,8 +8,9 @@ public static class ThirdPartyDetector
 {
     private static readonly string[] ProxyDllNames =
     {
-        "dwmapi.dll",      // OST + HubcapTools + StealIdra
+        "dwmapi.dll",      // OST + HubcapTools
         "xinput1_4.dll",   // OST alternate
+        "dwrite.dll",      // HubcapTools
     };
 
     // Compatible clients (allow deployment).

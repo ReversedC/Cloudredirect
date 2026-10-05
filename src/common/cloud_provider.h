@@ -60,18 +60,30 @@ public:
     virtual std::vector<FileInfo> List(const std::string& prefix) = 0;
 
     virtual std::vector<std::string> ListSubfolders(const std::string& prefix) {
-        auto files = List(prefix);
         std::vector<std::string> folders;
+        ListSubfoldersChecked(prefix, folders);
+        return folders;
+    }
+
+    // As ListSubfolders, but false means the listing failed rather than the
+    // prefix being empty. Callers that report results to a user want this.
+    virtual bool ListSubfoldersChecked(const std::string& prefix,
+                                       std::vector<std::string>& outFolders) {
+        outFolders.clear();
+        std::vector<FileInfo> files;
+        bool complete = false;
+        if (!ListChecked(prefix, files, &complete) || !complete)
+            return false;
         for (const auto& f : files) {
             if (f.path.size() <= prefix.size()) continue;
             std::string rest = f.path.substr(prefix.size());
             size_t slash = rest.find('/');
             if (slash == std::string::npos) continue;
             std::string folder = rest.substr(0, slash);
-            if (std::find(folders.begin(), folders.end(), folder) == folders.end())
-                folders.push_back(folder);
+            if (std::find(outFolders.begin(), outFolders.end(), folder) == outFolders.end())
+                outFolders.push_back(folder);
         }
-        return folders;
+        return true;
     }
 
     virtual bool ListChecked(const std::string& prefix, std::vector<FileInfo>& outFiles,

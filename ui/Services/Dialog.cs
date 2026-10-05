@@ -1,86 +1,164 @@
 using System;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Media;
-using System.Windows.Threading;
+using CloudRedirect.Dialogs;
 using CloudRedirect.Resources;
-using Wpf.Ui.Controls;
-using Button = Wpf.Ui.Controls.Button;
-using MessageBox = Wpf.Ui.Controls.MessageBox;
-using MessageBoxResult = Wpf.Ui.Controls.MessageBoxResult;
-using TextBlock = System.Windows.Controls.TextBlock;
 
 namespace CloudRedirect.Services;
 
 /// <summary>
-/// Modern dialog helpers using WPF-UI's fluent MessageBox instead of the
-/// legacy Win32 MessageBox. All methods are async and theme-aware.
+/// Modern authentic Steam dialog helpers matching the CloudRedirect Steam theme.
 /// </summary>
 public static class Dialog
 {
-    // Collapse empty footer buttons so only the close "OK" button is visible.
-    private static Task ShowAcknowledgeAsync(string title, string message, ControlAppearance appearance)
+    public static async Task ShowInfoAsync(string title, string message)
     {
-        var box = new MessageBox
+        await RunOnDispatcherAsync(() =>
         {
-            Title = title,
-            Content = new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap },
-            CloseButtonText = S.Get("Dialog_OK"),
-            CloseButtonAppearance = appearance,
-        };
-
-        box.Loaded += (_, _) => CollapseEmptyFooterButtons(box);
-        return box.ShowDialogAsync();
+            var dlg = new SteamMessageBoxDialog(
+                title,
+                message,
+                primaryButtonText: S.Get("Dialog_OK"),
+                secondaryButtonText: null,
+                primaryTheme: SteamMessageBoxDialog.ButtonTheme.PlayGreen,
+                iconType: SteamMessageBoxDialog.DialogIconType.Info);
+            dlg.ShowDialog();
+        });
     }
 
-    // Scoped to Wpf.Ui.Controls.Button (the footer buttons) so the title-bar
-    // close (X) and other chrome are never touched.
-    private static void CollapseEmptyFooterButtons(DependencyObject root)
+    public static async Task ShowWarningAsync(string title, string message)
     {
-        int count = VisualTreeHelper.GetChildrenCount(root);
-        for (int i = 0; i < count; i++)
+        await RunOnDispatcherAsync(() =>
         {
-            var child = VisualTreeHelper.GetChild(root, i);
-            if (child is Button btn)
-            {
-                var text = (btn.Content as string) ?? (btn.Content as TextBlock)?.Text;
-                if (string.IsNullOrWhiteSpace(text) && btn.Icon is null)
-                    btn.Visibility = Visibility.Collapsed;
-            }
-            CollapseEmptyFooterButtons(child);
-        }
+            var dlg = new SteamMessageBoxDialog(
+                title,
+                message,
+                primaryButtonText: S.Get("Dialog_OK"),
+                secondaryButtonText: null,
+                primaryTheme: SteamMessageBoxDialog.ButtonTheme.PlayGreen,
+                iconType: SteamMessageBoxDialog.DialogIconType.Warning);
+            dlg.ShowDialog();
+        });
     }
 
-    public static Task ShowInfoAsync(string title, string message)
-        => ShowAcknowledgeAsync(title, message, ControlAppearance.Primary);
-
-    public static Task ShowWarningAsync(string title, string message)
-        => ShowAcknowledgeAsync(title, message, ControlAppearance.Caution);
-
-    public static Task ShowErrorAsync(string title, string message)
-        => ShowAcknowledgeAsync(title, message, ControlAppearance.Danger);
+    public static async Task ShowErrorAsync(string title, string message)
+    {
+        await RunOnDispatcherAsync(() =>
+        {
+            var dlg = new SteamMessageBoxDialog(
+                title,
+                message,
+                primaryButtonText: S.Get("Dialog_OK"),
+                secondaryButtonText: null,
+                primaryTheme: SteamMessageBoxDialog.ButtonTheme.Danger,
+                iconType: SteamMessageBoxDialog.DialogIconType.Error);
+            dlg.ShowDialog();
+        });
+    }
 
     public static async Task<bool> ConfirmAsync(string title, string message)
     {
-        var box = new MessageBox
+        return await RunOnDispatcherAsync(() =>
         {
-            Title = title,
-            Content = new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap },
-            PrimaryButtonText = S.Get("Dialog_Yes"),
-            CloseButtonText = S.Get("Dialog_No")
-        };
-        return await box.ShowDialogAsync() == MessageBoxResult.Primary;
+            var dlg = new SteamMessageBoxDialog(
+                title,
+                message,
+                primaryButtonText: S.Get("Dialog_Yes"),
+                secondaryButtonText: S.Get("Dialog_No"),
+                primaryTheme: SteamMessageBoxDialog.ButtonTheme.PlayGreen,
+                iconType: SteamMessageBoxDialog.DialogIconType.Question);
+            dlg.ShowDialog();
+            return dlg.UserConfirmed;
+        });
+    }
+
+    public static async Task<bool> ConfirmDangerAsync(string title, string message)
+    {
+        return await RunOnDispatcherAsync(() =>
+        {
+            var dlg = new SteamMessageBoxDialog(
+                title,
+                message,
+                primaryButtonText: S.Get("Dialog_Yes"),
+                secondaryButtonText: S.Get("Dialog_No"),
+                primaryTheme: SteamMessageBoxDialog.ButtonTheme.Danger,
+                iconType: SteamMessageBoxDialog.DialogIconType.Warning);
+            dlg.ShowDialog();
+            return dlg.UserConfirmed;
+        });
+    }
+
+    public static async Task<bool> ConfirmDangerAsync(string title, UIElement content)
+    {
+        return await RunOnDispatcherAsync(() =>
+        {
+            var dlg = new SteamMessageBoxDialog(
+                title,
+                content,
+                primaryButtonText: S.Get("Dialog_Yes"),
+                secondaryButtonText: S.Get("Dialog_No"),
+                primaryTheme: SteamMessageBoxDialog.ButtonTheme.Danger);
+            dlg.ShowDialog();
+            return dlg.UserConfirmed;
+        });
+    }
+
+    public static async Task<bool> ConfirmDangerCountdownAsync(string title, string message, int countdownSeconds = 3)
+    {
+        return await RunOnDispatcherAsync(() =>
+        {
+            var dlg = new SteamMessageBoxDialog(
+                title,
+                message,
+                primaryButtonText: countdownSeconds > 0 ? S.Format("Dialog_YesCountdownFormat", countdownSeconds) : S.Get("Dialog_YesDeleteEverything"),
+                secondaryButtonText: S.Get("Dialog_No"),
+                primaryTheme: SteamMessageBoxDialog.ButtonTheme.Danger,
+                iconType: SteamMessageBoxDialog.DialogIconType.Warning);
+            
+            if (countdownSeconds > 0)
+            {
+                dlg.EnableCountdown(countdownSeconds, S.Get("Dialog_YesCountdownFormat"), S.Get("Dialog_YesDeleteEverything"));
+            }
+
+            dlg.ShowDialog();
+            return dlg.UserConfirmed;
+        });
+    }
+
+    public static async Task<bool> ChoiceAsync(string title, string message, string primaryText, string secondaryText)
+    {
+        return await RunOnDispatcherAsync(() =>
+        {
+            var dlg = new SteamMessageBoxDialog(
+                title,
+                message,
+                primaryButtonText: primaryText,
+                secondaryButtonText: secondaryText,
+                primaryTheme: SteamMessageBoxDialog.ButtonTheme.PlayGreen,
+                iconType: SteamMessageBoxDialog.DialogIconType.Question);
+            dlg.ShowDialog();
+            return dlg.UserConfirmed;
+        });
+    }
+
+    public static async Task<bool> ShowCustomAsync(string title, UIElement content, string primaryText, string secondaryText, SteamMessageBoxDialog.ButtonTheme theme = SteamMessageBoxDialog.ButtonTheme.PlayGreen)
+    {
+        return await RunOnDispatcherAsync(() =>
+        {
+            var dlg = new SteamMessageBoxDialog(
+                title,
+                content,
+                primaryButtonText: primaryText,
+                secondaryButtonText: secondaryText,
+                primaryTheme: theme);
+            dlg.ShowDialog();
+            return dlg.UserConfirmed;
+        });
     }
 
     public static async Task<bool> PromptUpdateAsync(string title, string message, string primaryText, string secondaryText, string? newVersion = null, string? currentVersion = null)
     {
-        if (Application.Current?.Dispatcher != null && !Application.Current.Dispatcher.CheckAccess())
-        {
-            return Application.Current.Dispatcher.Invoke(() => PromptUpdateAsync(title, message, primaryText, secondaryText, newVersion, currentVersion)).GetAwaiter().GetResult();
-        }
-
-        try
+        return await RunOnDispatcherAsync(() =>
         {
             string nVer = newVersion ?? "";
             string cVer = currentVersion ?? "";
@@ -101,120 +179,25 @@ public static class Dialog
             }
             bool? result = dialog.ShowDialog();
             return result == true || dialog.UserChoseUpdate;
+        });
+    }
+
+    private static Task RunOnDispatcherAsync(Action action)
+    {
+        if (Application.Current?.Dispatcher != null && !Application.Current.Dispatcher.CheckAccess())
+        {
+            return Application.Current.Dispatcher.InvokeAsync(action).Task;
         }
-        catch (Exception ex)
+        action();
+        return Task.CompletedTask;
+    }
+
+    private static Task<T> RunOnDispatcherAsync<T>(Func<T> func)
+    {
+        if (Application.Current?.Dispatcher != null && !Application.Current.Dispatcher.CheckAccess())
         {
-            App.LogStartup($"Failed to display SteamUpdatePromptDialog: {ex.Message}. Falling back to default message box.");
-            var box = new MessageBox
-            {
-                Title = title,
-                Content = new TextBlock
-                {
-                    Text = message,
-                    TextWrapping = TextWrapping.Wrap,
-                    LineHeight = 22,
-                    FontSize = 13
-                },
-                PrimaryButtonText = primaryText,
-                PrimaryButtonAppearance = ControlAppearance.Primary,
-                CloseButtonText = secondaryText
-            };
-            box.Loaded += (_, _) => CollapseEmptyFooterButtons(box);
-            return await box.ShowDialogAsync() == MessageBoxResult.Primary;
+            return Application.Current.Dispatcher.InvokeAsync(func).Task;
         }
-    }
-
-    public static async Task<bool> ConfirmDangerAsync(string title, string message)
-    {
-        var box = new MessageBox
-        {
-            Title = title,
-            Content = new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap },
-            PrimaryButtonText = S.Get("Dialog_Yes"),
-            PrimaryButtonAppearance = ControlAppearance.Danger,
-            CloseButtonText = S.Get("Dialog_No")
-        };
-        return await box.ShowDialogAsync() == MessageBoxResult.Primary;
-    }
-
-    public static async Task<bool> ConfirmDangerAsync(string title, UIElement content)
-    {
-        var box = new MessageBox
-        {
-            Title = title,
-            Content = content,
-            PrimaryButtonText = S.Get("Dialog_Yes"),
-            PrimaryButtonAppearance = ControlAppearance.Danger,
-            CloseButtonText = S.Get("Dialog_No")
-        };
-        return await box.ShowDialogAsync() == MessageBoxResult.Primary;
-    }
-
-    /// <summary>
-    /// Shows a danger confirmation dialog with a countdown timer.
-    /// The "Yes" button is disabled and shows a countdown (e.g. "Yes (3)")
-    /// until the timer expires, forcing the user to wait before confirming.
-    /// </summary>
-    public static async Task<bool> ConfirmDangerCountdownAsync(string title, string message, int countdownSeconds = 3)
-    {
-        var box = new MessageBox
-        {
-            Title = title,
-            Content = new TextBlock
-            {
-                Text = message,
-                TextWrapping = TextWrapping.Wrap,
-                Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x66, 0x66))
-            },
-            PrimaryButtonText = countdownSeconds > 0 ? S.Format("Dialog_YesCountdownFormat", countdownSeconds) : S.Get("Dialog_YesDeleteEverything"),
-            PrimaryButtonAppearance = ControlAppearance.Danger,
-            IsPrimaryButtonEnabled = countdownSeconds <= 0,
-            CloseButtonText = S.Get("Dialog_No")
-        };
-
-        DispatcherTimer timer = null;
-
-        if (countdownSeconds > 0)
-        {
-            int remaining = countdownSeconds;
-            timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-            timer.Tick += (_, _) =>
-            {
-                remaining--;
-                if (remaining <= 0)
-                {
-                    timer.Stop();
-                    box.IsPrimaryButtonEnabled = true;
-                    box.PrimaryButtonText = S.Get("Dialog_YesDeleteEverything");
-                }
-                else
-                {
-                    box.PrimaryButtonText = S.Format("Dialog_YesCountdownFormat", remaining);
-                }
-            };
-            timer.Start();
-        }
-
-        var result = await box.ShowDialogAsync();
-
-        timer?.Stop();
-        return result == MessageBoxResult.Primary;
-    }
-
-    /// <summary>
-    /// Shows a choice dialog with a primary action and a secondary/close action.
-    /// Returns true if the user chose the primary button.
-    /// </summary>
-    public static async Task<bool> ChoiceAsync(string title, string message,
-        string primaryText, string secondaryText)
-    {
-        var box = new MessageBox
-        {
-            Title = title,
-            Content = new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap },
-            PrimaryButtonText = primaryText,
-            CloseButtonText = secondaryText
-        };
-        return await box.ShowDialogAsync() == MessageBoxResult.Primary;
+        return Task.FromResult(func());
     }
 }

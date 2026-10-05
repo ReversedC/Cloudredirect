@@ -264,7 +264,9 @@ void RecordUploadBatchEnd(uint32_t accountId, uint32_t appId) {
     std::lock_guard<std::mutex> lock(g_mutex);
     std::optional<Entry> currentSession;
     auto entries = LoadEntriesUnlocked(accountId, appId, &currentSession);
-    RemoveOperation(entries, Operation::UploadInProgress);
+    // Success path only; use RecordUploadBatchInterrupted when the publish failed.
+    // Clears both ops: leaving them pins HasInterruptedUpload true forever.
+    RemoveUploadOperations(entries);
     SaveStateUnlocked(accountId, appId, entries, currentSession);
 }
 
@@ -361,6 +363,15 @@ bool HasPendingUpload(uint32_t accountId, uint32_t appId) {
     auto entries = LoadEntriesUnlocked(accountId, appId);
     for (const auto& entry : entries) {
         if (entry.operation == Operation::UploadPending) return true;
+    }
+    return false;
+}
+
+bool HasInterruptedUpload(uint32_t accountId, uint32_t appId) {
+    std::lock_guard<std::mutex> lock(g_mutex);
+    auto entries = LoadEntriesUnlocked(accountId, appId);
+    for (const auto& entry : entries) {
+        if (IsUploadOperation(entry.operation)) return true;
     }
     return false;
 }

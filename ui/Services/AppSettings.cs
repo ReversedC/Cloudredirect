@@ -127,10 +127,11 @@ public static class AppSettings
     }
 
     public const string DefaultCommunityDatabaseUrl = "https://gist.githubusercontent.com/mirzaarsyad74-cmyk/01b85e449667ae2bbba88d4fdd42df5a/raw/community_saves.json";
+    public const string LudusaviManifestUrl = "https://raw.githubusercontent.com/mtkennerly/ludusavi-manifest/master/data/manifest.yaml";
 
     public static string CommunityDatabaseUrl
     {
-        get => ReadString("community_database_url", DefaultCommunityDatabaseUrl);
+        get => ReadString("community_database_url", LudusaviManifestUrl);
         set => WriteString("community_database_url", value);
     }
 

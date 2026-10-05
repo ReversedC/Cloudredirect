@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
@@ -837,19 +838,27 @@ public sealed class MobileAuthServer : IDisposable
             if (socket.LocalEndPoint is IPEndPoint ep)
             {
                 string ip = ep.Address.ToString();
-                if (!ip.StartsWith("127.") && !ip.StartsWith("169.254."))
+                if (IsPrivateLanIp(ip))
                     return ip;
             }
         }
         catch { }
 
-        // 2. Scan network interfaces
+        // 2. Scan network interfaces, prioritizing Wi-Fi and Ethernet over virtual/VPN adapters
         try
         {
-            foreach (var ni in NetworkInterface.GetAllNetworkInterfaces())
+            var interfaces = NetworkInterface.GetAllNetworkInterfaces()
+                .Where(ni => ni.OperationalStatus == OperationalStatus.Up &&
+                             ni.NetworkInterfaceType != NetworkInterfaceType.Loopback)
+                .OrderByDescending(ni => ni.NetworkInterfaceType == NetworkInterfaceType.Wireless80211 ? 2 :
+                                        (ni.NetworkInterfaceType == NetworkInterfaceType.Ethernet ? 1 : 0));
+
+            foreach (var ni in interfaces)
             {
-                if (ni.OperationalStatus != OperationalStatus.Up ||
-                    ni.NetworkInterfaceType == NetworkInterfaceType.Loopback)
+                var name = ni.Name.ToLowerInvariant();
+                var desc = ni.Description.ToLowerInvariant();
+                if (name.Contains("tailscale") || name.Contains("zerotier") || name.Contains("wireguard") ||
+                    desc.Contains("tailscale") || desc.Contains("virtual") || desc.Contains("vpn"))
                     continue;
 
                 foreach (var ua in ni.GetIPProperties().UnicastAddresses)
@@ -857,7 +866,7 @@ public sealed class MobileAuthServer : IDisposable
                     if (ua.Address.AddressFamily == AddressFamily.InterNetwork)
                     {
                         string ip = ua.Address.ToString();
-                        if (!ip.StartsWith("127.") && !ip.StartsWith("169.254."))
+                        if (IsPrivateLanIp(ip))
                             return ip;
                     }
                 }
@@ -866,6 +875,25 @@ public sealed class MobileAuthServer : IDisposable
         catch { }
 
         return null;
+    }
+
+    private static bool IsPrivateLanIp(string ip)
+    {
+        if (string.IsNullOrEmpty(ip) || ip.StartsWith("127.") || ip.StartsWith("169.254.") || ip.StartsWith("100."))
+            return false;
+
+        // RFC 1918: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16
+        if (ip.StartsWith("192.168.") || ip.StartsWith("10."))
+            return true;
+
+        if (ip.StartsWith("172."))
+        {
+            var parts = ip.Split('.');
+            if (parts.Length > 1 && int.TryParse(parts[1], out int secondOctet) && secondOctet >= 16 && secondOctet <= 31)
+                return true;
+        }
+
+        return false;
     }
 
     public void Stop()

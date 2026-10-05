@@ -61,12 +61,38 @@ public class UiZoomManager
             }
         };
 
+        _window.SizeChanged += (_, _) =>
+        {
+            if (IsAutoFit)
+            {
+                TriggerAutoFitRecalculation();
+            }
+        };
+
+        _window.StateChanged += (_, _) =>
+        {
+            if (IsAutoFit)
+            {
+                TriggerAutoFitRecalculation();
+            }
+        };
+
+        _window.DpiChanged += (_, _) =>
+        {
+            if (IsAutoFit)
+            {
+                TriggerAutoFitRecalculation();
+            }
+        };
+
         _rootFrame.Navigated += (_, _) =>
         {
             if (_rootFrame.Content is Page page)
             {
+                HookPageContent(page);
                 page.Loaded += (_, _) =>
                 {
+                    HookPageContent(page);
                     if (IsAutoFit)
                     {
                         RecalculateAutoFitImmediate();
@@ -93,6 +119,18 @@ public class UiZoomManager
                     ApplyScale(CurrentScale, false);
                 }
             }, DispatcherPriority.Loaded);
+
+            // Re-evaluate auto-fit after page controls finish asynchronous measuring
+            var navDelayTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+            navDelayTimer.Tick += (_, _) =>
+            {
+                navDelayTimer.Stop();
+                if (IsAutoFit && _rootFrame.Content is not Pages.SuoRemotePage)
+                {
+                    RecalculateAutoFitImmediate();
+                }
+            };
+            navDelayTimer.Start();
         };
 
         _window.PreviewMouseWheel += Window_PreviewMouseWheel;
@@ -103,6 +141,29 @@ public class UiZoomManager
             _initialAutoFitApplied = false;
             _window.Dispatcher.InvokeAsync(RecalculateAutoFitImmediate, DispatcherPriority.Loaded);
             OnZoomChanged?.Invoke(CurrentScale, true);
+
+            // Multi-pass startup timers to ensure auto-fit recalculates after async card data loads
+            var startupTimer1 = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+            startupTimer1.Tick += (_, _) =>
+            {
+                startupTimer1.Stop();
+                if (IsAutoFit && _rootFrame.Content is not Pages.SuoRemotePage)
+                {
+                    RecalculateAutoFitImmediate();
+                }
+            };
+            startupTimer1.Start();
+
+            var startupTimer2 = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(750) };
+            startupTimer2.Tick += (_, _) =>
+            {
+                startupTimer2.Stop();
+                if (IsAutoFit && _rootFrame.Content is not Pages.SuoRemotePage)
+                {
+                    RecalculateAutoFitImmediate();
+                }
+            };
+            startupTimer2.Start();
         }
         else
         {
@@ -243,6 +304,8 @@ public class UiZoomManager
             return;
         }
 
+        HookPageContent(page);
+
         double availableHeight = _contentHost.ActualHeight;
         double availableWidth = _contentHost.ActualWidth;
 
@@ -254,15 +317,25 @@ public class UiZoomManager
 
         if (scrollViewer != null)
         {
-            unscaledHeight = scrollViewer.ExtentHeight;
-            unscaledWidth = scrollViewer.ExtentWidth;
-
-            // If ExtentHeight isn't available yet because layout hasn't completed, measure the inner content
-            if (unscaledHeight <= 0 && scrollViewer.Content is FrameworkElement scrollContent)
+            if (scrollViewer.Content is FrameworkElement scrollContent)
             {
-                scrollContent.Measure(new Size(availableWidth, double.PositiveInfinity));
-                unscaledHeight = scrollContent.DesiredSize.Height;
-                unscaledWidth = scrollContent.DesiredSize.Width;
+                // Force an immediate layout update so any visibility toggles or collapsed panels
+                // are fully computed into DesiredSize / ActualHeight before measuring
+                scrollContent.UpdateLayout();
+                scrollContent.Measure(new Size(availableWidth > 0 ? availableWidth : 800, double.PositiveInfinity));
+                double paddingY = scrollViewer.Padding.Top + scrollViewer.Padding.Bottom;
+                double paddingX = scrollViewer.Padding.Left + scrollViewer.Padding.Right;
+
+                double measuredH = scrollContent.DesiredSize.Height + paddingY;
+                double measuredW = scrollContent.DesiredSize.Width + paddingX;
+
+                unscaledHeight = measuredH > 0 ? measuredH : scrollViewer.ExtentHeight;
+                unscaledWidth = measuredW > 0 ? measuredW : scrollViewer.ExtentWidth;
+            }
+            else
+            {
+                unscaledHeight = scrollViewer.ExtentHeight;
+                unscaledWidth = scrollViewer.ExtentWidth;
             }
         }
 
@@ -284,15 +357,33 @@ public class UiZoomManager
 
         if (unscaledHeight > 0)
         {
-            // Leave a small 6px breathing room so content never touches the bottom edge
-            double targetHeight = availableHeight - 6;
-            double scaleY = targetHeight / unscaledHeight;
-            double scaleX = availableWidth / (unscaledWidth > 0 ? unscaledWidth : availableWidth);
+            // Ample safety margin so content never touches the bottom/side edge and no scrollbar appears
+            double safetyMarginY = 20.0;
+            double safetyMarginX = 16.0;
+            double targetHeight = Math.Max(100, availableHeight - safetyMarginY);
+            double targetWidth = Math.Max(100, availableWidth - safetyMarginX);
 
-            double autoScale = Math.Min(scaleX, scaleY);
+            // In normal windowed mode, never upscale beyond 1.0 (100%).
+            // 100% is the ideal baseline; only scale down when needed to prevent scrolling!
+            double[] allowedScales;
+            if (_window != null && _window.WindowState == WindowState.Maximized)
+            {
+                allowedScales = new[] { 1.15, 1.10, 1.05, 1.0, 0.95, 0.90, 0.85, 0.80, 0.75, 0.70, 0.65, 0.60 };
+            }
+            else
+            {
+                allowedScales = new[] { 1.0, 0.95, 0.90, 0.85, 0.80, 0.75, 0.70, 0.65, 0.60 };
+            }
 
-            // Clamp between 0.65 and 1.10
-            autoScale = Math.Clamp(autoScale, 0.65, 1.10);
+            double autoScale = 0.60;
+            foreach (var s in allowedScales)
+            {
+                if (unscaledHeight * s <= targetHeight && (unscaledWidth <= 0 || unscaledWidth * s <= targetWidth))
+                {
+                    autoScale = s;
+                    break;
+                }
+            }
 
             // In AutoFit mode, manage scrollbars so interface looks clean and unclipped
             if (scrollViewer != null)
@@ -318,6 +409,29 @@ public class UiZoomManager
             {
                 OnZoomChanged?.Invoke(CurrentScale, true);
             }
+        }
+    }
+
+    private FrameworkElement? _subscribedScrollContent;
+
+    public void HookPageContent(Page page)
+    {
+        var scrollViewer = FindVisualChild<ScrollViewer>(page);
+        var content = (scrollViewer?.Content as FrameworkElement) ?? (page.Content as FrameworkElement);
+        if (content != null && content != _subscribedScrollContent)
+        {
+            if (_subscribedScrollContent != null)
+                _subscribedScrollContent.SizeChanged -= ScrollContent_SizeChanged;
+            _subscribedScrollContent = content;
+            _subscribedScrollContent.SizeChanged += ScrollContent_SizeChanged;
+        }
+    }
+
+    private void ScrollContent_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (IsAutoFit && _rootFrame?.Content is not Pages.SuoRemotePage)
+        {
+            TriggerAutoFitRecalculation();
         }
     }
 

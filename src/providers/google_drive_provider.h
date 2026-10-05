@@ -20,7 +20,8 @@ public:
     bool Remove(const std::string& path) override;
     ExistsStatus CheckExists(const std::string& path) override;
     std::vector<FileInfo> List(const std::string& prefix) override;
-    std::vector<std::string> ListSubfolders(const std::string& prefix) override;
+    bool ListSubfoldersChecked(const std::string& prefix,
+                               std::vector<std::string>& outFolders) override;
     bool ListChecked(const std::string& prefix, std::vector<FileInfo>& outFiles,
                      bool* outComplete = nullptr) override;
     std::vector<SearchHit> SearchByName(const std::string& filename,

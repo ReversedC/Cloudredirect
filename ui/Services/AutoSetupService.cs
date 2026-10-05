@@ -90,22 +90,35 @@ public static class AutoSetupService
             Directory.CreateDirectory(configDir);
 
             var configPath = SteamDetector.GetConfigFilePath();
+            var gdriveTokenPath = Path.Combine(configDir, "gdrive_tokens.json");
+
             if (!File.Exists(configPath))
             {
-                var localCloudPath = Path.Combine(steamPath, "localcloud");
-                Directory.CreateDirectory(localCloudPath);
-
                 ConfigHelper.SaveConfig(configPath,
-                    new[] { "provider", "sync_path", "auto_update_dll", "sync_luas", "sync_achievements", "sync_playtime" },
+                    new[] { "provider", "token_path", "auto_update_dll", "sync_luas", "sync_achievements", "sync_playtime" },
                     writer =>
                     {
-                        writer.WriteString("provider", "folder");
-                        writer.WriteString("sync_path", localCloudPath);
+                        writer.WriteString("provider", "gdrive");
+                        writer.WriteString("token_path", gdriveTokenPath);
                         writer.WriteBoolean("auto_update_dll", true);
                         writer.WriteBoolean("sync_luas", true);
                         writer.WriteBoolean("sync_achievements", true);
                         writer.WriteBoolean("sync_playtime", true);
                     });
+            }
+            else
+            {
+                var config = SteamDetector.ReadConfig();
+                if (config != null && config.Provider != "gdrive")
+                {
+                    ConfigHelper.SaveConfig(configPath,
+                        new[] { "provider", "token_path" },
+                        writer =>
+                        {
+                            writer.WriteString("provider", "gdrive");
+                            writer.WriteString("token_path", string.IsNullOrEmpty(config.TokenPath) ? gdriveTokenPath : config.TokenPath);
+                        });
+                }
             }
         }
         catch (Exception ex)

@@ -92,10 +92,6 @@ set(COMMON_SOURCES
 
 set(PROVIDER_SOURCES
     src/providers/google_drive.cpp
-    src/providers/onedrive.cpp
-    src/providers/local_disk_provider.cpp
-    src/providers/s3_provider.cpp
-    src/providers/r2_provider.cpp
 )
 
 set(PLATFORM_SOURCES

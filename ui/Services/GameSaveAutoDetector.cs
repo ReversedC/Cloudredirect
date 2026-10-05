@@ -174,12 +174,44 @@ public static class GameSaveAutoDetector
             if (File.Exists(cachePath))
             {
                 var json = File.ReadAllText(cachePath);
-                ParseAndMergeDatabaseJson(json);
+                int count = ParseAndMergeDatabaseJson(json);
+                if (count > 0) return;
             }
+
+            // Fallback to embedded pre-compiled Ludusavi database (28,000+ signatures)
+            LoadEmbeddedDatabase();
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Failed to load cached community database: {ex}");
+            LoadEmbeddedDatabase();
+        }
+    }
+
+    private static void LoadEmbeddedDatabase()
+    {
+        try
+        {
+            using var stream = typeof(GameSaveAutoDetector).Assembly.GetManifestResourceStream("community_database.json.gz");
+            if (stream != null)
+            {
+                using var gz = new System.IO.Compression.GZipStream(stream, System.IO.Compression.CompressionMode.Decompress);
+                using var reader = new StreamReader(gz, System.Text.Encoding.UTF8);
+                var json = reader.ReadToEnd();
+                int count = ParseAndMergeDatabaseJson(json);
+                if (count > 0)
+                {
+                    var cachePath = GetCommunityDatabaseCachePath();
+                    var dir = Path.GetDirectoryName(cachePath);
+                    if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                        Directory.CreateDirectory(dir);
+                    File.WriteAllText(cachePath, json);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to load embedded community database: {ex}");
         }
     }
 
@@ -192,6 +224,8 @@ public static class GameSaveAutoDetector
             {
                 return (false, 0, "No remote Community Database URL configured.");
             }
+
+            url = LudusaviManifestParser.NormalizeManifestUrl(url);
 
             if (url.Contains("gist.github.com", StringComparison.OrdinalIgnoreCase) && !url.Contains("/raw", StringComparison.OrdinalIgnoreCase))
             {
@@ -206,7 +240,7 @@ public static class GameSaveAutoDetector
             var separator = url.Contains('?') ? "&" : "?";
             var liveFetchUrl = $"{url}{separator}_cb={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
 
-            using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+            using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(45) };
             using var req = new HttpRequestMessage(HttpMethod.Get, liveFetchUrl);
             req.Headers.UserAgent.ParseAdd("CloudRedirect-CommunityDB/1.0");
             req.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue
@@ -223,13 +257,28 @@ public static class GameSaveAutoDetector
                 return (false, 0, $"HTTP {(int)response.StatusCode}: {response.ReasonPhrase}");
             }
 
-            var json = await response.Content.ReadAsStringAsync();
-            if (string.IsNullOrWhiteSpace(json))
+            var rawContent = await response.Content.ReadAsStringAsync();
+            if (string.IsNullOrWhiteSpace(rawContent))
             {
                 return (false, 0, "Remote URL returned empty response.");
             }
 
-            int count = ParseAndMergeDatabaseJson(json);
+            string jsonToSave;
+            int count;
+
+            // Automatically detect and convert Ludusavi YAML manifest into CloudRedirect format
+            if (LudusaviManifestParser.IsYamlManifest(rawContent))
+            {
+                var (totalGames, totalSignatures, convertedJson) = LudusaviManifestParser.ConvertToCloudRedirectJson(rawContent);
+                jsonToSave = convertedJson;
+                count = ParseAndMergeDatabaseJson(convertedJson);
+            }
+            else
+            {
+                jsonToSave = rawContent;
+                count = ParseAndMergeDatabaseJson(rawContent);
+            }
+
             if (count > 0)
             {
                 var cachePath = GetCommunityDatabaseCachePath();
@@ -237,12 +286,12 @@ public static class GameSaveAutoDetector
                 if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
 
-                await File.WriteAllTextAsync(cachePath, json);
+                await File.WriteAllTextAsync(cachePath, jsonToSave);
                 AppSettings.CommunityDatabaseLastSync = DateTime.Now.ToString("MMM dd, yyyy h:mm tt");
-                return (true, count, $"Successfully synchronized {count} game signature(s).");
+                return (true, count, $"Successfully synchronized {count:N0} game signature(s) in CloudRedirect format.");
             }
 
-            return (false, 0, "Invalid JSON format or no game signatures found.");
+            return (false, 0, "Invalid format or no game signatures found.");
         }
         catch (Exception ex)
         {
@@ -382,6 +431,11 @@ public static class GameSaveAutoDetector
         {
             var allKnownPaths = GetAllKnownGameSavePaths();
             var keysToCheck = new List<string>();
+            if (appId > 0)
+            {
+                keysToCheck.Add($"steam:{appId}");
+                keysToCheck.Add(appId.ToString());
+            }
             if (!string.IsNullOrWhiteSpace(processName))
             {
                 var cleanProc = Path.GetFileNameWithoutExtension(processName).Trim();
@@ -393,13 +447,33 @@ public static class GameSaveAutoDetector
                 keysToCheck.Add(gameName.Replace(" ", "").Trim());
             }
 
+            // 1) Fast O(1) exact lookup first
             foreach (var key in keysToCheck)
             {
+                if (allKnownPaths.TryGetValue(key, out var directPaths))
+                {
+                    foreach (var rawPath in directPaths)
+                    {
+                        var expanded = ResolvePathWithWildcards(rawPath);
+                        if (expanded != null && Directory.Exists(expanded))
+                            return expanded;
+                    }
+                }
+            }
+
+            // 2) Fallback fuzzy search if exact match was not found
+            foreach (var key in keysToCheck)
+            {
+                if (key.StartsWith("steam:", StringComparison.OrdinalIgnoreCase) || uint.TryParse(key, out _))
+                    continue;
+
                 foreach (var kvp in allKnownPaths)
                 {
+                    if (kvp.Key.StartsWith("steam:", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
                     if (kvp.Key.Equals(key, StringComparison.OrdinalIgnoreCase) ||
-                        key.Contains(kvp.Key, StringComparison.OrdinalIgnoreCase) ||
-                        kvp.Key.Contains(key, StringComparison.OrdinalIgnoreCase))
+                        (key.Length >= 5 && kvp.Key.Length >= 5 && (key.Contains(kvp.Key, StringComparison.OrdinalIgnoreCase) || kvp.Key.Contains(key, StringComparison.OrdinalIgnoreCase))))
                     {
                         foreach (var rawPath in kvp.Value)
                         {
@@ -614,7 +688,7 @@ public static class GameSaveAutoDetector
                     var procName = proc.ProcessName;
 
                     // Filter out common non-game system processes
-                    if (IsSystemProcess(procName)) continue;
+                    if (IsSystemProcess(procName, proc)) continue;
 
                     var gameTitle = proc.MainWindowTitle.Trim();
                     // Strip typical suffixes like "(64-bit)", "DirectX 12", etc.
@@ -958,18 +1032,42 @@ public static class GameSaveAutoDetector
         };
     }
 
-    public static bool IsSystemProcess(string procName)
+    public static bool IsSystemProcess(string procName, Process? proc = null)
     {
         var sys = new[]
         {
-            "explorer", "devenv", "chrome", "firefox", "msedge", "brave", "code", "steam",
-            "taskmgr", "cmd", "powershell", "CloudRedirect", "discord", "spotify", "slack",
-            "system", "idle", "svchost", "csrss", "dwm", "runtimebroker", "searchhost",
+            "explorer", "devenv", "chrome", "firefox", "msedge", "brave", "opera", "vivaldi", "tor",
+            "code", "cursor", "taskmgr", "cmd", "powershell", "pwsh", "windowsterminal", "bash", "wsl", "wslhost",
+            "CloudRedirect", "TrayHelper", "antigravity", "antigravity-manager", "gemini", "node", "python", "git",
+            "discord", "spotify", "slack", "teams", "telegram", "whatsapp", "zoom",
+            "system", "idle", "svchost", "csrss", "dwm", "runtimebroker", "searchhost", "searchapp", "searchindexer",
             "textinputhost", "shellexperiencehost", "applicationframehost", "startmenuexperiencehost",
-            "widgets", "ctfmon", "conhost", "sihost", "fontdrvhost", "antigravity", "antigravity-manager",
-            "node", "python", "cursor", "git", "bash", "wsl", "windowsterminal", "gemini"
+            "sechealthui", "securityhealthsystray", "securityhealthservice", "smartscreen", "securityhealthhost",
+            "systemsettings", "systemsettingsbroker", "settingssynchost",
+            "gamebar", "gamebarftserver", "gamebarpresencewriter", "xboxapp", "xboxgameoverlay", "xboxpcapp",
+            "widgets", "ctfmon", "conhost", "sihost", "fontdrvhost", "lockapp", "logonui", "werfault", "audiodg", "spoolsv",
+            "calculatorapp", "notepad", "snippingtool", "mscorsvw", "msbuild", "csc"
         };
-        return sys.Any(s => s.Equals(procName, StringComparison.OrdinalIgnoreCase) || procName.Contains("antigravity", StringComparison.OrdinalIgnoreCase));
+
+        if (sys.Any(s => s.Equals(procName, StringComparison.OrdinalIgnoreCase) || procName.Contains("antigravity", StringComparison.OrdinalIgnoreCase)))
+            return true;
+
+        if (proc != null)
+        {
+            try
+            {
+                var fileName = proc.MainModule?.FileName;
+                if (!string.IsNullOrEmpty(fileName))
+                {
+                    var winDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+                    if (fileName.StartsWith(winDir, StringComparison.OrdinalIgnoreCase))
+                        return true;
+                }
+            }
+            catch { }
+        }
+
+        return false;
     }
 
     private static bool IsIgnoredSystemFolder(string name)

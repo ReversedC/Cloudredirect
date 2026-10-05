@@ -232,17 +232,7 @@ static bool EnumerateSaveFiles(const std::string& directory,
 }
 
 static std::string GetSaveProviderInitPath(const std::string& providerName) {
-    if (providerName != "folder" && providerName != "local") return GetTokenPath(providerName);
-
-    std::string configPath = GetConfigDir() + "config.json";
-    std::ifstream file(FileUtil::Utf8ToPath(configPath), std::ios::binary);
-    if (!file) return "";
-    std::ostringstream content;
-    content << file.rdbuf();
-    auto config = Json::Parse(content.str());
-    return config.type == Json::Type::Object && config.has("sync_path")
-        ? config["sync_path"].str()
-        : "";
+    return GetTokenPath(providerName);
 }
 
 static bool InitSaveProvider(const std::string& providerName,
@@ -476,7 +466,11 @@ std::string CmdListRemoteApps(const std::string& provider, const std::string& ac
 
     // List app folders first, then per-app stats (avoids heavy recursive listing).
     std::string prefix = accountId + "/";
-    auto appIds = prov->ListSubfolders(prefix);
+    std::vector<std::string> appIds;
+    if (!prov->ListSubfoldersChecked(prefix, appIds)) {
+        prov->Shutdown();
+        return JsonError("Failed to list apps for account " + accountId);
+    }
     std::map<std::string, std::pair<int, uint64_t>> appStats; // appId -> (count, totalSize)
     for (const auto& appId : appIds) {
         if (appId.empty()) continue;
@@ -537,7 +531,11 @@ std::string CmdListRemoteAppIds(const std::string& provider, const std::string& 
     }
     
     std::string prefix = accountId + "/";
-    auto folders = prov->ListSubfolders(prefix);
+    std::vector<std::string> folders;
+    if (!prov->ListSubfoldersChecked(prefix, folders)) {
+        prov->Shutdown();
+        return JsonError("Failed to list apps for account " + accountId);
+    }
     prov->Shutdown();
     
     // Build JSON array of app IDs
@@ -1300,7 +1298,11 @@ std::string CmdScanAll(const std::string& provider) {
     out << "[";
     bool firstApp = true;
     for (const auto& acct : accountIds) {
-        auto appIds = prov->ListSubfolders(acct + "/");
+        std::vector<std::string> appIds;
+        if (!prov->ListSubfoldersChecked(acct + "/", appIds)) {
+            prov->Shutdown();
+            return JsonError("Failed to list apps for account " + acct);
+        }
         for (const auto& appId : appIds) {
             if (appId.empty() || appId == "0") continue;
             if (!firstApp) out << ",";

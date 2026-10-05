@@ -12,15 +12,7 @@ internal static class UiCloudProviderFactory
 {
     public static IUiCloudProvider? TryResolve(CloudConfig? config, Action<string>? log)
     {
-        if (config == null || config.IsLocal) return null;
-        return config.Provider switch
-        {
-            "gdrive"   => new CliUiCloudProvider("gdrive", log),
-            "onedrive" => new CliUiCloudProvider("onedrive", log),
-            "r2"       => new CliUiCloudProvider("r2", log),
-            "s3"       => new CliUiCloudProvider("s3", log),
-            "folder"   => new FolderUiCloudProvider(log, config.SyncPath!),
-            _          => null,
-        };
+        if (config == null) return null;
+        return new CliUiCloudProvider("gdrive", log);
     }
 }

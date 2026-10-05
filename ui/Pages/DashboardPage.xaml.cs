@@ -141,9 +141,14 @@ public partial class DashboardPage : Page
                         appCount += Directory.GetDirectories(accountDir).Length;
                 }
 
-                // M9: Check OAuth token status off the UI thread (DPAPI + file I/O).
-                if (config?.TokenPath != null && config.Provider is not "r2" and not "s3")
-                    tokenStatus = Services.OAuthService.CheckTokenStatus(config.TokenPath);
+                var configDir = Services.SteamDetector.GetConfigDir();
+                var tokenPath = config?.TokenPath ?? Path.Combine(configDir, "gdrive_tokens.json");
+                if (!File.Exists(tokenPath))
+                {
+                    var legacyGoogle = Path.Combine(configDir, "google_tokens.json");
+                    if (File.Exists(legacyGoogle)) tokenPath = legacyGoogle;
+                }
+                tokenStatus = Services.OAuthService.CheckTokenStatus(tokenPath);
 
                 var luaCounts = Services.SteamDetector.CountLuaFiles(steamPath);
                 localLuas = luaCounts.LocalCount;
@@ -525,6 +530,14 @@ public partial class DashboardPage : Page
         }
     }
 
+    private void SetupWizardCard_Click(object sender, RoutedEventArgs e)
+    {
+        if (Window.GetWindow(this) is MainWindow mw)
+        {
+            mw.NavigateTo(typeof(SetupWizardPage));
+        }
+    }
+
     private void UniversalSavesCard_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         if (Window.GetWindow(this) is MainWindow mw)
@@ -541,66 +554,21 @@ public partial class DashboardPage : Page
         }
     }
 
-    private void UpdateProviderAuthStatus(Services.CloudConfig config, Services.TokenStatus preCheckedStatus)
+    private void UpdateProviderAuthStatus(Services.CloudConfig config, Services.TokenStatus? preCheckedStatus)
     {
-        if (config.IsLocal)
+        if (preCheckedStatus != null && preCheckedStatus.IsAuthenticated)
         {
-            ProviderStatus.Text = config.DisplayName;
+            ProviderStatus.Text = S.Format("Dashboard_Authenticated", "Google Drive");
             ProviderIcon.Symbol = Wpf.Ui.Controls.SymbolRegular.CloudCheckmark24;
-            return;
-        }
-
-        if (config.IsFolder)
-        {
-            if (config.SyncPath != null)
-            {
-                if (Directory.Exists(config.SyncPath))
-                {
-                    ProviderStatus.Text = S.Format("Dashboard_FolderAccessible", config.DisplayName);
-                    ProviderIcon.Symbol = Wpf.Ui.Controls.SymbolRegular.CloudCheckmark24;
-                }
-                else
-                {
-                    ProviderStatus.Text = S.Format("Dashboard_FolderNotFound", config.DisplayName);
-                    ProviderIcon.Symbol = Wpf.Ui.Controls.SymbolRegular.CloudDismiss24;
-                }
-            }
-            else
-            {
-                ProviderStatus.Text = S.Format("Dashboard_NoSyncFolder", config.DisplayName);
-                ProviderIcon.Symbol = Wpf.Ui.Controls.SymbolRegular.CloudOff24;
-            }
-            return;
-        }
-
-        // R2/S3: static credentials (no OAuth)
-        if (config.Provider is "r2" or "s3")
-        {
-            bool hasCreds = config.TokenPath != null && File.Exists(config.TokenPath);
-            ProviderStatus.Text = hasCreds
-                ? S.Format("Dashboard_Authenticated", config.DisplayName)
-                : S.Format("Dashboard_AuthStatus", config.DisplayName,
-                    S.Get(config.Provider == "s3" ? "CloudProvider_S3CredMissing" : "CloudProvider_R2CredMissing"));
-            ProviderIcon.Symbol = hasCreds
-                ? Wpf.Ui.Controls.SymbolRegular.CloudCheckmark24
-                : Wpf.Ui.Controls.SymbolRegular.CloudOff24;
-            return;
-        }
-
-        // OAuth providers (gdrive, onedrive)
-        if (config.TokenPath != null && preCheckedStatus != null)
-        {
-            ProviderStatus.Text = preCheckedStatus.IsAuthenticated
-                ? S.Format("Dashboard_Authenticated", config.DisplayName)
-                : S.Format("Dashboard_AuthStatus", config.DisplayName, preCheckedStatus.Message);
-            ProviderIcon.Symbol = preCheckedStatus.IsAuthenticated
-                ? Wpf.Ui.Controls.SymbolRegular.CloudCheckmark24
-                : Wpf.Ui.Controls.SymbolRegular.CloudOff24;
+            ProviderIcon.Foreground = new System.Windows.Media.SolidColorBrush(
+                System.Windows.Media.Color.FromRgb(0xA4, 0xD0, 0x07));
         }
         else
         {
-            ProviderStatus.Text = S.Format("Dashboard_NoTokenPath", config.DisplayName);
+            ProviderStatus.Text = preCheckedStatus != null ? preCheckedStatus.Message : S.Get("CloudProvider_NoTokensLoaded");
             ProviderIcon.Symbol = Wpf.Ui.Controls.SymbolRegular.CloudOff24;
+            ProviderIcon.Foreground = new System.Windows.Media.SolidColorBrush(
+                System.Windows.Media.Color.FromRgb(0xDF, 0x56, 0x48));
         }
     }
 

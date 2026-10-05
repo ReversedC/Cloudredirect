@@ -102,21 +102,6 @@ public static class CloudLocationService
                 return;
             }
         }
-        else if (config != null && config.Provider == "onedrive")
-        {
-            Process.Start(new ProcessStartInfo("https://onedrive.live.com/") { UseShellExecute = true })?.Dispose();
-            return;
-        }
-        else if (config != null && (config.IsFolder || config.IsLocal) && !string.IsNullOrEmpty(config.SyncPath))
-        {
-            var target = Path.Combine(config.SyncPath, accountId, appId);
-            if (!Directory.Exists(target)) target = config.SyncPath;
-            if (Directory.Exists(target))
-            {
-                Process.Start(new ProcessStartInfo { FileName = target, UseShellExecute = true })?.Dispose();
-                return;
-            }
-        }
 
         // Fallback: Open local CloudRedirect storage folder
         OpenLocalStorageFolder(accountId, appId);

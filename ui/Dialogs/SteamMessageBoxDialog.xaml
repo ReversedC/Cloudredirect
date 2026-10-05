@@ -1,0 +1,117 @@
+<Window x:Class="CloudRedirect.Dialogs.SteamMessageBoxDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        Title="CloudRedirect"
+        Width="480" SizeToContent="Height"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        ResizeMode="NoResize"
+        KeyDown="Window_KeyDown">
+
+    <Border Margin="14"
+            Background="#171A21"
+            BorderBrush="#2A475E"
+            BorderThickness="1"
+            CornerRadius="8"
+            ClipToBounds="True">
+        <Border.Effect>
+            <DropShadowEffect Color="#000000" BlurRadius="24" ShadowDepth="4" Opacity="0.8" />
+        </Border.Effect>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" /> <!-- Header -->
+                <RowDefinition Height="*" />    <!-- Content -->
+                <RowDefinition Height="Auto" /> <!-- Footer -->
+            </Grid.RowDefinitions>
+
+            <!-- 1. Header Bar -->
+            <Border Grid.Row="0"
+                    Background="#1B2838"
+                    BorderBrush="#253A4E"
+                    BorderThickness="0,0,0,1"
+                    Padding="14,10"
+                    MouseLeftButtonDown="Header_MouseLeftButtonDown">
+                <Grid>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Image Source="pack://application:,,,/steam_logo3.ico" Width="18" Height="18" Margin="0,0,8,0" VerticalAlignment="Center" />
+                        <TextBlock x:Name="DialogTitleText"
+                                   Text="CLOUDREDIRECT"
+                                   FontSize="12"
+                                   FontWeight="Bold"
+                                   Foreground="#66C0F4"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <!-- Close X Button -->
+                    <Button HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Width="26" Height="26"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Foreground="#8F98A0"
+                            Cursor="Hand"
+                            Click="CloseButton_Click"
+                            ToolTip="Close">
+                        <TextBlock Text="✕" FontSize="12" FontWeight="Bold" />
+                    </Button>
+                </Grid>
+            </Border>
+
+            <!-- 2. Content Body -->
+            <Border Grid.Row="1" Padding="20,18">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Optional Status Icon -->
+                    <Border x:Name="StatusIconBorder" Grid.Column="0" Margin="0,2,14,0" VerticalAlignment="Top" Visibility="Collapsed">
+                        <ui:SymbolIcon x:Name="StatusIcon" Symbol="Info24" FontSize="26" Foreground="#66C0F4" />
+                    </Border>
+
+                    <!-- Message Text or Custom Content -->
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock x:Name="DialogMessageText"
+                                   Foreground="#C6D4DF"
+                                   FontSize="13"
+                                   TextWrapping="Wrap"
+                                   LineHeight="20"
+                                   Visibility="Visible" />
+                        <ContentPresenter x:Name="DialogCustomContent" Visibility="Collapsed" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- 3. Footer Actions -->
+            <Border Grid.Row="2"
+                    Background="#131C26"
+                    BorderBrush="#253A4E"
+                    BorderThickness="0,1,0,0"
+                    Padding="18,12">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <!-- Secondary Button (Cancel / No / Later) -->
+                    <Button x:Name="SecondaryBtn"
+                            Content="Cancel"
+                            Style="{StaticResource SteamSecondaryButtonStyle}"
+                            MinWidth="96"
+                            Margin="0,0,10,0"
+                            Visibility="Collapsed"
+                            Click="SecondaryBtn_Click" />
+
+                    <!-- Primary Button (OK / Yes / Add / Play) -->
+                    <Button x:Name="PrimaryBtn"
+                            Content="OK"
+                            Style="{StaticResource SteamPlayButtonStyle}"
+                            MinWidth="96"
+                            Click="PrimaryBtn_Click" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

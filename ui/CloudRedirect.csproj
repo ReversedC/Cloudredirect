@@ -53,6 +53,7 @@
     <EmbeddedResource Include="Resources\cloud_redirect.dll" LogicalName="cloud_redirect.dll" Condition="Exists('Resources\cloud_redirect.dll')" />
     <EmbeddedResource Include="Resources\cloud_redirect_cli.exe" LogicalName="cloud_redirect_cli.exe" Condition="Exists('Resources\cloud_redirect_cli.exe')" />
     <EmbeddedResource Include="Resources\WebView2Loader.dll" LogicalName="WebView2Loader.dll" Condition="Exists('Resources\WebView2Loader.dll')" />
+    <EmbeddedResource Include="Resources\community_database.json.gz" LogicalName="community_database.json.gz" Condition="Exists('Resources\community_database.json.gz')" />
     <EmbeddedResource Include="Resources\MillenniumPlugin\**\*" />
   </ItemGroup>
 

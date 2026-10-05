@@ -36,11 +36,11 @@ public static class SaveUploadWatcherService
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     private static readonly Regex ProviderUploadRegex = new(
-        @"\[(?:GDriveProvider|OneDriveProvider|S3Provider|R2Provider|FolderProvider)\]\s+Uploaded\s+(?:(?<acc>\d+)/(?<app>\d+)/)?(?<file>[^\s]+)\s+\((?<bytes>\d+)\s+bytes\)",
+        @"\[GDriveProvider\]\s+Uploaded\s+(?:(?<acc>\d+)/(?<app>\d+)/)?(?<file>[^\s]+)\s+\((?<bytes>\d+)\s+bytes\)",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     private static readonly Regex BatchUploadRegex = new(
-        @"\[(?:GDriveProvider|OneDriveProvider|S3Provider|R2Provider|FolderProvider)\]\s+UploadBatch:\s+(?<count>\d+)\s+file\(s\)\s+\((?<uploaded>\d+)\s+uploaded",
+        @"\[GDriveProvider\]\s+UploadBatch:\s+(?<count>\d+)\s+file\(s\)\s+\((?<uploaded>\d+)\s+uploaded",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     private static readonly Regex AppCompleteRegex = new(

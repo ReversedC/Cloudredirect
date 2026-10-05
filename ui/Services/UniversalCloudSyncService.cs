@@ -47,13 +47,7 @@ public static class UniversalCloudSyncService
             return await UploadToGoogleDriveAsync(profile, saveDir, saveFiles, config);
         }
 
-        // 2. Folder / Local / Network Sync
-        if (config.IsFolder || config.IsLocal || !string.IsNullOrEmpty(config.SyncPath))
-        {
-            return await UploadToLocalSyncFolderAsync(profile, saveDir, saveFiles, config.SyncPath ?? "");
-        }
-
-        // 3. Fallback: Local snapshot only
+        // Fallback: Local snapshot only
         return new SyncResult(true, saveFiles.Length, 0, "Local snapshots active (Safe Mode).");
     }
 
@@ -231,55 +225,6 @@ public static class UniversalCloudSyncService
         }
     }
 
-    private static async Task<SyncResult> UploadToLocalSyncFolderAsync(
-        UniversalGameProfile profile,
-        string saveDir,
-        string[] saveFiles,
-        string syncPath)
-    {
-        return await Task.Run(() =>
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(syncPath) || !Directory.Exists(syncPath))
-                {
-                    return new SyncResult(false, 0, 0, "Configured sync path does not exist.");
-                }
-
-                var sanitizedName = SaveHistoryManager.SanitizeFolderName(profile.GameName);
-                var destRoot = Path.Combine(syncPath, "UniversalCloudSaves", sanitizedName);
-                if (!Directory.Exists(destRoot))
-                    Directory.CreateDirectory(destRoot);
-
-                int copied = 0;
-                long totalBytes = 0;
-
-                foreach (var src in saveFiles)
-                {
-                    var rel = Path.GetRelativePath(saveDir, src);
-                    var dest = Path.Combine(destRoot, rel);
-                    var destDir = Path.GetDirectoryName(dest)!;
-                    if (!Directory.Exists(destDir))
-                        Directory.CreateDirectory(destDir);
-
-                    var info = new FileInfo(src);
-                    File.Copy(src, dest, overwrite: true);
-                    copied++;
-                    totalBytes += info.Length;
-                }
-
-                return new SyncResult(
-                    true,
-                    copied,
-                    totalBytes,
-                    $"Successfully synced {copied} file(s) to local cloud storage folder.");
-            }
-            catch (Exception ex)
-            {
-                return new SyncResult(false, 0, 0, $"Local sync error: {ex.Message}");
-            }
-        });
-    }
 
     private static async Task<string?> EnsureDriveFolderAsync(HttpClient http, string name, string? parentId)
     {
@@ -750,47 +695,9 @@ public static class UniversalCloudSyncService
                 result.Success = true;
                 return result;
             }
-            else if (config.IsFolder || config.IsLocal || !string.IsNullOrEmpty(config.SyncPath))
-            {
-                var basePath = config.SyncPath ?? "";
-                var sanitizedGameName = SaveHistoryManager.SanitizeFolderName(gameName);
-                var targetDir = Path.Combine(basePath, "UniversalCloudSaves", sanitizedGameName);
-
-                if (!Directory.Exists(targetDir) && appId > 0)
-                {
-                    var acctDir = !string.IsNullOrEmpty(accountId) && accountId != "0"
-                        ? Path.Combine(basePath, accountId, appId.ToString())
-                        : Path.Combine(basePath, appId.ToString());
-                    if (Directory.Exists(acctDir))
-                    {
-                        targetDir = acctDir;
-                    }
-                }
-
-                result.FolderPathDisplay = $"Local Cloud Folder ➔ {targetDir}";
-                if (Directory.Exists(targetDir))
-                {
-                    var di = new DirectoryInfo(targetDir);
-                    foreach (var fi in di.GetFiles("*", SearchOption.AllDirectories))
-                    {
-                        var rel = Path.GetRelativePath(targetDir, fi.FullName).Replace('\\', '/');
-                        result.Files.Add(new CloudDriveFileInfo
-                        {
-                            Id = fi.FullName,
-                            Name = rel,
-                            Size = fi.Length,
-                            ModifiedTime = fi.LastWriteTimeUtc,
-                            IsDirectory = false
-                        });
-                    }
-                }
-                result.Files = result.Files.OrderBy(f => f.Name).ToList();
-                result.Success = true;
-                return result;
-            }
             else
             {
-                result.ErrorMessage = "In-app cloud explorer is supported for Google Drive and Local Folders.";
+                result.ErrorMessage = "In-app cloud explorer is supported for Google Drive.";
                 return result;
             }
         }

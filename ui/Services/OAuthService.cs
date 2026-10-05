@@ -64,23 +64,12 @@ internal static class TokenFile
 /// </summary>
 public sealed class OAuthService : IDisposable
 {
-    // Google Drive (clasp credentials — same as hardcoded in the DLL)
     private const string GDriveClientId = // owo what's this?
         "1072944905499-vm2v2i5dvn0a0d2o4ca36i1vge8cvbn0.apps.googleusercontent.com";
     private const string GDriveClientSecret = "v6V3fKV_zWU7iw1DrpO1rknX"; // uwuuu
     private const string GDriveScope = "https://www.googleapis.com/auth/drive.file";
     private const string GDriveAuthUrl = "https://accounts.google.com/o/oauth2/v2/auth";
     private const string GDriveTokenUrl = "https://oauth2.googleapis.com/token";
-
-    // OneDrive (using rclone's public client ID - our Azure AD app has redirect URI issues)
-    private const string OneDriveClientId = "b15665d9-eda6-4092-8539-0eec376afd59";
-    private const string OneDriveClientSecret = "qtyfaBBYA403=unZUP40~_#";
-    private const string OneDriveScope = "Files.ReadWrite offline_access";
-    private const string OneDriveAuthUrl =
-        "https://login.microsoftonline.com/common/oauth2/v2.0/authorize";
-    private const string OneDriveTokenUrl =
-        "https://login.microsoftonline.com/common/oauth2/v2.0/token";
-    private const int OneDrivePort = 53682; // rclone's Azure AD app only has this port registered
 
     private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(30) };
     private HttpListener? _listener;
@@ -143,25 +132,33 @@ public sealed class OAuthService : IDisposable
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancel);
         _listener = new HttpListener();
 
-        if (provider == "onedrive")
+        // Google Drive - use dynamic port with /callback path
+        for (int attempt = 0; attempt < 5; attempt++)
         {
-            port = OneDrivePort;
-            redirectUri = $"http://localhost:{port}/";
-            
-            log($"Starting OAuth flow for {provider}...");
+            port = FindAvailablePort();
+            redirectUri = $"http://localhost:{port}/callback";
+
+            log($"Starting OAuth flow for Google Drive...");
             log($"Listening on {redirectUri}");
 
             _listener.Prefixes.Clear();
-            _listener.Prefixes.Add(redirectUri);
+            _listener.Prefixes.Add($"http://localhost:{port}/callback/");
 
             try
             {
                 _listener.Start();
+                break; // success
+            }
+            catch (HttpListenerException) when (attempt < 4)
+            {
+                log($"Port {port} in use, retrying...");
+                _listener.Close();
+                _listener = new HttpListener();
+                continue;
             }
             catch (HttpListenerException ex)
             {
-                log($"ERROR: Failed to start HTTP listener on port {port}: {ex.Message}");
-                log("(Port 53682 may be in use by another application)");
+                log($"ERROR: Failed to start HTTP listener after 5 attempts: {ex.Message}");
                 _listener.Close();
                 _listener = null;
                 _cts.Dispose();
@@ -169,47 +166,8 @@ public sealed class OAuthService : IDisposable
                 return false;
             }
         }
-        else
-        {
-            // Google Drive - use dynamic port with /callback path
-            for (int attempt = 0; attempt < 5; attempt++)
-            {
-                port = FindAvailablePort();
-                redirectUri = $"http://localhost:{port}/callback";
 
-                log($"Starting OAuth flow for {provider}...");
-                log($"Listening on {redirectUri}");
-
-                _listener.Prefixes.Clear();
-                _listener.Prefixes.Add($"http://localhost:{port}/callback/");
-
-                try
-                {
-                    _listener.Start();
-                    break; // success
-                }
-                catch (HttpListenerException) when (attempt < 4)
-                {
-                    log($"Port {port} in use, retrying...");
-                    _listener.Close();
-                    _listener = new HttpListener();
-                    continue;
-                }
-                catch (HttpListenerException ex)
-                {
-                    log($"ERROR: Failed to start HTTP listener after 5 attempts: {ex.Message}");
-                    _listener.Close();
-                    _listener = null;
-                    _cts.Dispose();
-                    _cts = null;
-                    return false;
-                }
-            }
-        }
-
-        string redirectUriFinal = provider == "onedrive" 
-            ? $"http://localhost:{port}/" 
-            : $"http://localhost:{port}/callback";
+        string redirectUriFinal = $"http://localhost:{port}/callback";
 
         // Generate CSRF state and PKCE code verifier
         _oauthState = GenerateRandomString(32);
@@ -217,12 +175,7 @@ public sealed class OAuthService : IDisposable
         string codeChallenge = ComputeCodeChallenge(_codeVerifier);
 
         // Build the authorization URL
-        string authUrl = provider switch
-        {
-            "gdrive" => BuildGDriveAuthUrl(redirectUriFinal, _oauthState, codeChallenge),
-            "onedrive" => BuildOneDriveAuthUrl(redirectUriFinal, _oauthState, codeChallenge),
-            _ => throw new ArgumentException($"Unknown provider: {provider}")
-        };
+        string authUrl = BuildGDriveAuthUrl(redirectUriFinal, _oauthState, codeChallenge);
 
         CurrentAuthUrl = authUrl;
         _manualCodeTcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -282,12 +235,7 @@ public sealed class OAuthService : IDisposable
         TokenResult? tokens;
         try
         {
-            tokens = provider switch
-            {
-                "gdrive" => await ExchangeGDriveCodeAsync(code, redirectUriFinal, _codeVerifier!, cancel),
-                "onedrive" => await ExchangeOneDriveCodeAsync(code, redirectUriFinal, _codeVerifier!, log, cancel),
-                _ => null
-            };
+            tokens = await ExchangeGDriveCodeAsync(code, redirectUriFinal, _codeVerifier!, cancel);
         }
         catch (Exception ex)
         {
@@ -450,18 +398,7 @@ public sealed class OAuthService : IDisposable
                $"&code_challenge_method=S256";
     }
 
-    private static string BuildOneDriveAuthUrl(string redirectUri, string state, string codeChallenge)
-    {
-        return $"{OneDriveAuthUrl}" +
-               $"?client_id={Uri.EscapeDataString(OneDriveClientId)}" +
-               $"&redirect_uri={Uri.EscapeDataString(redirectUri)}" +
-               $"&response_type=code" +
-               $"&scope={Uri.EscapeDataString(OneDriveScope)}" +
-               $"&prompt=consent" +
-               $"&state={Uri.EscapeDataString(state)}" +
-               $"&code_challenge={Uri.EscapeDataString(codeChallenge)}" +
-               $"&code_challenge_method=S256";
-    }
+
 
     private async Task<string?> WaitForCallbackAsync(CancellationToken cancel)
     {
@@ -593,34 +530,7 @@ public sealed class OAuthService : IDisposable
         return ParseTokenResponse(json);
     }
 
-    private async Task<TokenResult?> ExchangeOneDriveCodeAsync(
-        string code, string redirectUri, string codeVerifier,
-        Action<string> log, CancellationToken cancel)
-    {
-        var fields = new Dictionary<string, string>
-        {
-            ["code"] = code,
-            ["client_id"] = OneDriveClientId,
-            ["client_secret"] = OneDriveClientSecret,
-            ["redirect_uri"] = redirectUri,
-            ["grant_type"] = "authorization_code",
-            ["scope"] = OneDriveScope,
-            ["code_verifier"] = codeVerifier
-        };
 
-        log("OneDrive token exchange: exchanging authorization code...");
-        var resp = await _http.PostAsync(OneDriveTokenUrl, new FormUrlEncodedContent(fields), cancel);
-        var json = await resp.Content.ReadAsStringAsync(cancel);
-
-        if (resp.IsSuccessStatusCode)
-        {
-            log("OneDrive token exchange succeeded.");
-            return ParseTokenResponse(json);
-        }
-
-        log($"OneDrive token exchange failed (HTTP {(int)resp.StatusCode}): {json}");
-        throw new Exception($"Token exchange failed (HTTP {(int)resp.StatusCode}): {json}");
-    }
 
     private static TokenResult ParseTokenResponse(string json)
     {

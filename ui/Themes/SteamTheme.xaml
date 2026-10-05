@@ -117,6 +117,12 @@
     <SolidColorBrush x:Key="SteamTextPrimaryBrush" Color="{StaticResource SteamTextPrimaryColor}" />
     <SolidColorBrush x:Key="SteamTextSecondaryBrush" Color="{StaticResource SteamTextSecondaryColor}" />
     <SolidColorBrush x:Key="SteamTextTertiaryBrush" Color="{StaticResource SteamTextTertiaryColor}" />
+    <SolidColorBrush x:Key="SteamCardBackground" Color="{StaticResource SteamBgCardColor}" />
+    <SolidColorBrush x:Key="SteamCardBackgroundSecondary" Color="{StaticResource SteamBgCardSecondaryColor}" />
+    <SolidColorBrush x:Key="SteamPlayGreenBorderBrush" Color="{StaticResource SteamPlayGreenBorderColor}" />
+    <SolidColorBrush x:Key="SteamBlueBtnBorderBrush" Color="{StaticResource SteamBlueBtnBorderColor}" />
+    <SolidColorBrush x:Key="SteamSecondaryBtnBorderBrush" Color="{StaticResource SteamSecondaryBtnBorderColor}" />
+    <SolidColorBrush x:Key="SteamDangerBorderBrush" Color="{StaticResource SteamDangerBorderColor}" />
 
     <!-- ====================================================================
          WPF-UI DESIGN SYSTEM OVERRIDES
@@ -376,7 +382,179 @@
         <Setter Property="MaxWidth" Value="520" />
         <Setter Property="HorizontalAlignment" Value="Center" />
         <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <!-- ====================================================================
+         AUTHENTIC STEAM BUTTON STYLES
+         ==================================================================== -->
+
+    <!-- Steam Play Green Button Style (Play, Primary Action, Submit) -->
+    <Style x:Key="SteamPlayButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="{StaticResource SteamPlayButtonGradient}" />
+        <Setter Property="Foreground" Value="#FFFFFF" />
+        <Setter Property="BorderBrush" Value="{StaticResource SteamPlayGreenBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Padding" Value="16,8" />
         <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="playBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="5"
+                            Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="playBorder" Property="Background" Value="{StaticResource SteamPlayButtonHoverGradient}" />
+                            <Setter TargetName="playBorder" Property="BorderBrush" Value="#86C825" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="playBorder" Property="Background" Value="#3D6310" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="playBorder" Property="Background" Value="#223020" />
+                            <Setter TargetName="playBorder" Property="BorderBrush" Value="#2D402B" />
+                            <Setter Property="Foreground" Value="#5C7A58" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Steam Store Blue Button Style -->
+    <Style x:Key="SteamBlueButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="{StaticResource SteamBlueButtonGradient}" />
+        <Setter Property="Foreground" Value="#FFFFFF" />
+        <Setter Property="BorderBrush" Value="{StaticResource SteamBlueBtnBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Padding" Value="16,8" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="blueBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="5"
+                            Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="blueBorder" Property="Background" Value="#FF2B5F87" />
+                            <Setter TargetName="blueBorder" Property="BorderBrush" Value="#FF4A9BD4" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="blueBorder" Property="Background" Value="#FF153852" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="blueBorder" Property="Background" Value="#FF172330" />
+                            <Setter TargetName="blueBorder" Property="BorderBrush" Value="#FF1E3348" />
+                            <Setter Property="Foreground" Value="#FF4E6B87" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Steam Secondary Button Style -->
+    <Style x:Key="SteamSecondaryButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="#22364B" />
+        <Setter Property="Foreground" Value="#C6D4DF" />
+        <Setter Property="BorderBrush" Value="#325272" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Padding" Value="16,8" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="secBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="5"
+                            Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="secBorder" Property="Background" Value="#2F4C69" />
+                            <Setter TargetName="secBorder" Property="BorderBrush" Value="#4C78A4" />
+                            <Setter Property="Foreground" Value="#FFFFFF" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="secBorder" Property="Background" Value="#172738" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="secBorder" Property="Background" Value="#162230" />
+                            <Setter TargetName="secBorder" Property="BorderBrush" Value="#203348" />
+                            <Setter Property="Foreground" Value="#4E6379" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Steam Danger Button Style -->
+    <Style x:Key="SteamDangerButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="{StaticResource SteamDangerButtonGradient}" />
+        <Setter Property="Foreground" Value="#FFFFFF" />
+        <Setter Property="BorderBrush" Value="{StaticResource SteamDangerBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Padding" Value="16,8" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="dangerBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="5"
+                            Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="dangerBorder" Property="Background" Value="#FFA62F33" />
+                            <Setter TargetName="dangerBorder" Property="BorderBrush" Value="#FFDF484E" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="dangerBorder" Property="Background" Value="#FF521315" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="dangerBorder" Property="Background" Value="#FF2B1416" />
+                            <Setter TargetName="dangerBorder" Property="BorderBrush" Value="#FF3D1F22" />
+                            <Setter Property="Foreground" Value="#FF7A4B4E" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
 </ResourceDictionary>
