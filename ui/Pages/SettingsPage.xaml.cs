@@ -120,6 +120,11 @@ public partial class SettingsPage : Page
             AutoConflictHealingToggle.IsChecked = AppSettings.AutoConflictHealing;
             AutoCompressionToggle.IsChecked = AppSettings.AutoStorageCompression;
             AutoCommunityDbToggle.IsChecked = AppSettings.AutoCommunityDatabase;
+            if (CommunityDbFeedPanel != null)
+                CommunityDbFeedPanel.Visibility = AppSettings.AutoCommunityDatabase ? Visibility.Visible : Visibility.Collapsed;
+            if (CommunityDbUrlTextBox != null)
+                CommunityDbUrlTextBox.Text = AppSettings.CommunityDatabaseUrl;
+            UpdateCommunityDbStatsDisplay();
 
             InitializeSettingsLanguageSelector();
         }
@@ -286,7 +291,94 @@ public partial class SettingsPage : Page
         if (AutoCompressionToggle != null)
             AppSettings.AutoStorageCompression = AutoCompressionToggle.IsChecked == true;
         if (AutoCommunityDbToggle != null)
+        {
             AppSettings.AutoCommunityDatabase = AutoCommunityDbToggle.IsChecked == true;
+            if (CommunityDbFeedPanel != null)
+                CommunityDbFeedPanel.Visibility = AutoCommunityDbToggle.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        }
+    }
+
+    private void UpdateCommunityDbStatsDisplay()
+    {
+        if (CommunityDbStatusText == null || CommunityDbStatsText == null) return;
+        var (builtIn, remote, total, lastSync) = Services.GameSaveAutoDetector.GetCommunityDatabaseStats();
+        if (!string.IsNullOrEmpty(lastSync))
+        {
+            CommunityDbStatusText.Text = $"Last updated: {lastSync}";
+            CommunityDbStatusText.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xA4, 0xD0, 0x07));
+        }
+        else
+        {
+            CommunityDbStatusText.Text = "Status: Ready (Built-in active)";
+            CommunityDbStatusText.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x66, 0xC0, 0xF4));
+        }
+
+        CommunityDbStatsText.Text = remote > 0
+            ? $"• {total} signatures ({remote} custom/remote, {builtIn} built-in)"
+            : $"• {builtIn} built-in game signatures";
+    }
+
+    private void CommunityDbUrlTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_syncLoading || CommunityDbUrlTextBox == null) return;
+        AppSettings.CommunityDatabaseUrl = CommunityDbUrlTextBox.Text?.Trim() ?? "";
+    }
+
+    private async void CommunityDbSyncButton_Click(object sender, RoutedEventArgs e)
+    {
+        var btn = CommunityDbSyncButton;
+        if (btn != null) btn.IsEnabled = false;
+
+        try
+        {
+            var url = CommunityDbUrlTextBox?.Text?.Trim() ?? "";
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                await Services.Dialog.ShowWarningAsync("Community Database",
+                    "Please enter a valid raw JSON URL or GitHub Gist link first (e.g. https://gist.githubusercontent.com/.../raw/saves.json).");
+                return;
+            }
+
+            CommunityDbStatusText.Text = "Syncing from remote feed...";
+            CommunityDbStatusText.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x66, 0xC0, 0xF4));
+
+            var (success, remoteCount, message) = await Services.GameSaveAutoDetector.SyncRemoteCommunityDatabaseAsync(url);
+            UpdateCommunityDbStatsDisplay();
+
+            if (success)
+            {
+                await Services.Dialog.ShowInfoAsync("Community Database Updated",
+                    $"{message}\n\nAll game save signatures are now actively monitored by CloudRedirect without needing an app restart!");
+            }
+            else
+            {
+                await Services.Dialog.ShowWarningAsync("Update Failed",
+                    $"Could not update from remote URL:\n{message}\n\nPlease verify that the URL is public, accessible, and returns valid JSON.");
+            }
+        }
+        catch (Exception ex)
+        {
+            await Services.Dialog.ShowErrorAsync("Update Error", ex.Message);
+        }
+        finally
+        {
+            if (btn != null) btn.IsEnabled = true;
+        }
+    }
+
+    private async void CommunityDbCopyTemplateButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var json = Services.GameSaveAutoDetector.ExportDatabaseToJson();
+            Clipboard.SetText(json);
+            await Services.Dialog.ShowInfoAsync("Template Copied",
+                "The complete Community Database JSON template has been copied to your clipboard!\n\nYou can now create a new GitHub Gist, paste this content, save it, and click 'Raw' to copy its URL into CloudRedirect.");
+        }
+        catch (Exception ex)
+        {
+            await Services.Dialog.ShowErrorAsync("Copy Failed", ex.Message);
+        }
     }
 
     private void AutoFitZoomToggle_Changed(object sender, RoutedEventArgs e)

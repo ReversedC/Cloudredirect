@@ -51,7 +51,26 @@ public static class SaveHistoryManager
         return string.IsNullOrEmpty(sanitized) ? "unknown_game" : sanitized;
     }
 
-    public static string? FindAppStorageDir(string? steamPath, uint appId, string? accountId = null)
+    public static bool HasRealSaveFiles(string dir)
+    {
+        if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir)) return false;
+        try
+        {
+            var files = Directory.GetFiles(dir, "*", SearchOption.AllDirectories);
+            return files.Any(f =>
+            {
+                var name = Path.GetFileName(f);
+                return name is not "cn.cloudredirect"
+                       and not "cn.dat"
+                       and not "state.cloudredirect"
+                       and not "manifest.cloudredirect"
+                       and not "root_token.dat";
+            });
+        }
+        catch { return false; }
+    }
+
+    public static string? FindAppStorageDir(string? steamPath, uint appId, string? accountId = null, bool requireFiles = false)
     {
         if (string.IsNullOrEmpty(steamPath) || appId == 0) return null;
 
@@ -61,13 +80,14 @@ public static class SaveHistoryManager
         if (!string.IsNullOrEmpty(accountId) && accountId != "0")
         {
             var direct = Path.Combine(storageRoot, accountId, appId.ToString());
-            if (Directory.Exists(direct)) return direct;
+            if (Directory.Exists(direct) && (!requireFiles || HasRealSaveFiles(direct)))
+                return direct;
         }
 
         foreach (var accDir in Directory.GetDirectories(storageRoot))
         {
             var candidate = Path.Combine(accDir, appId.ToString());
-            if (Directory.Exists(candidate))
+            if (Directory.Exists(candidate) && (!requireFiles || HasRealSaveFiles(candidate)))
                 return candidate;
         }
 

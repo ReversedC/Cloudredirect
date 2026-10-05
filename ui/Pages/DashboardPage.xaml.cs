@@ -845,10 +845,19 @@ public partial class DashboardPage : Page
         try
         {
             ActivityProgressBar.Visibility = Visibility.Visible;
+            ActivityStatusText.Text = S.Get("Dashboard_Uploading");
+            ActivityIcon.Symbol = Wpf.Ui.Controls.SymbolRegular.ArrowSync24;
+
+            var tasks = new List<Task>();
             if (_steamPath != null)
             {
-                await Task.Run(() => Services.LuaSyncHelper.ManualBackup(_steamPath));
+                tasks.Add(Task.Run(() => Services.LuaSyncHelper.ManualBackup(_steamPath)));
             }
+
+            // Sync all universal out-of-process game saves (Minecraft, Elden Ring, etc.)
+            tasks.Add(Services.UniversalCloudSyncService.SyncAllProfilesAsync());
+
+            await Task.WhenAll(tasks);
             await LoadStatusAsync();
         }
         catch { }

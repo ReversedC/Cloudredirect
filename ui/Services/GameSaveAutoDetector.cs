@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace CloudRedirect.Services;
 
@@ -45,9 +48,16 @@ public static class GameSaveAutoDetector
         Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), // Documents
     ];
 
-    // Known game save signatures (matching by process or name keywords)
-    private static readonly Dictionary<string, string[]> KnownGameSaveRelativePaths = new(StringComparer.OrdinalIgnoreCase)
+    // Built-in offline fallback database
+    private static readonly Dictionary<string, string[]> BuiltInGameSaveRelativePaths = new(StringComparer.OrdinalIgnoreCase)
     {
+        { "Dungeons", [@"%LOCALAPPDATA%\Dungeons2\Saved\SaveGames", @"%LOCALAPPDATA%\Dungeons\Saved\SaveGames", @"%LOCALAPPDATA%\Packages\Microsoft.Lovika_8wekyb3d8bbwe\LocalCache\Local\Dungeons\Saved\SaveGames"] },
+        { "Dungeons2", [@"%LOCALAPPDATA%\Dungeons2\Saved\SaveGames", @"%LOCALAPPDATA%\Dungeons\Saved\SaveGames"] },
+        { "Dungeons-Win64-Shipping", [@"%LOCALAPPDATA%\Dungeons2\Saved\SaveGames", @"%LOCALAPPDATA%\Dungeons\Saved\SaveGames"] },
+        { "Minecraft Dungeons", [@"%LOCALAPPDATA%\Dungeons2\Saved\SaveGames", @"%LOCALAPPDATA%\Dungeons\Saved\SaveGames", @"%LOCALAPPDATA%\Packages\Microsoft.Lovika_8wekyb3d8bbwe\LocalCache\Local\Dungeons\Saved\SaveGames", @"%LOCALAPPDATA%\Mojang\products\dungeons\dungeons"] },
+        { "Minecraft Dungeons II", [@"%LOCALAPPDATA%\Dungeons2\Saved\SaveGames", @"%LOCALAPPDATA%\Dungeons\Saved\SaveGames"] },
+        { "Minecraft", [@"%APPDATA%\.minecraft\saves", @"%LOCALAPPDATA%\Packages\Microsoft.MinecraftUWP_8wekyb3d8bbwe\LocalState\games\com.mojang\minecraftWorlds"] },
+        { "MinecraftLegends", [@"%USERPROFILE%\Saved Games\Minecraft Legends"] },
         { "eldenring", [@"%APPDATA%\EldenRing"] },
         { "bg3", [@"%LOCALAPPDATA%\Larian Studios\Baldur's Gate 3\PlayerProfiles\Public\Savegames"] },
         { "b1-Win64-Shipping", [@"%LOCALAPPDATA%\b1\Saved\SaveGames"] },
@@ -98,6 +108,222 @@ public static class GameSaveAutoDetector
         { "pcsx2", [@"Documents\PCSX2\memcards", @"%USERPROFILE%\Documents\PCSX2\memcards"] },
         { "retroarch", [@"%APPDATA%\RetroArch\saves"] }
     };
+
+    // Dynamically loaded / remote community database
+    private static readonly Dictionary<string, string[]> RemoteGameSaveRelativePaths = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly object _dbLock = new();
+
+    public static string GetCommunityDatabaseCachePath()
+    {
+        return Path.Combine(SteamDetector.GetConfigDir(), "community_database.json");
+    }
+
+    public static Dictionary<string, string[]> GetAllKnownGameSavePaths()
+    {
+        lock (_dbLock)
+        {
+            var combined = new Dictionary<string, string[]>(BuiltInGameSaveRelativePaths, StringComparer.OrdinalIgnoreCase);
+            foreach (var kvp in RemoteGameSaveRelativePaths)
+            {
+                combined[kvp.Key] = kvp.Value;
+            }
+            return combined;
+        }
+    }
+
+    public static (int builtIn, int remote, int total, string? lastSync) GetCommunityDatabaseStats()
+    {
+        lock (_dbLock)
+        {
+            int builtIn = BuiltInGameSaveRelativePaths.Count;
+            int remote = RemoteGameSaveRelativePaths.Count;
+            int total = GetAllKnownGameSavePaths().Count;
+            string? lastSync = AppSettings.CommunityDatabaseLastSync;
+            if (string.IsNullOrWhiteSpace(lastSync)) lastSync = null;
+            return (builtIn, remote, total, lastSync);
+        }
+    }
+
+    private static DateTime _lastSyncCheckTime = DateTime.MinValue;
+
+    public static void InitializeCommunityDatabase()
+    {
+        LoadLocalCachedDatabase();
+        if (AppSettings.AutoCommunityDatabase)
+        {
+            _lastSyncCheckTime = DateTime.UtcNow;
+            _ = Task.Run(async () => await SyncRemoteCommunityDatabaseAsync());
+        }
+    }
+
+    public static void CheckPeriodicCommunityDatabaseSync()
+    {
+        if (!AppSettings.AutoCommunityDatabase) return;
+        if ((DateTime.UtcNow - _lastSyncCheckTime).TotalMinutes >= 30)
+        {
+            _lastSyncCheckTime = DateTime.UtcNow;
+            _ = Task.Run(async () => await SyncRemoteCommunityDatabaseAsync());
+        }
+    }
+
+    public static void LoadLocalCachedDatabase()
+    {
+        try
+        {
+            var cachePath = GetCommunityDatabaseCachePath();
+            if (File.Exists(cachePath))
+            {
+                var json = File.ReadAllText(cachePath);
+                ParseAndMergeDatabaseJson(json);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to load cached community database: {ex}");
+        }
+    }
+
+    public static async Task<(bool success, int remoteCount, string message)> SyncRemoteCommunityDatabaseAsync(string? explicitUrl = null)
+    {
+        try
+        {
+            var url = explicitUrl ?? AppSettings.CommunityDatabaseUrl;
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                return (false, 0, "No remote Community Database URL configured.");
+            }
+
+            if (url.Contains("gist.github.com", StringComparison.OrdinalIgnoreCase) && !url.Contains("/raw", StringComparison.OrdinalIgnoreCase))
+            {
+                url = url.Replace("gist.github.com", "gist.githubusercontent.com", StringComparison.OrdinalIgnoreCase).TrimEnd('/') + "/raw";
+            }
+
+            // Strip specific commit revisions (e.g. /raw/82ac67a33dfe7b312349dcb2d14175afce1c8c11/ -> /raw/)
+            // so the URL always pulls the newest edits automatically when updated on GitHub
+            url = System.Text.RegularExpressions.Regex.Replace(url, @"/raw/[a-f0-9]{40}/", "/raw/", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+            // Append live cache-buster timestamp query parameter to bypass CDN intermediate cache
+            var separator = url.Contains('?') ? "&" : "?";
+            var liveFetchUrl = $"{url}{separator}_cb={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+
+            using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+            using var req = new HttpRequestMessage(HttpMethod.Get, liveFetchUrl);
+            req.Headers.UserAgent.ParseAdd("CloudRedirect-CommunityDB/1.0");
+            req.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue
+            {
+                NoCache = true,
+                NoStore = true,
+                MustRevalidate = true
+            };
+            req.Headers.Pragma.ParseAdd("no-cache");
+
+            var response = await httpClient.SendAsync(req);
+            if (!response.IsSuccessStatusCode)
+            {
+                return (false, 0, $"HTTP {(int)response.StatusCode}: {response.ReasonPhrase}");
+            }
+
+            var json = await response.Content.ReadAsStringAsync();
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return (false, 0, "Remote URL returned empty response.");
+            }
+
+            int count = ParseAndMergeDatabaseJson(json);
+            if (count > 0)
+            {
+                var cachePath = GetCommunityDatabaseCachePath();
+                var dir = Path.GetDirectoryName(cachePath);
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                    Directory.CreateDirectory(dir);
+
+                await File.WriteAllTextAsync(cachePath, json);
+                AppSettings.CommunityDatabaseLastSync = DateTime.Now.ToString("MMM dd, yyyy h:mm tt");
+                return (true, count, $"Successfully synchronized {count} game signature(s).");
+            }
+
+            return (false, 0, "Invalid JSON format or no game signatures found.");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to sync community database: {ex}");
+            return (false, 0, ex.Message);
+        }
+    }
+
+    public static int ParseAndMergeDatabaseJson(string json)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            JsonElement gamesElem = root;
+            if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("games", out var gProp) && gProp.ValueKind == JsonValueKind.Object)
+            {
+                gamesElem = gProp;
+            }
+
+            if (gamesElem.ValueKind != JsonValueKind.Object)
+                return 0;
+
+            int count = 0;
+            lock (_dbLock)
+            {
+                RemoteGameSaveRelativePaths.Clear();
+                foreach (var prop in gamesElem.EnumerateObject())
+                {
+                    var gameKey = prop.Name;
+                    var paths = new List<string>();
+
+                    if (prop.Value.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var item in prop.Value.EnumerateArray())
+                        {
+                            if (item.ValueKind == JsonValueKind.String)
+                            {
+                                var str = item.GetString();
+                                if (!string.IsNullOrWhiteSpace(str))
+                                    paths.Add(str);
+                            }
+                        }
+                    }
+                    else if (prop.Value.ValueKind == JsonValueKind.String)
+                    {
+                        var str = prop.Value.GetString();
+                        if (!string.IsNullOrWhiteSpace(str))
+                            paths.Add(str);
+                    }
+
+                    if (paths.Count > 0)
+                    {
+                        RemoteGameSaveRelativePaths[gameKey] = paths.ToArray();
+                        count++;
+                    }
+                }
+            }
+
+            return count;
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+
+    public static string ExportDatabaseToJson()
+    {
+        var all = GetAllKnownGameSavePaths();
+        var model = new
+        {
+            schema = "cloudredirect-community-saves-v1",
+            updatedAt = DateTime.UtcNow.ToString("o"),
+            description = "CloudRedirect Community Game Save Location Database. Edit and host as a raw GitHub Gist to dynamically update all clients without rebuilds.",
+            games = all
+        };
+
+        return JsonSerializer.Serialize(model, new JsonSerializerOptions { WriteIndented = true });
+    }
 
     /// <summary>
     /// Auto-detects the save folder for a game given its name, process name, or Steam AppID.
@@ -154,6 +380,7 @@ public static class GameSaveAutoDetector
         // 2. Check known signature table by process or game name (Community Database)
         if (AppSettings.AutoCommunityDatabase)
         {
+            var allKnownPaths = GetAllKnownGameSavePaths();
             var keysToCheck = new List<string>();
             if (!string.IsNullOrWhiteSpace(processName))
             {
@@ -168,7 +395,7 @@ public static class GameSaveAutoDetector
 
             foreach (var key in keysToCheck)
             {
-                foreach (var kvp in KnownGameSaveRelativePaths)
+                foreach (var kvp in allKnownPaths)
                 {
                     if (kvp.Key.Equals(key, StringComparison.OrdinalIgnoreCase) ||
                         key.Contains(kvp.Key, StringComparison.OrdinalIgnoreCase) ||
@@ -559,7 +786,12 @@ public static class GameSaveAutoDetector
             dirName.Equals("Microsoft", StringComparison.OrdinalIgnoreCase) ||
             dirName.Equals("Temp", StringComparison.OrdinalIgnoreCase) ||
             dirName.Equals("Packages", StringComparison.OrdinalIgnoreCase) ||
-            dirName.Equals("CrashReportClient", StringComparison.OrdinalIgnoreCase))
+            dirName.Equals("CrashReportClient", StringComparison.OrdinalIgnoreCase) ||
+            dirName.Equals("Programs", StringComparison.OrdinalIgnoreCase) ||
+            dirName.Equals("DirectX", StringComparison.OrdinalIgnoreCase) ||
+            dirName.Equals("NVIDIA", StringComparison.OrdinalIgnoreCase) ||
+            dirName.Equals("Intel", StringComparison.OrdinalIgnoreCase) ||
+            dirName.Equals("AMD", StringComparison.OrdinalIgnoreCase))
             return false;
 
         var cleanDir = System.Text.RegularExpressions.Regex.Replace(dirName, @"[^\w]", "").ToLowerInvariant();
@@ -568,27 +800,47 @@ public static class GameSaveAutoDetector
         if (cleanGame.StartsWith("steamapp") || cleanGame.StartsWith("steamgame"))
             return false;
 
+        cleanDir = NormalizeNumerals(cleanDir);
+        cleanGame = NormalizeNumerals(cleanGame);
+
         if (cleanDir == cleanGame || cleanDir.Contains(cleanGame) || (cleanGame.Length >= 5 && cleanDir.StartsWith(cleanGame)))
+            return true;
+
+        if (cleanDir.Length >= 4 && cleanGame.Contains(cleanDir))
             return true;
 
         if (!string.IsNullOrEmpty(processName))
         {
             var cleanProc = Path.GetFileNameWithoutExtension(processName).ToLowerInvariant()
                 .Replace("-win64-shipping", "").Replace("win64", "");
-            if (cleanProc.Length >= 4 && (cleanDir == cleanProc || cleanDir.Contains(cleanProc)))
+            cleanProc = NormalizeNumerals(cleanProc);
+            if (cleanProc.Length >= 4 && (cleanDir == cleanProc || cleanDir.Contains(cleanProc) || (cleanDir.Length >= 4 && cleanProc.Contains(cleanDir))))
                 return true;
         }
 
         // For multi-word games (e.g. "Mars Attracts", "Dragon Shelter"), ensure all significant words match
         var words = gameName.Split(new[] { ' ', ':', '-', '_' }, StringSplitOptions.RemoveEmptyEntries)
             .Where(w => w.Length >= 3 && !w.Equals("the", StringComparison.OrdinalIgnoreCase) && !w.Equals("demo", StringComparison.OrdinalIgnoreCase))
-            .Select(w => w.ToLowerInvariant())
+            .Select(w => NormalizeNumerals(w.ToLowerInvariant()))
             .ToList();
 
         if (words.Count >= 2 && words.All(w => cleanDir.Contains(w)))
             return true;
 
         return false;
+    }
+
+    private static string NormalizeNumerals(string input)
+    {
+        if (string.IsNullOrEmpty(input)) return input;
+        return input
+            .Replace("viii", "8")
+            .Replace("vii", "7")
+            .Replace("vi", "6")
+            .Replace("iv", "4")
+            .Replace("v", "5")
+            .Replace("iii", "3")
+            .Replace("ii", "2");
     }
 
     private static string? ResolvePathWithWildcards(string rawPath)
@@ -625,11 +877,22 @@ public static class GameSaveAutoDetector
     {
         try
         {
+            var ueSaves = Path.Combine(dir, "Saved", "SaveGames");
+            if (Directory.Exists(ueSaves) && Directory.EnumerateFileSystemEntries(ueSaves).Any())
+                return ueSaves;
+
             var subdirs = Directory.GetDirectories(dir, "*", SearchOption.TopDirectoryOnly);
             foreach (var sub in subdirs)
             {
                 var name = Path.GetFileName(sub).ToLowerInvariant();
-                if (name is "savegames" or "saves" or "save" or "saved" or "savedata" or "saved games" or "playerprofiles")
+                if (name == "saved")
+                {
+                    var nestedSaveGames = Path.Combine(sub, "SaveGames");
+                    if (Directory.Exists(nestedSaveGames))
+                        return nestedSaveGames;
+                    return sub;
+                }
+                if (name is "savegames" or "saves" or "save" or "savedata" or "saved games" or "playerprofiles")
                     return sub;
             }
         }

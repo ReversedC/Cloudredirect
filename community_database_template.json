@@ -1,0 +1,186 @@
+{
+  "schema": "cloudredirect-community-saves-v1",
+  "updatedAt": "2026-10-05T00:00:00Z",
+  "description": "CloudRedirect Community Game Save Location Database. Host this on GitHub Gist (raw link) to update game save locations on the fly without updating the app.",
+  "games": {
+    "Dungeons": [
+      "%LOCALAPPDATA%\\Dungeons2\\Saved\\SaveGames",
+      "%LOCALAPPDATA%\\Dungeons\\Saved\\SaveGames",
+      "%LOCALAPPDATA%\\Packages\\Microsoft.Lovika_8wekyb3d8bbwe\\LocalCache\\Local\\Dungeons\\Saved\\SaveGames"
+    ],
+    "Dungeons2": [
+      "%LOCALAPPDATA%\\Dungeons2\\Saved\\SaveGames",
+      "%LOCALAPPDATA%\\Dungeons\\Saved\\SaveGames"
+    ],
+    "Dungeons-Win64-Shipping": [
+      "%LOCALAPPDATA%\\Dungeons2\\Saved\\SaveGames",
+      "%LOCALAPPDATA%\\Dungeons\\Saved\\SaveGames"
+    ],
+    "Minecraft Dungeons": [
+      "%LOCALAPPDATA%\\Dungeons2\\Saved\\SaveGames",
+      "%LOCALAPPDATA%\\Dungeons\\Saved\\SaveGames",
+      "%LOCALAPPDATA%\\Packages\\Microsoft.Lovika_8wekyb3d8bbwe\\LocalCache\\Local\\Dungeons\\Saved\\SaveGames",
+      "%LOCALAPPDATA%\\Mojang\\products\\dungeons\\dungeons"
+    ],
+    "Minecraft Dungeons II": [
+      "%LOCALAPPDATA%\\Dungeons2\\Saved\\SaveGames",
+      "%LOCALAPPDATA%\\Dungeons\\Saved\\SaveGames"
+    ],
+    "Minecraft": [
+      "%APPDATA%\\.minecraft\\saves",
+      "%LOCALAPPDATA%\\Packages\\Microsoft.MinecraftUWP_8wekyb3d8bbwe\\LocalState\\games\\com.mojang\\minecraftWorlds"
+    ],
+    "MinecraftLegends": [
+      "%USERPROFILE%\\Saved Games\\Minecraft Legends"
+    ],
+    "eldenring": [
+      "%APPDATA%\\EldenRing"
+    ],
+    "bg3": [
+      "%LOCALAPPDATA%\\Larian Studios\\Baldur's Gate 3\\PlayerProfiles\\Public\\Savegames"
+    ],
+    "b1-Win64-Shipping": [
+      "%LOCALAPPDATA%\\b1\\Saved\\SaveGames"
+    ],
+    "Cyberpunk2077": [
+      "%USERPROFILE%\\Saved Games\\CD Projekt Red\\Cyberpunk 2077"
+    ],
+    "Palworld-Win64-Shipping": [
+      "%LOCALAPPDATA%\\Pal\\Saved\\SaveGames"
+    ],
+    "DarkSoulsIII": [
+      "%APPDATA%\\DarkSoulsIII"
+    ],
+    "DarkSoulsII": [
+      "%APPDATA%\\DarkSoulsII"
+    ],
+    "DarkSoulsRemastered": [
+      "%LOCALAPPDATA%\\VirtualStore\\Program Files\\BANDAI NAMCO",
+      "Documents\\NBGI\\DARK SOULS REMASTERED"
+    ],
+    "Starfield": [
+      "Documents\\My Games\\Starfield\\Saves"
+    ],
+    "sekiro": [
+      "%APPDATA%\\Sekiro"
+    ],
+    "armoredcore6": [
+      "%APPDATA%\\ArmoredCore6"
+    ],
+    "witcher3": [
+      "Documents\\The Witcher 3\\gamesaves"
+    ],
+    "HogwartsLegacy": [
+      "%LOCALAPPDATA%\\Hogwarts Legacy\\Saved\\SaveGames"
+    ],
+    "LiesofP-Win64-Shipping": [
+      "%LOCALAPPDATA%\\LiesofP\\Saved\\SaveGames"
+    ],
+    "GodOfWar": [
+      "%USERPROFILE%\\Saved Games\\God of War"
+    ],
+    "GodOfWarRagnarok": [
+      "%USERPROFILE%\\Saved Games\\God of War Ragnarök"
+    ],
+    "GhostOfTsushima": [
+      "Documents\\Ghost of Tsushima DIRECTOR'S CUT"
+    ],
+    "HorizonZeroDawn": [
+      "Documents\\Horizon Zero Dawn\\Saved Games"
+    ],
+    "HorizonForbiddenWest": [
+      "Documents\\Horizon Forbidden West Complete Edition"
+    ],
+    "Hades": [
+      "Documents\\Saved Games\\Hades"
+    ],
+    "Hades2": [
+      "%USERPROFILE%\\Saved Games\\Hades II"
+    ],
+    "Hollow Knight": [
+      "%USERPROFILE%\\AppData\\LocalLow\\Team Cherry\\Hollow Knight"
+    ],
+    "DeadCells": [
+      "%APPDATA%\\DeadCells"
+    ],
+    "MonsterHunterWorld": [
+      "%APPDATA%\\MonsterHunterWorld"
+    ],
+    "MonsterHunterRise": [
+      "%APPDATA%\\MonsterHunterRise"
+    ],
+    "Fallout4": [
+      "Documents\\My Games\\Fallout4\\Saves"
+    ],
+    "SkyrimSE": [
+      "Documents\\My Games\\Skyrim Special Edition\\Saves"
+    ],
+    "Stardew Valley": [
+      "%APPDATA%\\StardewValley\\Saves"
+    ],
+    "Terraria": [
+      "Documents\\My Games\\Terraria\\Players"
+    ],
+    "SlayTheSpire": [
+      "%USERPROFILE%\\.prefs"
+    ],
+    "Balatro": [
+      "%APPDATA%\\Balatro"
+    ],
+    "ManorLords-Win64-Shipping": [
+      "%LOCALAPPDATA%\\ManorLords\\Saved\\SaveGames"
+    ],
+    "Helldivers2": [
+      "%APPDATA%\\Arrowhead\\Helldivers2"
+    ],
+    "Valheim": [
+      "%USERPROFILE%\\AppData\\LocalLow\\IronGate\\Valheim\\worlds_local"
+    ],
+    "DaveTheDiver": [
+      "%USERPROFILE%\\AppData\\LocalLow\\Mintrocket\\DAVE THE DIVER"
+    ],
+    "ResidentEvil4": [
+      "%APPDATA%\\RE4",
+      "%LOCALAPPDATA%\\Capcom\\RE4"
+    ],
+    "ResidentEvilVillage": [
+      "Documents\\CAPCOM\\RESIDENT EVIL VILLAGE"
+    ],
+    "Persona5Royal": [
+      "%APPDATA%\\SEGA\\P5R"
+    ],
+    "Persona3Reload": [
+      "%APPDATA%\\SEGA\\P3R"
+    ],
+    "Subnautica": [
+      "%USERPROFILE%\\AppData\\LocalLow\\Unknown Worlds\\Subnautica\\SavedGames"
+    ],
+    "NoMansSky": [
+      "%APPDATA%\\HelloGames\\NMS"
+    ],
+    "RDR2": [
+      "Documents\\Rockstar Games\\Red Dead Redemption 2\\Profiles"
+    ],
+    "GTA5": [
+      "Documents\\Rockstar Games\\GTA V\\Profiles"
+    ],
+    "Ryujinx": [
+      "%APPDATA%\\Ryujinx\\bis\\user\\save"
+    ],
+    "rpcs3": [
+      "%USERPROFILE%\\AppData\\Local\\RPCS3\\dev_hdd0\\home"
+    ],
+    "Dolphin": [
+      "Documents\\Dolphin Emulator\\GC",
+      "Documents\\Dolphin Emulator\\Wii",
+      "%APPDATA%\\Dolphin Emulator\\GC"
+    ],
+    "pcsx2": [
+      "Documents\\PCSX2\\memcards",
+      "%USERPROFILE%\\Documents\\PCSX2\\memcards"
+    ],
+    "retroarch": [
+      "%APPDATA%\\RetroArch\\saves"
+    ]
+  }
+}

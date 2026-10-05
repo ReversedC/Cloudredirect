@@ -177,6 +177,12 @@ public static class UniversalSaveWatcherService
             GameName = "Sekiro: Shadows Die Twice",
             ProcessName = "sekiro",
             SaveFolderPath = @"%APPDATA%\Sekiro"
+        },
+        new()
+        {
+            GameName = "Minecraft Dungeons",
+            ProcessName = "Dungeons",
+            SaveFolderPath = @"%LOCALAPPDATA%\Dungeons2\Saved\SaveGames"
         }
     ];
 
@@ -271,20 +277,43 @@ public static class UniversalSaveWatcherService
 
         if (!string.IsNullOrWhiteSpace(processName))
         {
-            var cleanProc = processName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
-                ? Path.GetFileNameWithoutExtension(processName)
-                : processName;
+            var cleanProc = Path.GetFileNameWithoutExtension(processName).Trim();
             var match = list.FirstOrDefault(p =>
-                !string.IsNullOrWhiteSpace(p.ProcessName) &&
-                (p.ProcessName.Equals(cleanProc, StringComparison.OrdinalIgnoreCase) ||
-                 p.ProcessName.Equals(processName, StringComparison.OrdinalIgnoreCase)));
-            if (match != null) return match;
+            {
+                if (string.IsNullOrWhiteSpace(p.ProcessName)) return false;
+                var pClean = Path.GetFileNameWithoutExtension(p.ProcessName).Trim();
+                return pClean.Equals(cleanProc, StringComparison.OrdinalIgnoreCase) ||
+                       pClean.Equals(processName.Trim(), StringComparison.OrdinalIgnoreCase) ||
+                       p.ProcessName.Trim().Equals(cleanProc, StringComparison.OrdinalIgnoreCase) ||
+                       p.ProcessName.Trim().Equals(processName.Trim(), StringComparison.OrdinalIgnoreCase);
+            });
+            if (match != null)
+            {
+                if (match.SteamAppId == 0 && appId > 0)
+                {
+                    match.SteamAppId = appId;
+                    SaveProfiles();
+                }
+                return match;
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(gameName))
         {
-            var match = list.FirstOrDefault(p => p.GameName.Equals(gameName, StringComparison.OrdinalIgnoreCase));
-            if (match != null) return match;
+            var cleanGame = gameName.Trim();
+            var match = list.FirstOrDefault(p =>
+                p.GameName.Equals(cleanGame, StringComparison.OrdinalIgnoreCase) ||
+                cleanGame.Contains(p.GameName, StringComparison.OrdinalIgnoreCase) ||
+                p.GameName.Contains(cleanGame, StringComparison.OrdinalIgnoreCase));
+            if (match != null)
+            {
+                if (match.SteamAppId == 0 && appId > 0)
+                {
+                    match.SteamAppId = appId;
+                    SaveProfiles();
+                }
+                return match;
+            }
         }
 
         return null;

@@ -1338,71 +1338,113 @@ public static class SteamDetector
     }
 
     /// <summary>
-    /// Scans cloud_redirect/storage to discover the most recently backed up game, its AppID, and stats.
+    /// Scans cloud_redirect/storage and Universal Saves to discover the most recently backed up game, its AppID, and stats.
     /// </summary>
     public static LastBackupInfo? GetLastBackupInfo(string? steamPath)
     {
-        if (string.IsNullOrEmpty(steamPath) || !Directory.Exists(steamPath))
-            return null;
-
-        var storageDir = Path.Combine(steamPath, "cloud_redirect", "storage");
-        if (!Directory.Exists(storageDir))
-            return null;
-
         uint latestAppId = 0;
         DateTime latestTime = DateTime.MinValue;
         string? latestAppDir = null;
+        string? latestGameName = null;
+        int latestFileCount = 0;
+        long latestTotalBytes = 0;
+        string? latestPrimaryFileName = null;
 
         try
         {
-            foreach (var accountDir in Directory.GetDirectories(storageDir))
+            if (!string.IsNullOrEmpty(steamPath) && Directory.Exists(steamPath))
             {
-                foreach (var appDir in Directory.GetDirectories(accountDir))
+                var storageDir = Path.Combine(steamPath, "cloud_redirect", "storage");
+                if (Directory.Exists(storageDir))
                 {
-                    var folderName = Path.GetFileName(appDir);
-                    if (folderName == "0" || !uint.TryParse(folderName, out var appId))
-                        continue;
-
-                    // Determine newest modification in app folder
-                    DateTime appTime = Directory.GetLastWriteTime(appDir);
-                    var cnFile = Path.Combine(appDir, "cn.cloudredirect");
-                    if (File.Exists(cnFile))
+                    foreach (var accountDir in Directory.GetDirectories(storageDir))
                     {
-                        var cnTime = File.GetLastWriteTime(cnFile);
-                        if (cnTime > appTime) appTime = cnTime;
+                        foreach (var appDir in Directory.GetDirectories(accountDir))
+                        {
+                            var folderName = Path.GetFileName(appDir);
+                            if (folderName == "0" || !uint.TryParse(folderName, out var appId))
+                                continue;
+
+                            // Skip empty directories without real save files
+                            if (!SaveHistoryManager.HasRealSaveFiles(appDir))
+                                continue;
+
+                            // Determine newest modification in app folder
+                            DateTime appTime = Directory.GetLastWriteTime(appDir);
+                            var cnFile = Path.Combine(appDir, "cn.cloudredirect");
+                            if (File.Exists(cnFile))
+                            {
+                                var cnTime = File.GetLastWriteTime(cnFile);
+                                if (cnTime > appTime) appTime = cnTime;
+                            }
+
+                            if (appTime > latestTime)
+                            {
+                                latestTime = appTime;
+                                latestAppId = appId;
+                                latestAppDir = appDir;
+                            }
+                        }
                     }
 
-                    if (appTime > latestTime)
+                    if (latestAppId > 0 && latestAppDir != null)
                     {
-                        latestTime = appTime;
-                        latestAppId = appId;
-                        latestAppDir = appDir;
+                        var files = Directory.GetFiles(latestAppDir, "*", SearchOption.AllDirectories);
+                        foreach (var f in files)
+                        {
+                            var fname = Path.GetFileName(f);
+                            if (fname is "cn.cloudredirect" or "cn.dat" or "state.cloudredirect" or "manifest.cloudredirect" or "root_token.dat")
+                                continue;
+
+                            latestFileCount++;
+                            var fi = new FileInfo(f);
+                            latestTotalBytes += fi.Length;
+                            latestPrimaryFileName ??= fname;
+                        }
+                        latestGameName = GetGameName(steamPath, latestAppId);
                     }
                 }
             }
 
-            if (latestAppId == 0 || latestAppDir == null)
-                return null;
-
-            int fileCount = 0;
-            long totalBytes = 0;
-            string? firstSaveName = null;
-
-            var files = Directory.GetFiles(latestAppDir, "*", SearchOption.AllDirectories);
-            foreach (var f in files)
+            // Check Universal Cloud Saves
+            var uniProfiles = UniversalSaveWatcherService.GetProfiles();
+            foreach (var profile in uniProfiles)
             {
-                var fname = Path.GetFileName(f);
-                if (fname is "cn.cloudredirect" or "cn.dat" or "state.cloudredirect" or "manifest.cloudredirect" or "root_token.dat")
+                if (!profile.Enabled) continue;
+                var saveDir = profile.ExpandedSavePath;
+                if (!Directory.Exists(saveDir) || !SaveHistoryManager.HasRealSaveFiles(saveDir))
                     continue;
 
-                fileCount++;
-                var fi = new FileInfo(f);
-                totalBytes += fi.Length;
-                firstSaveName ??= fname;
+                DateTime uniTime = profile.LastSyncTime ?? Directory.GetLastWriteTime(saveDir);
+                try
+                {
+                    var files = Directory.GetFiles(saveDir, "*", SearchOption.AllDirectories);
+                    if (files.Length > 0)
+                    {
+                        var newestFileTime = files.Max(f => File.GetLastWriteTime(f));
+                        if (profile.LastSyncTime == null || newestFileTime > uniTime)
+                            uniTime = newestFileTime;
+
+                        if (uniTime > latestTime)
+                        {
+                            latestTime = uniTime;
+                            latestAppId = profile.SteamAppId;
+                            latestGameName = profile.GameName;
+                            latestFileCount = files.Length;
+                            latestTotalBytes = files.Sum(f => new FileInfo(f).Length);
+                            latestPrimaryFileName = Path.GetFileName(files[0]);
+                        }
+                    }
+                }
+                catch { }
             }
 
-            var gameName = GetGameName(steamPath, latestAppId);
-            return new LastBackupInfo(latestAppId, gameName, latestTime, fileCount, totalBytes, firstSaveName);
+            if (!string.IsNullOrEmpty(latestGameName) && latestFileCount > 0)
+            {
+                return new LastBackupInfo(latestAppId, latestGameName, latestTime, latestFileCount, latestTotalBytes, latestPrimaryFileName);
+            }
+
+            return null;
         }
         catch
         {

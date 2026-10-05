@@ -130,6 +130,8 @@ public static class ActiveGameTrackerService
     {
         try
         {
+            GameSaveAutoDetector.CheckPeriodicCommunityDatabaseSync();
+
             // 1. Check Steam's native RunningAppId in registry
             uint runningAppId = 0;
             try
@@ -485,6 +487,11 @@ public static class ActiveGameTrackerService
 
                         var sw = Stopwatch.StartNew();
 
+                        if (universalProfile == null)
+                        {
+                            universalProfile = UniversalSaveWatcherService.FindProfile(appId, procName, gameName);
+                        }
+
                         if (universalProfile != null)
                         {
                             _lastActiveUniversalProfile = null;
@@ -507,18 +514,42 @@ public static class ActiveGameTrackerService
 
                             var steamPath = SteamDetector.FindSteamPath();
                             string? saveDir = null;
-                            if (appId > 0 && !exitedGame.HasSteamCloud)
+                            if (appId > 0)
                             {
-                                saveDir = SaveHistoryManager.FindAppStorageDir(steamPath, appId)
+                                saveDir = SaveHistoryManager.FindAppStorageDir(steamPath, appId, requireFiles: true)
                                           ?? GameSaveAutoDetector.DetectSaveFolder(gameName, procName, appId);
                             }
-                            else if (appId == 0)
+                            else
                             {
                                 saveDir = GameSaveAutoDetector.DetectSaveFolder(gameName, procName);
                             }
 
                             if (saveDir != null && Directory.Exists(saveDir))
                             {
+                                // If the save directory is an external directory (not inside Steam's redirected storage),
+                                // auto-enroll it as a Universal Profile and sync to cloud!
+                                bool isExternal = string.IsNullOrEmpty(steamPath) ||
+                                                  !saveDir.StartsWith(steamPath, StringComparison.OrdinalIgnoreCase);
+
+                                if (isExternal)
+                                {
+                                    var autoProf = UniversalSaveWatcherService.AutoEnrollIfNeeded(
+                                        gameName, procName, appId, saveDir, hasAntiCheat: false, isGenuine: false);
+                                    if (autoProf != null)
+                                    {
+                                        bool ok = await UniversalSaveWatcherService.SyncProfileNowAsync(autoProf, "Auto-Backup on Game Exit");
+                                        sw.Stop();
+                                        if (AppSettings.ShowSyncNotifications)
+                                        {
+                                            var message = ok
+                                                ? $"☁️ {gameName}: Saves synchronized to cloud ({sw.Elapsed.TotalSeconds:F1}s)"
+                                                : $"⚠️ {gameName}: Cloud sync encountered an issue upon exit.";
+                                            TrayIconService.Instance.ShowNotification("CloudRedirect", message);
+                                        }
+                                        return;
+                                    }
+                                }
+
                                 // Check for corruption and auto-heal if needed
                                 if (AppSettings.AutoConflictHealing && SaveHistoryManager.CheckSaveCorruption(saveDir))
                                 {

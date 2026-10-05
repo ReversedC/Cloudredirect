@@ -102,6 +102,9 @@ public partial class MainWindow : FluentWindow
                     }
                 });
 
+                App.LogStartup("Loaded: GameSaveAutoDetector.InitializeCommunityDatabase");
+                Services.GameSaveAutoDetector.InitializeCommunityDatabase();
+
                 App.LogStartup("Loaded: ActiveGameTrackerService.Start");
                 Services.ActiveGameTrackerService.Start();
                 _ = Task.Run(async () =>

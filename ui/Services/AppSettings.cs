@@ -126,6 +126,20 @@ public static class AppSettings
         set => WriteBool("auto_community_database", value);
     }
 
+    public const string DefaultCommunityDatabaseUrl = "https://gist.githubusercontent.com/mirzaarsyad74-cmyk/01b85e449667ae2bbba88d4fdd42df5a/raw/community_saves.json";
+
+    public static string CommunityDatabaseUrl
+    {
+        get => ReadString("community_database_url", DefaultCommunityDatabaseUrl);
+        set => WriteString("community_database_url", value);
+    }
+
+    public static string CommunityDatabaseLastSync
+    {
+        get => ReadString("community_database_last_sync", "");
+        set => WriteString("community_database_last_sync", value);
+    }
+
     public static bool GameBoostEnabled
     {
         get => ReadBool("game_boost_enabled", false);

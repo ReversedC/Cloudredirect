@@ -68,8 +68,8 @@ public static class UniversalCloudSyncService
         {
             try
             {
-                var res = await UploadProfileSavesToCloudAsync(profile);
-                if (res.Success) count++;
+                var ok = await UniversalSaveWatcherService.SyncProfileNowAsync(profile, "Manual Sync");
+                if (ok) count++;
             }
             catch { }
         }
