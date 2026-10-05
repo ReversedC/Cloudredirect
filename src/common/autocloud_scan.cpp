@@ -791,10 +791,23 @@ ScanResult GetFileList(const std::string& steamPath,
     std::string pfxBase = compatdataBase + "/pfx/drive_c/users/steamuser/";
     if (effectivePlatform == AutoCloudEffectivePlatform::Windows) {
         LOG("GetAutoCloudFileList: app %u has Proton prefix, using compatdata paths", appId);
-        localAppData = pfxBase + "Local Settings/Application Data/";
+        std::error_code ec;
+        if (std::filesystem::exists(pfxBase + "AppData/Local", ec)) {
+            localAppData = pfxBase + "AppData/Local/";
+        } else {
+            localAppData = pfxBase + "Local Settings/Application Data/";
+        }
         localLow = pfxBase + "AppData/LocalLow/";
-        roamingAppData = pfxBase + "Application Data/";
-        myDocuments = pfxBase + "My Documents/";
+        if (std::filesystem::exists(pfxBase + "AppData/Roaming", ec)) {
+            roamingAppData = pfxBase + "AppData/Roaming/";
+        } else {
+            roamingAppData = pfxBase + "Application Data/";
+        }
+        if (std::filesystem::exists(pfxBase + "Documents", ec)) {
+            myDocuments = pfxBase + "Documents/";
+        } else {
+            myDocuments = pfxBase + "My Documents/";
+        }
         savedGames = pfxBase + "Saved Games/";
         programData = compatdataBase + "/pfx/drive_c/ProgramData/";
         windowsHome = pfxBase;
@@ -1316,10 +1329,23 @@ std::unordered_map<std::string, std::string> GetRootTokenDirectories(
     std::string compatdataBase = steamPath + "/steamapps/compatdata/" + std::to_string(appId);
     std::string pfxBase = compatdataBase + "/pfx/drive_c/users/steamuser/";
     if (effectivePlatform == AutoCloudEffectivePlatform::Windows) {
-        localAppData = pfxBase + "Local Settings/Application Data/";
+        std::error_code ec;
+        if (std::filesystem::exists(pfxBase + "AppData/Local", ec)) {
+            localAppData = pfxBase + "AppData/Local/";
+        } else {
+            localAppData = pfxBase + "Local Settings/Application Data/";
+        }
         localLow = pfxBase + "AppData/LocalLow/";
-        roamingAppData = pfxBase + "Application Data/";
-        myDocuments = pfxBase + "My Documents/";
+        if (std::filesystem::exists(pfxBase + "AppData/Roaming", ec)) {
+            roamingAppData = pfxBase + "AppData/Roaming/";
+        } else {
+            roamingAppData = pfxBase + "Application Data/";
+        }
+        if (std::filesystem::exists(pfxBase + "Documents", ec)) {
+            myDocuments = pfxBase + "Documents/";
+        } else {
+            myDocuments = pfxBase + "My Documents/";
+        }
         savedGames = pfxBase + "Saved Games/";
         programData = compatdataBase + "/pfx/drive_c/ProgramData/";
         windowsHome = pfxBase;

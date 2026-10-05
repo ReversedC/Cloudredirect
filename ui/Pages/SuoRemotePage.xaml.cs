@@ -28,21 +28,23 @@ public partial class SuoRemotePage : Page
             var suo = await SuoDetector.DetectAsync();
             UpdateSuoStatusUi(suo);
 
-            if (suo.IsInstalled || suo.IsOnline)
+            if (!suo.IsInstalled && !suo.IsOnline)
             {
-                ActivationCard.Visibility = Visibility.Collapsed;
-                LoadingOverlay.Visibility = Visibility.Visible;
-                await InitWebViewAsync();
+                SuoNoticeBanner.Visibility = Visibility.Visible;
             }
             else
             {
-                LoadingOverlay.Visibility = Visibility.Collapsed;
-                ActivationCard.Visibility = Visibility.Visible;
+                SuoNoticeBanner.Visibility = Visibility.Collapsed;
             }
+
+            // Always initialize and display the WebView2 dashboard regardless of local daemon state
+            LoadingOverlay.Visibility = Visibility.Visible;
+            await InitWebViewAsync();
         }
         catch (Exception ex)
         {
-            LoadingStatusText.Text = "Error loading dashboard: " + ex.Message;
+            LoadingOverlay.Visibility = Visibility.Collapsed;
+            ShowError("Failed to initialize SUO remote view: " + ex.Message);
         }
     }
 
@@ -115,10 +117,7 @@ public partial class SuoRemotePage : Page
             var userDataFolder = Path.Combine(appData, "CloudRedirect", "webview2_profile");
             Directory.CreateDirectory(userDataFolder);
 
-            var options = new CoreWebView2EnvironmentOptions(
-                "--enable-features=DnsOverHttps --dns-over-https-mode=automatic");
-
-            var env = await CoreWebView2Environment.CreateAsync(null, userDataFolder, options);
+            var env = await CoreWebView2Environment.CreateAsync(null, userDataFolder, null);
             await DashboardWebView.EnsureCoreWebView2Async(env);
 
             DashboardWebView.DefaultBackgroundColor = System.Drawing.Color.FromArgb(0x10, 0x18, 0x22);
@@ -128,11 +127,13 @@ public partial class SuoRemotePage : Page
             DashboardWebView.NavigationStarting += (_, _) =>
             {
                 ErrorCard.Visibility = Visibility.Collapsed;
+                UpdateNavButtons();
             };
 
             DashboardWebView.NavigationCompleted += (_, args) =>
             {
                 LoadingOverlay.Visibility = Visibility.Collapsed;
+                UpdateNavButtons();
                 if (!args.IsSuccess)
                 {
                     ShowError($"Could not connect to SUO Remote Dashboard ({args.WebErrorStatus}). Please check your connection or click 'Open in Browser'.");
@@ -141,6 +142,13 @@ public partial class SuoRemotePage : Page
 
             DashboardWebView.CoreWebView2.Navigate(DashboardUrl);
             _isWebViewInitialized = true;
+            UpdateNavButtons();
+        }
+        catch (WebView2RuntimeNotFoundException)
+        {
+            LoadingOverlay.Visibility = Visibility.Collapsed;
+            InstallWebView2Btn.Visibility = Visibility.Visible;
+            ShowError("Microsoft Edge WebView2 Runtime is not installed on this PC. Please install it to view the dashboard embedded, or click 'Open in Browser'.");
         }
         catch (Exception ex)
         {
@@ -149,10 +157,65 @@ public partial class SuoRemotePage : Page
         }
     }
 
+    private void UpdateNavButtons()
+    {
+        try
+        {
+            BackBtn.IsEnabled = _isWebViewInitialized && DashboardWebView?.CanGoBack == true;
+            ForwardBtn.IsEnabled = _isWebViewInitialized && DashboardWebView?.CanGoForward == true;
+        }
+        catch { }
+    }
+
     private void ShowError(string message)
     {
         ErrorCardText.Text = message;
         ErrorCard.Visibility = Visibility.Visible;
+    }
+
+    private void Back_Click(object sender, RoutedEventArgs e)
+    {
+        if (_isWebViewInitialized && DashboardWebView?.CanGoBack == true)
+        {
+            DashboardWebView.GoBack();
+        }
+    }
+
+    private void Forward_Click(object sender, RoutedEventArgs e)
+    {
+        if (_isWebViewInitialized && DashboardWebView?.CanGoForward == true)
+        {
+            DashboardWebView.GoForward();
+        }
+    }
+
+    private void Home_Click(object sender, RoutedEventArgs e)
+    {
+        if (_isWebViewInitialized && DashboardWebView?.CoreWebView2 != null)
+        {
+            DashboardWebView.CoreWebView2.Navigate(DashboardUrl);
+        }
+    }
+
+    private void DismissBanner_Click(object sender, RoutedEventArgs e)
+    {
+        SuoNoticeBanner.Visibility = Visibility.Collapsed;
+    }
+
+    private async void ContinueToWebview_Click(object sender, RoutedEventArgs e)
+    {
+        ActivationCard.Visibility = Visibility.Collapsed;
+        LoadingOverlay.Visibility = Visibility.Visible;
+        await InitWebViewAsync();
+    }
+
+    private void InstallWebView2_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo("https://go.microsoft.com/fwlink/p/?LinkId=2124703") { UseShellExecute = true });
+        }
+        catch { }
     }
 
     private async void UpdateSuo_Click(object sender, RoutedEventArgs e)
@@ -188,13 +251,15 @@ public partial class SuoRemotePage : Page
 
             if (suo.IsInstalled || suo.IsOnline)
             {
-                await InitWebViewAsync();
-                DashboardWebView.Reload();
-            }
-            else
-            {
-                LoadingOverlay.Visibility = Visibility.Collapsed;
-                ActivationCard.Visibility = Visibility.Visible;
+                SuoNoticeBanner.Visibility = Visibility.Collapsed;
+                if (!_isWebViewInitialized)
+                {
+                    await InitWebViewAsync();
+                }
+                else
+                {
+                    DashboardWebView.Reload();
+                }
             }
         }
         catch (Exception ex)
@@ -206,7 +271,13 @@ public partial class SuoRemotePage : Page
 
     private async void RecheckSuo_Click(object sender, RoutedEventArgs e)
     {
-        await InitializePageAsync();
+        var suo = await SuoDetector.DetectAsync();
+        UpdateSuoStatusUi(suo);
+        if (suo.IsInstalled || suo.IsOnline)
+        {
+            SuoNoticeBanner.Visibility = Visibility.Collapsed;
+            ActivationCard.Visibility = Visibility.Collapsed;
+        }
     }
 
     private void Reload_Click(object sender, RoutedEventArgs e)

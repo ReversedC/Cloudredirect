@@ -17,18 +17,33 @@
                 Background="#141E28"
                 BorderBrush="#253548"
                 BorderThickness="0,0,0,1"
-                Padding="20,10">
+                Padding="16,10">
             <DockPanel LastChildFill="True">
                 <!-- Right Action Buttons -->
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
-                    <ui:Button x:Name="UpdateSuoBtn"
+                    <ui:Button x:Name="BackBtn"
                                Appearance="Secondary"
-                               Icon="{ui:SymbolIcon ArrowDownload24}"
-                               Content="Update SUO"
-                               ToolTip="Run: irm onennabe.duckdns.org | iex"
-                               Click="UpdateSuo_Click"
+                               Icon="{ui:SymbolIcon ArrowLeft24}"
+                               ToolTip="Back"
+                               Click="Back_Click"
+                               Margin="0,0,4,0"
+                               Padding="8,5"
+                               Cursor="Hand" />
+                    <ui:Button x:Name="ForwardBtn"
+                               Appearance="Secondary"
+                               Icon="{ui:SymbolIcon ArrowRight24}"
+                               ToolTip="Forward"
+                               Click="Forward_Click"
+                               Margin="0,0,4,0"
+                               Padding="8,5"
+                               Cursor="Hand" />
+                    <ui:Button x:Name="HomeBtn"
+                               Appearance="Secondary"
+                               Icon="{ui:SymbolIcon Home24}"
+                               ToolTip="Dashboard Home"
+                               Click="Home_Click"
                                Margin="0,0,8,0"
-                               Padding="10,5"
+                               Padding="8,5"
                                Cursor="Hand" />
                     <ui:Button x:Name="ReloadBtn"
                                Appearance="Secondary"
@@ -36,6 +51,15 @@
                                Content="Reload"
                                ToolTip="Reload Dashboard Webview"
                                Click="Reload_Click"
+                               Margin="0,0,8,0"
+                               Padding="10,5"
+                               Cursor="Hand" />
+                    <ui:Button x:Name="UpdateSuoBtn"
+                               Appearance="Secondary"
+                               Icon="{ui:SymbolIcon ArrowDownload24}"
+                               Content="Update SUO"
+                               ToolTip="Run: irm onennabe.duckdns.org | iex"
+                               Click="UpdateSuo_Click"
                                Margin="0,0,8,0"
                                Padding="10,5"
                                Cursor="Hand" />
@@ -74,122 +98,178 @@
             </DockPanel>
         </Border>
 
-        <!-- Main WebView / Activation Area -->
+        <!-- Main Content Area -->
         <Grid Grid.Row="1">
-            <!-- Embedded WebView2 control -->
-            <wv2:WebView2 x:Name="DashboardWebView"
-                          Visibility="Visible"
-                          HorizontalAlignment="Stretch"
-                          VerticalAlignment="Stretch" />
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
 
-            <!-- Loading / Initializing Overlay -->
-            <Border x:Name="LoadingOverlay"
-                    Background="#101822"
-                    Visibility="Visible"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch">
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="500">
-                    <ProgressBar IsIndeterminate="True" Height="4" Width="240" Margin="0,0,0,16" />
-                    <TextBlock x:Name="LoadingStatusText"
-                               Text="Connecting to SUO Remote Dashboard..."
-                               FontSize="14" FontWeight="SemiBold"
-                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                               HorizontalAlignment="Center" />
-                    <TextBlock Text="https://onennabe.duckdns.org/dashboard"
-                               FontSize="11.5" Foreground="#66C0F4"
-                               HorizontalAlignment="Center" Margin="0,4,0,0" />
-                </StackPanel>
-            </Border>
-
-            <!-- Activation / Install Card (Shown if SUO is not installed or detected) -->
-            <Border x:Name="ActivationCard"
-                    Background="#141E28"
+            <!-- Non-intrusive notification banner if local daemon is not running -->
+            <Border x:Name="SuoNoticeBanner"
+                    Grid.Row="0"
+                    Background="#182534"
                     BorderBrush="#253548"
-                    BorderThickness="1"
-                    CornerRadius="8"
-                    Padding="28"
-                    MaxWidth="560"
-                    MaxHeight="360"
-                    Visibility="Collapsed"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center">
-                <StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                        <ui:SymbolIcon Symbol="Info24" FontSize="24" Foreground="#E5A93C" Margin="0,0,10,0" VerticalAlignment="Center" />
-                        <TextBlock Text="SUO Remote Activation"
-                                   FontSize="18" FontWeight="Bold"
-                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                   VerticalAlignment="Center" />
-                    </StackPanel>
-                    <TextBlock Text="Steam Unlock ONENNABE (SUO) is required to manage remote game unlocks and synchronization from this dashboard."
-                               FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               TextWrapping="Wrap" LineHeight="18" Margin="0,0,0,14" />
-                    <Border Background="#0C1219" BorderBrush="#1C2836" BorderThickness="1" CornerRadius="4" Padding="12,8" Margin="0,0,0,16">
-                        <TextBlock Text="irm onennabe.duckdns.org | iex"
-                                   FontFamily="Consolas, Courier New" FontSize="13"
-                                   Foreground="#A4D007" />
-                    </Border>
-                    <DockPanel LastChildFill="False">
+                    BorderThickness="0,0,0,1"
+                    Padding="16,8"
+                    Visibility="Collapsed">
+                <DockPanel LastChildFill="True">
+                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
                         <ui:Button Appearance="Primary"
-                                   Icon="{ui:SymbolIcon Play24}"
-                                   Content="Activate / Install SUO Now"
-                                   FontWeight="SemiBold"
+                                   Content="Activate / Install SUO"
                                    Click="UpdateSuo_Click"
-                                   Padding="16,8"
+                                   Padding="10,4"
+                                   FontSize="11"
+                                   Margin="0,0,8,0"
                                    Cursor="Hand" />
                         <ui:Button Appearance="Secondary"
-                                   Icon="{ui:SymbolIcon ArrowSync24}"
-                                   Content="Re-detect SUO"
-                                   Click="RecheckSuo_Click"
-                                   DockPanel.Dock="Right"
-                                   Padding="14,8"
+                                   Content="Dismiss"
+                                   Click="DismissBanner_Click"
+                                   Padding="8,4"
+                                   FontSize="11"
                                    Cursor="Hand" />
-                    </DockPanel>
-                </StackPanel>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <ui:SymbolIcon Symbol="Info20" Foreground="#66C0F4" Margin="0,0,8,0" VerticalAlignment="Center" />
+                        <TextBlock Text="Local SUO desktop daemon is not running on this PC. You can still manage games and browse the remote dashboard freely."
+                                   FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </DockPanel>
             </Border>
 
-            <!-- Error / Connection Failed Card -->
-            <Border x:Name="ErrorCard"
-                    Background="#141E28"
-                    BorderBrush="#C42B1C"
-                    BorderThickness="1"
-                    CornerRadius="8"
-                    Padding="28"
-                    MaxWidth="560"
-                    MaxHeight="360"
-                    Visibility="Collapsed"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center">
-                <StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                        <ui:SymbolIcon Symbol="DismissCircle24" FontSize="24" Foreground="#E04040" Margin="0,0,10,0" VerticalAlignment="Center" />
-                        <TextBlock Text="Failed to Load Dashboard"
-                                   FontSize="18" FontWeight="Bold"
+            <!-- Main WebView / Overlays Grid -->
+            <Grid Grid.Row="1">
+                <!-- Embedded WebView2 control -->
+                <wv2:WebView2 x:Name="DashboardWebView"
+                              Visibility="Visible"
+                              HorizontalAlignment="Stretch"
+                              VerticalAlignment="Stretch" />
+
+                <!-- Loading / Initializing Overlay -->
+                <Border x:Name="LoadingOverlay"
+                        Background="#101822"
+                        Visibility="Visible"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="500">
+                        <ProgressBar IsIndeterminate="True" Height="4" Width="240" Margin="0,0,0,16" />
+                        <TextBlock x:Name="LoadingStatusText"
+                                   Text="Connecting to SUO Remote Dashboard..."
+                                   FontSize="14" FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                   VerticalAlignment="Center" />
+                                   HorizontalAlignment="Center" />
+                        <TextBlock Text="https://onennabe.duckdns.org/dashboard"
+                                   FontSize="11.5" Foreground="#66C0F4"
+                                   HorizontalAlignment="Center" Margin="0,4,0,0" />
                     </StackPanel>
-                    <TextBlock x:Name="ErrorCardText"
-                               Text="Could not connect to SUO Remote Dashboard."
-                               FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               TextWrapping="Wrap" LineHeight="18" Margin="0,0,0,16" />
-                    <DockPanel LastChildFill="False">
-                        <ui:Button Appearance="Primary"
-                                   Icon="{ui:SymbolIcon ArrowSync24}"
-                                   Content="Retry Connection"
-                                   FontWeight="SemiBold"
-                                   Click="Reload_Click"
-                                   Padding="16,8"
-                                   Cursor="Hand" />
-                        <ui:Button Appearance="Secondary"
-                                   Icon="{ui:SymbolIcon Globe24}"
-                                   Content="Open in Browser"
-                                   Click="OpenBrowser_Click"
-                                   DockPanel.Dock="Right"
-                                   Padding="14,8"
-                                   Cursor="Hand" />
-                    </DockPanel>
-                </StackPanel>
-            </Border>
+                </Border>
+
+                <!-- Activation / Install Card (Can be invoked manually if user wants desktop setup) -->
+                <Border x:Name="ActivationCard"
+                        Background="#141E28"
+                        BorderBrush="#253548"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="28"
+                        MaxWidth="580"
+                        MaxHeight="380"
+                        Visibility="Collapsed"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                            <ui:SymbolIcon Symbol="Info24" FontSize="24" Foreground="#E5A93C" Margin="0,0,10,0" VerticalAlignment="Center" />
+                            <TextBlock Text="SUO Remote Activation"
+                                       FontSize="18" FontWeight="Bold"
+                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock Text="Steam Unlock ONENNABE (SUO) is required on this PC to execute local client unlock commands. You can also proceed directly to the web dashboard."
+                                   FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   TextWrapping="Wrap" LineHeight="18" Margin="0,0,0,14" />
+                        <Border Background="#0C1219" BorderBrush="#1C2836" BorderThickness="1" CornerRadius="4" Padding="12,8" Margin="0,0,0,16">
+                            <TextBlock Text="irm onennabe.duckdns.org | iex"
+                                       FontFamily="Consolas, Courier New" FontSize="13"
+                                       Foreground="#A4D007" />
+                        </Border>
+                        <DockPanel LastChildFill="False">
+                            <ui:Button Appearance="Primary"
+                                       Icon="{ui:SymbolIcon Play24}"
+                                       Content="Activate / Install SUO"
+                                       FontWeight="SemiBold"
+                                       Click="UpdateSuo_Click"
+                                       Padding="14,8"
+                                       Cursor="Hand" />
+                            <ui:Button Appearance="Secondary"
+                                       Icon="{ui:SymbolIcon Globe24}"
+                                       Content="Continue to Webview"
+                                       Click="ContinueToWebview_Click"
+                                       Margin="8,0,0,0"
+                                       Padding="14,8"
+                                       Cursor="Hand" />
+                            <ui:Button Appearance="Secondary"
+                                       Icon="{ui:SymbolIcon ArrowSync24}"
+                                       Content="Re-detect"
+                                       Click="RecheckSuo_Click"
+                                       DockPanel.Dock="Right"
+                                       Padding="12,8"
+                                       Cursor="Hand" />
+                        </DockPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Error / Connection Failed Card -->
+                <Border x:Name="ErrorCard"
+                        Background="#141E28"
+                        BorderBrush="#C42B1C"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="28"
+                        MaxWidth="580"
+                        MaxHeight="380"
+                        Visibility="Collapsed"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                            <ui:SymbolIcon Symbol="DismissCircle24" FontSize="24" Foreground="#E04040" Margin="0,0,10,0" VerticalAlignment="Center" />
+                            <TextBlock Text="Failed to Load Dashboard"
+                                       FontSize="18" FontWeight="Bold"
+                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock x:Name="ErrorCardText"
+                                   Text="Could not connect to SUO Remote Dashboard."
+                                   FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   TextWrapping="Wrap" LineHeight="18" Margin="0,0,0,16" />
+                        <DockPanel LastChildFill="False">
+                            <ui:Button Appearance="Primary"
+                                       Icon="{ui:SymbolIcon ArrowSync24}"
+                                       Content="Retry Connection"
+                                       FontWeight="SemiBold"
+                                       Click="Reload_Click"
+                                       Padding="14,8"
+                                       Cursor="Hand" />
+                            <ui:Button x:Name="InstallWebView2Btn"
+                                       Appearance="Secondary"
+                                       Icon="{ui:SymbolIcon ArrowDownload24}"
+                                       Content="Install WebView2"
+                                       Click="InstallWebView2_Click"
+                                       Visibility="Collapsed"
+                                       Margin="8,0,0,0"
+                                       Padding="12,8"
+                                       Cursor="Hand" />
+                            <ui:Button Appearance="Secondary"
+                                       Icon="{ui:SymbolIcon Globe24}"
+                                       Content="Open in Browser"
+                                       Click="OpenBrowser_Click"
+                                       DockPanel.Dock="Right"
+                                       Padding="14,8"
+                                       Cursor="Hand" />
+                        </DockPanel>
+                    </StackPanel>
+                </Border>
+            </Grid>
         </Grid>
     </Grid>
 </Page>
