@@ -1,26 +1,38 @@
 # Agent Guidelines for CloudRedirect
 
-## Post-Task Build & Release Directive
-**MANDATORY**: Whenever you make any changes or complete any task in this codebase, you **MUST** automatically:
-1. **Bump Version Number**: Increment `<ReleaseVersion>` in `Version.props` (e.g. `2.6.5` -> `2.6.6`) so that running instances of CloudRedirect can auto-detect the newer version and prompt/auto-install it.
-2. **Build and Publish the Windows Executable (`.exe`)**:
-   ```powershell
-   dotnet publish ui/CloudRedirect.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o ui/bin/publish
-   & "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /target:winexe /platform:x64 /win32icon:ui\steam_logo3.ico /res:ui\bin\publish\CloudRedirect.Core.exe,MainAppPayload /out:ui\bin\publish\CloudRedirect.exe /r:System.dll,System.Windows.Forms.dll,System.Drawing.dll,System.Core.dll src\launcher\CloudRedirectLauncher.cs
-   ```
-   The published executable will be at `ui/bin/publish/CloudRedirect.exe` (~10.2 MB). It combines the main app with the built-in Steam-styled .NET 8 auto-downloader & progress bar into a single file.
-3. **Commit & Push Code**:
-   ```powershell
-   git add -A
-   git commit -m "..."
-   git push origin master
-   ```
-4. **Publish GitHub Release**:
-   Run the automated release script to create/update the GitHub Release for the new version and upload `CloudRedirect.exe` and `CloudRedirect.exe.sha256`:
-   ```powershell
-   powershell -ExecutionPolicy Bypass -File scripts/publish-release.ps1 -ReleaseBody "<Description of changes>"
-   ```
-   This ensures the in-app `AppUpdater` can detect the new release on GitHub, download the binary, and perform auto-update seamlessly.
+## Development, Build & Release Directive
+- **Local Testing & Debug Mode (DEFAULT)**:
+  - When making iterative changes or when working on tasks, build and test **locally only**.
+  - **Do NOT push to GitHub or trigger releases** until the user explicitly says to push to GitHub.
+  - While testing locally, append a debug indicator or pre-release suffix (e.g. `<ReleasePrerelease>-DEBUG</ReleasePrerelease>` in `Version.props`) and use a debug display name so it never conflicts with production or triggers premature auto-updates for existing users.
+  - For local builds:
+    ```powershell
+    dotnet build ui/CloudRedirect.csproj -c Debug
+    ```
+    or for testing the published bundle locally:
+    ```powershell
+    dotnet publish ui/CloudRedirect.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o ui/bin/publish
+    & "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /target:winexe /platform:x64 /win32icon:ui\steam_logo3.ico /res:ui\bin\publish\CloudRedirect.Core.exe,MainAppPayload /out:ui\bin\publish\CloudRedirect.exe /r:System.dll,System.Windows.Forms.dll,System.Drawing.dll,System.Core.dll src\launcher\CloudRedirectLauncher.cs
+    ```
+
+- **Production Build & Release Directive (ONLY WHEN USER EXPLICITLY INSTRUCTS TO PUSH)**:
+  - Once the user explicitly instructs to publish/push to GitHub:
+    1. Clear `<ReleasePrerelease>` in `Version.props` and bump `<ReleaseVersion>` (e.g. `2.9.111` -> `2.9.112`).
+    2. Build and publish the Windows Executable (`.exe`):
+       ```powershell
+       dotnet publish ui/CloudRedirect.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o ui/bin/publish
+       & "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /target:winexe /platform:x64 /win32icon:ui\steam_logo3.ico /res:ui\bin\publish\CloudRedirect.Core.exe,MainAppPayload /out:ui\bin\publish\CloudRedirect.exe /r:System.dll,System.Windows.Forms.dll,System.Drawing.dll,System.Core.dll src\launcher\CloudRedirectLauncher.cs
+       ```
+    3. Commit & Push Code:
+       ```powershell
+       git add -A
+       git commit -m "..."
+       git push origin master
+       ```
+    4. Publish GitHub Release:
+       ```powershell
+       powershell -ExecutionPolicy Bypass -File scripts/publish-release.ps1 -ReleaseBody "<Description of changes>"
+       ```
 
 ## Project Overview
 - **Target Platform**: Windows x64 only.

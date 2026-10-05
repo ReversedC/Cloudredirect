@@ -73,15 +73,15 @@ internal static class AppUpdater
             isBeta = true;
             s = s.Substring(0, s.Length - 1).Trim();
         }
-        else if (s.Contains("-beta", StringComparison.OrdinalIgnoreCase))
+        else if (s.Contains("-", StringComparison.OrdinalIgnoreCase))
         {
-            isBeta = true;
-            s = s.Replace("-beta", "", StringComparison.OrdinalIgnoreCase).Trim();
-        }
-        else if (s.Contains("-rc", StringComparison.OrdinalIgnoreCase))
-        {
-            isBeta = true;
-            s = s.Replace("-rc", "", StringComparison.OrdinalIgnoreCase).Trim();
+            int dashIdx = s.IndexOf('-');
+            var suffix = s.Substring(dashIdx);
+            if (suffix.Contains("beta", StringComparison.OrdinalIgnoreCase) || suffix.Contains("rc", StringComparison.OrdinalIgnoreCase))
+            {
+                isBeta = true;
+            }
+            s = s.Substring(0, dashIdx).Trim();
         }
 
         if (Version.TryParse(s, out var v))
@@ -112,6 +112,74 @@ internal static class AppUpdater
         public string? Body { get; init; }
         /// <summary>URL to the GitHub release page.</summary>
         public string? HtmlUrl { get; init; }
+    }
+
+    public sealed record ReleaseChangelogItem(
+        string TagName,
+        string Name,
+        string Body,
+        string PublishedAt,
+        string HtmlUrl,
+        bool IsPrerelease,
+        bool IsCurrentVersion);
+
+    /// <summary>
+    /// Fetches all recent release changelogs from GitHub releases, with offline fallback for current version.
+    /// </summary>
+    internal static async Task<System.Collections.Generic.List<ReleaseChangelogItem>> FetchReleasesChangelogAsync()
+    {
+        var items = new System.Collections.Generic.List<ReleaseChangelogItem>();
+        var currentRaw = GetCurrentVersionString();
+        var currentVer = currentRaw.Split('-')[0].TrimStart('v');
+
+        try
+        {
+            var json = await Http.GetStringAsync(ReleasesApiUrl);
+            using var doc = JsonDocument.Parse(json);
+            foreach (var rel in doc.RootElement.EnumerateArray())
+            {
+                if (rel.TryGetProperty("draft", out var d) && d.ValueKind == JsonValueKind.True)
+                    continue;
+
+                var tag = rel.GetProperty("tag_name").GetString() ?? "";
+                var name = rel.TryGetProperty("name", out var n) ? n.GetString() ?? tag : tag;
+                var body = rel.TryGetProperty("body", out var b) ? b.GetString() ?? "" : "";
+                var htmlUrl = rel.TryGetProperty("html_url", out var h) ? h.GetString() ?? "" : "";
+                var pubAt = rel.TryGetProperty("published_at", out var p) ? p.GetString() ?? "" : "";
+                var isPre = rel.TryGetProperty("prerelease", out var pr) && pr.ValueKind == JsonValueKind.True;
+
+                string formattedDate = pubAt;
+                if (DateTimeOffset.TryParse(pubAt, out var dto))
+                {
+                    formattedDate = dto.LocalDateTime.ToString("MMM dd, yyyy");
+                }
+
+                var cleanTag = tag.Split('-')[0].TrimStart('v');
+                bool isCurrent = string.Equals(cleanTag, currentVer, StringComparison.OrdinalIgnoreCase);
+
+                items.Add(new ReleaseChangelogItem(tag, name, body, formattedDate, htmlUrl, isPre, isCurrent));
+            }
+        }
+        catch (Exception ex)
+        {
+            App.LogStartup($"AppUpdater.FetchReleasesChangelogAsync: GitHub fetch skipped or failed: {ex.Message}");
+        }
+
+        // If items list is empty or offline, provide current version release highlights
+        if (items.Count == 0)
+        {
+            items.Add(new ReleaseChangelogItem(
+                TagName: "v" + currentRaw,
+                Name: $"CloudRedirect v{currentRaw}",
+                Body: "• Added Network Boost (0ms network packet throttling index & MMCSS gaming optimization)\n• Added Bluetooth Boost (Low-Latency controller & headset selective suspend tweak)\n• Redesigned Game Space Overlay with dynamic Anti-Lag toggle and telemetry\n• Redesigned Settings Page with full auto-wrapping and auto-fit scaling\n• Added Update Changelog viewer with GitHub release sync\n• Enhanced multi-language dynamic switching and Steam UI theme alignment",
+                PublishedAt: DateTime.Now.ToString("MMM dd, yyyy"),
+                HtmlUrl: $"https://github.com/{RepoOwner}/{RepoName}/releases",
+                IsPrerelease: false,
+                IsCurrentVersion: true
+            ));
+        }
+
+        return items;
     }
 
     /// <summary>

@@ -17,6 +17,7 @@ public sealed class GlobalHotkeyService : IDisposable
     private const int WM_HOTKEY = 0x0312;
     private const int HOTKEY_ID = 0xCD01;
     private const int HOTKEY_GAMESPACE_ID = 0xCD02;
+    private const int HOTKEY_STICKYNOTE_ID = 0xCD03;
 
     // Modifiers
     private const uint MOD_ALT = 0x0001;
@@ -36,14 +37,17 @@ public sealed class GlobalHotkeyService : IDisposable
     private HwndSource? _hwndSource;
     private bool _isRegistered;
     private bool _isGameSpaceRegistered;
+    private bool _isStickyNoteRegistered;
     private string _currentShortcut = "Ctrl+Shift+C";
     private long _lastHotkeyTicks;
     private long _lastGameSpaceHotkeyTicks;
+    private long _lastStickyNoteHotkeyTicks;
     private bool _isHooked;
 
     public string CurrentShortcut => _currentShortcut;
     public bool IsRegistered => _isRegistered;
     public bool IsGameSpaceRegistered => _isGameSpaceRegistered;
+    public bool IsStickyNoteRegistered => _isStickyNoteRegistered;
 
     public event Action<string, bool>? OnHotkeyRegistrationChanged;
 
@@ -73,6 +77,7 @@ public sealed class GlobalHotkeyService : IDisposable
         }
 
         RegisterGameSpaceHotkey();
+        RegisterStickyNoteHotkey();
     }
 
     public bool RegisterWithFallback(string requestedShortcut, out string actualShortcut)
@@ -189,6 +194,61 @@ public sealed class GlobalHotkeyService : IDisposable
         }
     }
 
+    public bool RegisterStickyNoteHotkey()
+    {
+        if (_hwnd == IntPtr.Zero) return false;
+        UnregisterStickyNoteHotkey();
+
+        if (!AppSettings.StickyNoteHotkeyEnabled) return false;
+
+        string shortcut = AppSettings.StickyNoteHotkey;
+        if (string.IsNullOrWhiteSpace(shortcut)) shortcut = "Alt+N";
+
+        if (!ParseShortcut(shortcut, out uint modifiers, out uint vk))
+        {
+            App.LogStartup($"GlobalHotkeyService: Failed to parse StickyNote shortcut '{shortcut}'");
+            return false;
+        }
+
+        bool success = RegisterHotKey(_hwnd, HOTKEY_STICKYNOTE_ID, modifiers | MOD_NOREPEAT, vk);
+        if (!success)
+        {
+            success = RegisterHotKey(_hwnd, HOTKEY_STICKYNOTE_ID, modifiers, vk);
+        }
+
+        // If primary Alt+N is blocked by another app, try fallbacks
+        if (!success)
+        {
+            var fallbacks = new[] { "Ctrl+Alt+N", "Alt+Shift+N", "Ctrl+Shift+N" };
+            foreach (var fb in fallbacks)
+            {
+                if (ParseShortcut(fb, out var mod, out var k))
+                {
+                    success = RegisterHotKey(_hwnd, HOTKEY_STICKYNOTE_ID, mod | MOD_NOREPEAT, k);
+                    if (success)
+                    {
+                        shortcut = fb;
+                        break;
+                    }
+                }
+            }
+        }
+
+        var err = success ? 0 : Marshal.GetLastWin32Error();
+        App.LogStartup($"GlobalHotkeyService: StickyNote hotkey '{shortcut}' registered={success}, err={err}");
+        _isStickyNoteRegistered = success;
+        return success;
+    }
+
+    public void UnregisterStickyNoteHotkey()
+    {
+        if (_hwnd != IntPtr.Zero)
+        {
+            UnregisterHotKey(_hwnd, HOTKEY_STICKYNOTE_ID);
+            _isStickyNoteRegistered = false;
+        }
+    }
+
     private void ComponentDispatcher_ThreadFilterMessage(ref MSG msg, ref bool handled)
     {
         if (msg.message == WM_HOTKEY)
@@ -202,6 +262,11 @@ public sealed class GlobalHotkeyService : IDisposable
             else if (id == HOTKEY_GAMESPACE_ID)
             {
                 HandleGameSpaceHotkeyPressed();
+                handled = true;
+            }
+            else if (id == HOTKEY_STICKYNOTE_ID)
+            {
+                HandleStickyNoteHotkeyPressed();
                 handled = true;
             }
         }
@@ -222,8 +287,29 @@ public sealed class GlobalHotkeyService : IDisposable
                 HandleGameSpaceHotkeyPressed();
                 handled = true;
             }
+            else if (id == HOTKEY_STICKYNOTE_ID)
+            {
+                HandleStickyNoteHotkeyPressed();
+                handled = true;
+            }
         }
         return IntPtr.Zero;
+    }
+
+    private void HandleStickyNoteHotkeyPressed()
+    {
+        var nowTicks = Environment.TickCount64;
+        if (nowTicks - _lastStickyNoteHotkeyTicks < 350) return; // 350ms debounce
+        _lastStickyNoteHotkeyTicks = nowTicks;
+
+        App.LogStartup("GlobalHotkeyService.HandleStickyNoteHotkeyPressed triggered.");
+        Application.Current?.Dispatcher.Invoke(() =>
+        {
+            var game = ActiveGameTrackerService.CurrentGame;
+            var gameName = (game != null && !string.IsNullOrWhiteSpace(game.Name)) ? game.Name : "Global";
+            var note = StickyNotesService.CreateNote(gameName, "New Note", "");
+            StickyNotesService.ShowNoteWindow(note);
+        });
     }
 
     private void HandleGameSpaceHotkeyPressed()
@@ -339,6 +425,7 @@ public sealed class GlobalHotkeyService : IDisposable
     {
         Unregister();
         UnregisterGameSpaceHotkey();
+        UnregisterStickyNoteHotkey();
         if (_isHooked)
         {
             try

@@ -4,7 +4,7 @@
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         Title="CloudRedirect Game Space"
-        Width="380"
+        Width="390"
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
@@ -76,10 +76,39 @@
             </Setter>
         </Style>
 
-        <Style x:Key="SteamActiveTabButtonStyle" TargetType="Button" BasedOn="{StaticResource SteamButtonStyle}">
-            <Setter Property="Background" Value="#2A475E" />
-            <Setter Property="BorderBrush" Value="#66C0F4" />
-            <Setter Property="Foreground" Value="#FFFFFF" />
+        <Style x:Key="SteamCyanButtonStyle" TargetType="Button" BasedOn="{StaticResource SteamButtonStyle}">
+            <Setter Property="Background" Value="#1B3650" />
+            <Setter Property="Foreground" Value="#66C0F4" />
+            <Setter Property="BorderBrush" Value="#2B547E" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="cyanBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="5"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="cyanBorder" Property="Background" Value="#234668" />
+                                <Setter TargetName="cyanBorder" Property="BorderBrush" Value="#4E87BA" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="cyanBorder" Property="Background" Value="#14293D" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SteamMiniActionButtonStyle" TargetType="Button" BasedOn="{StaticResource SteamButtonStyle}">
+            <Setter Property="Padding" Value="8,3" />
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
     </Window.Resources>
 
@@ -87,16 +116,21 @@
         <!-- Main Drawer Container with slide transform -->
         <Border x:Name="DrawerBorder"
                 HorizontalAlignment="Right"
-                Width="380"
-                Background="#F2131C26"
-                BorderBrush="#FF2A475E"
+                Width="390"
+                BorderBrush="#FF2F5A82"
                 BorderThickness="1,0,0,0"
                 CornerRadius="14,0,0,14">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Color="#F80E1722" Offset="0.0" />
+                    <GradientStop Color="#FB141F2D" Offset="1.0" />
+                </LinearGradientBrush>
+            </Border.Background>
             <Border.RenderTransform>
                 <TranslateTransform x:Name="DrawerTransform" X="0" />
             </Border.RenderTransform>
             <Border.Effect>
-                <DropShadowEffect Color="#000000" BlurRadius="28" ShadowDepth="0" Opacity="0.75" Direction="180" />
+                <DropShadowEffect Color="#000000" BlurRadius="32" ShadowDepth="0" Opacity="0.85" Direction="180" />
             </Border.Effect>
 
             <Grid Margin="18,16,18,16">
@@ -114,7 +148,7 @@
                     </Grid.ColumnDefinitions>
 
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Border Background="#1C354A" CornerRadius="6" Padding="6,4" Margin="0,0,8,0">
+                        <Border Background="#1C354A" BorderBrush="#2F5A82" BorderThickness="1" CornerRadius="7" Padding="6,5" Margin="0,0,10,0">
                             <ui:SymbolIcon Symbol="Games24" FontSize="18" Foreground="#66C0F4" />
                         </Border>
                         <StackPanel VerticalAlignment="Center">
@@ -128,7 +162,7 @@
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
-                            <TextBlock Text="CloudRedirect In-Game Companion" FontSize="10" Foreground="#8F98A0" Margin="0,1,0,0" />
+                            <TextBlock Text="CloudRedirect Quick Access Companion" FontSize="10" Foreground="#8F98A0" Margin="0,1,0,0" />
                         </StackPanel>
                     </StackPanel>
 
@@ -158,7 +192,7 @@
                                 BorderThickness="1"
                                 CornerRadius="8"
                                 Padding="12"
-                                Margin="0,0,0,14">
+                                Margin="0,0,0,12">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
@@ -201,13 +235,14 @@
                                                        Text="⏱️ No Active Game"
                                                        FontSize="11"
                                                        Foreground="#8F98A0" />
-                                            <TextBlock x:Name="BoostActiveBadge"
-                                                       Text="🚀 Boosted"
-                                                       FontSize="10"
-                                                       FontWeight="SemiBold"
-                                                       Foreground="#00D2FF"
-                                                       Margin="8,0,0,0"
-                                                       Visibility="Collapsed" />
+                                            <Border Background="#112938" BorderBrush="#1C4B6B" BorderThickness="1" CornerRadius="4" Padding="4,1" Margin="8,0,0,0">
+                                                <TextBlock x:Name="BoostActiveBadge"
+                                                           Text="🚀 Boosted"
+                                                           FontSize="9"
+                                                           FontWeight="Bold"
+                                                           Foreground="#00D2FF"
+                                                           Visibility="Collapsed" />
+                                            </Border>
                                         </StackPanel>
                                     </StackPanel>
                                 </Grid>
@@ -227,17 +262,19 @@
                             </Grid>
                         </Border>
 
-                        <!-- System & Performance Telemetry Card with Auto-Fit 3-Column Grid -->
+                        <!-- System & Performance Telemetry Card with Network/BT Latency Boost -->
                         <Border Background="#16222F" BorderBrush="#24394E" BorderThickness="1"
-                                CornerRadius="8" Padding="12" Margin="0,0,0,14">
+                                CornerRadius="8" Padding="12" Margin="0,0,0,12">
                             <StackPanel>
                                 <DockPanel LastChildFill="False" Margin="0,0,0,10">
                                     <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
                                         <ui:SymbolIcon Symbol="Flash24" FontSize="14" Foreground="#A4D007" Margin="0,0,6,0" />
                                         <TextBlock Text="SYSTEM &amp; PERFORMANCE" FontSize="11" FontWeight="Bold" Foreground="#66C0F4" />
                                     </StackPanel>
-                                    <TextBlock x:Name="PowerPlanText" DockPanel.Dock="Right"
-                                               Text="High Perf" FontSize="10" Foreground="#8F98A0" VerticalAlignment="Center" />
+                                    <Border Background="#182A3A" BorderBrush="#2B4E6B" BorderThickness="1" CornerRadius="4" Padding="6,2" DockPanel.Dock="Right">
+                                        <TextBlock x:Name="PowerPlanText"
+                                                   Text="High Perf" FontSize="10" FontWeight="SemiBold" Foreground="#66C0F4" VerticalAlignment="Center" />
+                                    </Border>
                                 </DockPanel>
 
                                 <!-- 3-Column Telemetry Tiles: CPU | GPU | RAM (with Viewbox Auto-Fit) -->
@@ -302,31 +339,69 @@
                                                  Foreground="#66C0F4" Background="#0F1720" BorderThickness="0" />
                                 </Grid>
 
-                                <!-- Action Buttons: Purge RAM & Freeze Background Apps -->
-                                <Grid Margin="0,2,0,0">
+                                <!-- Network & Bluetooth Latency Boost Status Strip -->
+                                <Grid Margin="0,0,0,8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="6" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
 
+                                    <!-- Network Anti-Lag Badge -->
+                                    <Border x:Name="NetBoostChip" Grid.Column="0" Background="#101C27" BorderBrush="#1F3D56" BorderThickness="1" CornerRadius="5" Padding="6,4">
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <TextBlock Text="🌐" FontSize="10" Margin="0,0,4,0" />
+                                            <TextBlock x:Name="NetBoostChipText" Text="Net Boost: 0ms Throttling" FontSize="9" FontWeight="SemiBold" Foreground="#66C0F4" />
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Bluetooth Low-Latency Badge -->
+                                    <Border x:Name="BtBoostChip" Grid.Column="2" Background="#101C27" BorderBrush="#1F3D56" BorderThickness="1" CornerRadius="5" Padding="6,4">
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <TextBlock Text="📶" FontSize="10" Margin="0,0,4,0" />
+                                            <TextBlock x:Name="BtBoostChipText" Text="BT Boost: Anti-Lag" FontSize="9" FontWeight="SemiBold" Foreground="#A4D007" />
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+
+                                <!-- Action Buttons: Purge RAM, Freeze Background Apps, and Latency Boost -->
+                                <Grid Margin="0,2,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="5" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="5" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
                                     <!-- Purge RAM Button -->
                                     <Button Grid.Column="0" x:Name="PurgeRamBtn" Click="PurgeRam_Click"
                                             Style="{StaticResource SteamPlayButtonStyle}"
-                                            HorizontalAlignment="Stretch" Padding="6,6">
+                                            HorizontalAlignment="Stretch" Padding="4,6">
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <ui:SymbolIcon Symbol="Broom24" FontSize="13" Margin="0,0,4,0" />
-                                            <TextBlock Text="⚡ Purge RAM" FontSize="11" />
+                                            <ui:SymbolIcon Symbol="Broom24" FontSize="12" Margin="0,0,3,0" />
+                                            <TextBlock Text="Purge RAM" FontSize="10" FontWeight="SemiBold" />
                                         </StackPanel>
                                     </Button>
 
                                     <!-- Freeze BG Apps Toggle Button -->
                                     <Button Grid.Column="2" x:Name="FreezeBgAppsBtn" Click="FreezeBgApps_Click"
                                             Style="{StaticResource SteamButtonStyle}"
-                                            HorizontalAlignment="Stretch" Padding="6,6">
+                                            HorizontalAlignment="Stretch" Padding="4,6">
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <ui:SymbolIcon x:Name="FreezeIcon" Symbol="WeatherSnowflake24" FontSize="13" Foreground="#66C0F4" Margin="0,0,4,0" />
-                                            <TextBlock x:Name="FreezeBtnText" Text="🧊 Freeze Apps" FontSize="11" />
+                                            <ui:SymbolIcon x:Name="FreezeIcon" Symbol="WeatherSnowflake24" FontSize="12" Foreground="#66C0F4" Margin="0,0,3,0" />
+                                            <TextBlock x:Name="FreezeBtnText" Text="Freeze Apps" FontSize="10" FontWeight="SemiBold" />
+                                        </StackPanel>
+                                    </Button>
+
+                                    <!-- Optimize Ping & BT Button with Explicit ON / OFF Toggle Appearance -->
+                                    <Button Grid.Column="4" x:Name="AntiLagBtn" Click="OptimizePingBt_Click"
+                                            Style="{StaticResource SteamButtonStyle}"
+                                            HorizontalAlignment="Stretch" Padding="4,6"
+                                            ToolTip="Toggle low-latency network throttling and Bluetooth controller response">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <ui:SymbolIcon x:Name="AntiLagIcon" Symbol="Flash24" FontSize="12" Foreground="#A4D007" Margin="0,0,3,0" />
+                                            <TextBlock x:Name="AntiLagBtnText" Text="Anti-Lag: ON" FontSize="10" FontWeight="SemiBold" />
                                         </StackPanel>
                                     </Button>
                                 </Grid>
@@ -351,7 +426,7 @@
 
                         <!-- In-Game Save Checkpoints Section -->
                         <Border Background="#16222F" BorderBrush="#24394E" BorderThickness="1"
-                                CornerRadius="8" Padding="12" Margin="0,0,0,14">
+                                CornerRadius="8" Padding="12" Margin="0,0,0,12">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6" VerticalAlignment="Center">
                                     <ui:SymbolIcon Symbol="Camera24" FontSize="14" Foreground="#66C0F4" Margin="0,0,6,0" />
@@ -406,7 +481,7 @@
 
                         <!-- In-Game Web Guides & Mini Browser Launcher Card -->
                         <Border Background="#16222F" BorderBrush="#24394E" BorderThickness="1"
-                                CornerRadius="8" Padding="12" Margin="0,0,0,14">
+                                CornerRadius="8" Padding="12" Margin="0,0,0,12">
                             <StackPanel>
                                 <DockPanel LastChildFill="False" Margin="0,0,0,6">
                                     <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
@@ -426,7 +501,7 @@
                                         HorizontalAlignment="Stretch" Padding="10,7" Margin="0,0,0,8">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                         <ui:SymbolIcon Symbol="Globe24" FontSize="14" Margin="0,0,8,0" />
-                                        <TextBlock Text="🌐 Open Mini Web Browser ↗" FontSize="11" FontWeight="Bold" />
+                                        <TextBlock Text="Open Mini Web Browser ↗" FontSize="11" FontWeight="Bold" />
                                     </StackPanel>
                                 </Button>
 
@@ -448,33 +523,59 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- Game Scratchpad / Notes Section -->
+                        <!-- Multi-Sticky Notes & Scratchpad System -->
                         <Border Background="#16222F" BorderBrush="#24394E" BorderThickness="1"
                                 CornerRadius="8" Padding="12" Margin="0,0,0,10">
                             <StackPanel>
                                 <DockPanel LastChildFill="False" Margin="0,0,0,6">
                                     <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
                                         <ui:SymbolIcon Symbol="Note24" FontSize="14" Foreground="#E5A130" Margin="0,0,6,0" />
-                                        <TextBlock Text="GAME SCRATCHPAD / NOTES" FontSize="11" FontWeight="Bold" Foreground="#66C0F4" />
+                                        <TextBlock Text="STICKY NOTES &amp; HUD" FontSize="11" FontWeight="Bold" Foreground="#66C0F4" />
                                     </StackPanel>
-                                    <TextBlock x:Name="NotesSavedIndicator" DockPanel.Dock="Right"
-                                               Text="Saved" FontSize="10" Foreground="#A4D007" Visibility="Collapsed" VerticalAlignment="Center" />
-                                </DockPanel>
-                                <TextBlock Text="Codes, puzzle clues, coords (auto-saved per game):"
-                                           FontSize="10" Foreground="#8F98A0" Margin="0,0,0,6" />
 
-                                <TextBox x:Name="GameNotesTextBox"
-                                         AcceptsReturn="True"
-                                         TextWrapping="Wrap"
-                                         Height="84"
-                                         FontSize="11"
-                                         Background="#0F1720"
-                                         Foreground="#C6D4DF"
-                                         BorderBrush="#253A4E"
-                                         BorderThickness="1"
-                                         Padding="8,6"
-                                         VerticalScrollBarVisibility="Auto"
-                                         TextChanged="GameNotesTextBox_TextChanged" />
+                                    <!-- New Note Button -->
+                                    <Button DockPanel.Dock="Right"
+                                            x:Name="NewNoteBtn"
+                                            Click="NewNoteBtn_Click"
+                                            Style="{StaticResource SteamPlayButtonStyle}"
+                                            Padding="8,3"
+                                            FontSize="10"
+                                            Cursor="Hand"
+                                            ToolTip="Create new sticky note (Alt+N)">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <TextBlock Text="+" FontWeight="Bold" FontSize="12" Margin="0,0,4,0" />
+                                            <TextBlock Text="New Note" FontWeight="Bold" />
+                                            <Border Background="#203E15" BorderBrush="#3D7D28" BorderThickness="1" CornerRadius="3" Padding="4,1" Margin="6,0,0,0">
+                                                <TextBlock Text="Alt+N" FontSize="9" FontWeight="Bold" Foreground="#A4D007" />
+                                            </Border>
+                                        </StackPanel>
+                                    </Button>
+                                </DockPanel>
+
+                                <TextBlock Text="Floating translucent notes over game HUD (codes, clues, coords):"
+                                           FontSize="10" Foreground="#8F98A0" Margin="0,0,0,8" TextWrapping="Wrap" />
+
+                                <!-- Note Management Quick Tools -->
+                                <DockPanel LastChildFill="False" Margin="0,0,0,8">
+                                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                                        <Button Content="📌 Float All Pinned"
+                                                Style="{StaticResource SteamMiniActionButtonStyle}"
+                                                Click="FloatAllPinned_Click"
+                                                Margin="0,0,6,0"
+                                                ToolTip="Spawn all pinned sticky notes floating on screen" />
+                                        <Button Content="✕ Hide Floating"
+                                                Style="{StaticResource SteamMiniActionButtonStyle}"
+                                                Click="HideAllFloating_Click"
+                                                ToolTip="Close floating notes (remains saved)" />
+                                    </StackPanel>
+
+                                    <TextBlock x:Name="NotesCountText" DockPanel.Dock="Right"
+                                               Text="0 note(s)" FontSize="10" Foreground="#6B7782"
+                                               VerticalAlignment="Center" />
+                                </DockPanel>
+
+                                <!-- List of Notes Container -->
+                                <StackPanel x:Name="StickyNotesListPanel" />
                             </StackPanel>
                         </Border>
 

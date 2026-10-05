@@ -180,6 +180,18 @@ public static class AppSettings
         set => WriteBool("game_boost_periodic_ram_purge", value);
     }
 
+    public static bool GameBoostNetworkBoost
+    {
+        get => ReadBool("game_boost_network_boost", true);
+        set => WriteBool("game_boost_network_boost", value);
+    }
+
+    public static bool GameBoostBluetoothBoost
+    {
+        get => ReadBool("game_boost_bluetooth_boost", true);
+        set => WriteBool("game_boost_bluetooth_boost", value);
+    }
+
     public static bool GameSpaceEnabled
     {
         get => ReadBool("game_space_enabled", true);
@@ -190,6 +202,18 @@ public static class AppSettings
     {
         get => ReadString("game_space_hotkey", "Ctrl+Space");
         set => WriteString("game_space_hotkey", value);
+    }
+
+    public static bool StickyNoteHotkeyEnabled
+    {
+        get => ReadBool("sticky_note_hotkey_enabled", true);
+        set => WriteBool("sticky_note_hotkey_enabled", value);
+    }
+
+    public static string StickyNoteHotkey
+    {
+        get => ReadString("sticky_note_hotkey", "Alt+N");
+        set => WriteString("sticky_note_hotkey", value);
     }
 
     public static double ZoomScale

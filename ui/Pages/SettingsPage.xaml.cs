@@ -32,8 +32,15 @@ public partial class SettingsPage : Page
 
         Loaded += async (_, _) =>
         {
+            InitializeSettingsLanguageSelector();
+            LanguageService.OnLanguageChanged += InitializeSettingsLanguageSelector;
             try { await LoadSettingsAsync(); }
             catch { }
+        };
+
+        Unloaded += (_, _) =>
+        {
+            LanguageService.OnLanguageChanged -= InitializeSettingsLanguageSelector;
         };
     }
 
@@ -91,8 +98,11 @@ public partial class SettingsPage : Page
             if (GameBoostGpuToggle != null) GameBoostGpuToggle.IsChecked = AppSettings.GameBoostHighPerformanceGpu;
             if (GameBoostAutoFreezeToggle != null) GameBoostAutoFreezeToggle.IsChecked = AppSettings.GameBoostAutoFreezeBackground;
             if (GameBoostPeriodicRamToggle != null) GameBoostPeriodicRamToggle.IsChecked = AppSettings.GameBoostPeriodicRamPurge;
+            if (GameBoostNetworkBoostToggle != null) GameBoostNetworkBoostToggle.IsChecked = AppSettings.GameBoostNetworkBoost;
+            if (GameBoostBluetoothBoostToggle != null) GameBoostBluetoothBoostToggle.IsChecked = AppSettings.GameBoostBluetoothBoost;
             if (GameBoostSubOptionsPanel != null) GameBoostSubOptionsPanel.IsEnabled = AppSettings.GameBoostEnabled;
             GameSpaceToggle.IsChecked = AppSettings.GameSpaceEnabled;
+            if (StickyNoteHotkeyToggle != null) StickyNoteHotkeyToggle.IsChecked = AppSettings.StickyNoteHotkeyEnabled;
             AutoProtectNonCloudToggle.IsChecked = AppSettings.AutoProtectNonCloudGames;
             MillenniumPluginToggle.IsChecked = AppSettings.EnableMillenniumPlugin;
             bool millInstalled = MillenniumPluginService.IsMillenniumInstalled();
@@ -110,6 +120,8 @@ public partial class SettingsPage : Page
             AutoConflictHealingToggle.IsChecked = AppSettings.AutoConflictHealing;
             AutoCompressionToggle.IsChecked = AppSettings.AutoStorageCompression;
             AutoCommunityDbToggle.IsChecked = AppSettings.AutoCommunityDatabase;
+
+            InitializeSettingsLanguageSelector();
         }
         finally
         {
@@ -221,6 +233,10 @@ public partial class SettingsPage : Page
             AppSettings.GameBoostAutoFreezeBackground = GameBoostAutoFreezeToggle.IsChecked == true;
         if (GameBoostPeriodicRamToggle != null)
             AppSettings.GameBoostPeriodicRamPurge = GameBoostPeriodicRamToggle.IsChecked == true;
+        if (GameBoostNetworkBoostToggle != null)
+            AppSettings.GameBoostNetworkBoost = GameBoostNetworkBoostToggle.IsChecked == true;
+        if (GameBoostBluetoothBoostToggle != null)
+            AppSettings.GameBoostBluetoothBoost = GameBoostBluetoothBoostToggle.IsChecked == true;
 
         if (GameSpaceToggle != null)
         {
@@ -230,6 +246,17 @@ public partial class SettingsPage : Page
             if (prevGameSpace != newGameSpace)
             {
                 GlobalHotkeyService.Instance.RegisterGameSpaceHotkey();
+            }
+        }
+
+        if (StickyNoteHotkeyToggle != null)
+        {
+            bool prev = AppSettings.StickyNoteHotkeyEnabled;
+            bool now = StickyNoteHotkeyToggle.IsChecked == true;
+            AppSettings.StickyNoteHotkeyEnabled = now;
+            if (prev != now)
+            {
+                GlobalHotkeyService.Instance.RegisterStickyNoteHotkey();
             }
         }
 
@@ -302,6 +329,14 @@ public partial class SettingsPage : Page
     private void GameSpaceTestButton_Click(object sender, RoutedEventArgs e)
     {
         GameSpaceService.Instance.Toggle(isPreview: true);
+    }
+
+    private void StickyNoteTestButton_Click(object sender, RoutedEventArgs e)
+    {
+        var game = ActiveGameTrackerService.CurrentGame;
+        var gameName = (game != null && !string.IsNullOrWhiteSpace(game.Name)) ? game.Name : "Global";
+        var note = StickyNotesService.CreateNote(gameName, "Quick Note (Alt+N)", "Testing sticky note hotkey!\n• Pinned always on top\n• Translucent\n• Editable");
+        StickyNotesService.ShowNoteWindow(note);
     }
 
 
@@ -498,5 +533,78 @@ public partial class SettingsPage : Page
             }
         }
         catch { }
+    }
+
+    private bool _settingsLanguageLoading;
+
+    private void InitializeSettingsLanguageSelector()
+    {
+        if (SettingsLanguageComboBox == null) return;
+        _settingsLanguageLoading = true;
+        try
+        {
+            SettingsLanguageComboBox.Items.Clear();
+            var currentCode = LanguageService.ReadLanguagePreference();
+            int selectedIndex = 0;
+            var languages = LanguageService.SupportedLanguages;
+
+            for (int i = 0; i < languages.Length; i++)
+            {
+                var lang = languages[i];
+                var itemText = lang.Code == "system"
+                    ? S.Get(lang.ResourceKey)
+                    : lang.DisplayName;
+
+                var cbi = new ComboBoxItem
+                {
+                    Content = itemText,
+                    Tag = lang.Code,
+                    FontSize = 12,
+                    Padding = new Thickness(6, 4, 12, 4),
+                    VerticalContentAlignment = VerticalAlignment.Center,
+                    HorizontalContentAlignment = HorizontalAlignment.Left
+                };
+
+                SettingsLanguageComboBox.Items.Add(cbi);
+                if (string.Equals(lang.Code, currentCode, StringComparison.OrdinalIgnoreCase))
+                {
+                    selectedIndex = i;
+                }
+            }
+
+            SettingsLanguageComboBox.SelectedIndex = selectedIndex;
+        }
+        finally
+        {
+            _settingsLanguageLoading = false;
+        }
+    }
+
+    private void SettingsLanguageComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_settingsLanguageLoading || _syncLoading || SettingsLanguageComboBox == null) return;
+        if (SettingsLanguageComboBox.SelectedItem is ComboBoxItem cbi && cbi.Tag is string code)
+        {
+            LanguageService.ApplyLanguage(code, save: true);
+        }
+        else
+        {
+            var idx = SettingsLanguageComboBox.SelectedIndex;
+            var languages = LanguageService.SupportedLanguages;
+            if (idx >= 0 && idx < languages.Length)
+            {
+                LanguageService.ApplyLanguage(languages[idx].Code, save: true);
+            }
+        }
+    }
+
+    private void ViewChangelog_Click(object sender, RoutedEventArgs e)
+    {
+        var win = Window.GetWindow(this) ?? Application.Current.MainWindow;
+        var dialog = new Dialogs.UpdateChangelogDialog
+        {
+            Owner = win
+        };
+        dialog.ShowDialog();
     }
 }

@@ -76,6 +76,9 @@
   <data name="Nav_UniversalSaves" xml:space="preserve">
     <value>Universal Cloud Saves</value>
   </data>
+  <data name="Nav_Changelog" xml:space="preserve">
+    <value>Update Changelog</value>
+  </data>
   <data name="Stats_Hint" xml:space="preserve">
     <value>View current cloud achievement/playtime data for your injected apps.</value>
   </data>
@@ -1998,6 +2001,93 @@ Are you sure?</value>
   </data>
   <data name="Settings_AutoUpdate_Description" xml:space="preserve">
     <value>Automatically download latest version of the Cloud Redirect DLL on Steam startup</value>
+  </data>
+  <data name="Settings_HeroSubtitle" xml:space="preserve">
+    <value>Customize synchronization redundancy, performance anti-lag optimizations, Steam integrations, and system shortcuts.</value>
+  </data>
+  <data name="Settings_GameBoost" xml:space="preserve">
+    <value>Game Boost Engine</value>
+  </data>
+  <data name="Settings_GameBoost_Desc" xml:space="preserve">
+    <value>Automatically optimize CPU/GPU priority, switch Windows to High Performance power plan, and trim background standby RAM when a game launches.</value>
+  </data>
+  <data name="Settings_GameBoost_Network" xml:space="preserve">
+    <value>Network Boost (Anti-Lag)</value>
+  </data>
+  <data name="Settings_GameBoost_Network_Desc" xml:space="preserve">
+    <value>Disables Windows network packet throttling (0ms throttling index), prioritizes multiplayer game packets, and flushes DNS cache.</value>
+  </data>
+  <data name="Settings_GameBoost_Bluetooth" xml:space="preserve">
+    <value>Bluetooth Boost (Low-Latency)</value>
+  </data>
+  <data name="Settings_GameBoost_Bluetooth_Desc" xml:space="preserve">
+    <value>Disables Bluetooth selective suspend power-saving to eliminate wireless controller and headset input lag spikes.</value>
+  </data>
+  <data name="Settings_GameBoost_Gpu" xml:space="preserve">
+    <value>Auto-Assign Dedicated GPU</value>
+  </data>
+  <data name="Settings_GameBoost_Gpu_Desc" xml:space="preserve">
+    <value>Forces Windows DirectX graphics settings to run games on the discrete high-performance GPU, preventing lag on integrated graphics.</value>
+  </data>
+  <data name="Settings_GameBoost_Freeze" xml:space="preserve">
+    <value>Auto-Freeze Background Apps</value>
+  </data>
+  <data name="Settings_GameBoost_Freeze_Desc" xml:space="preserve">
+    <value>Silences background browsers (Chrome, Edge), Discord, and game launchers to Idle priority and flushes their RAM while in-game.</value>
+  </data>
+  <data name="Settings_GameBoost_RamPurge" xml:space="preserve">
+    <value>Periodic Smart RAM Auto-Purge</value>
+  </data>
+  <data name="Settings_GameBoost_RamPurge_Desc" xml:space="preserve">
+    <value>Monitors memory load during long sessions; automatically flushes background standby RAM if total usage exceeds 80%.</value>
+  </data>
+  <data name="Settings_GameSpace" xml:space="preserve">
+    <value>Game Space In-Game Overlay</value>
+  </data>
+  <data name="Settings_GameSpace_Desc" xml:space="preserve">
+    <value>In-game slide-out drawer with live telemetry, on-demand RAM purge, named save checkpoints, and scratchpad notes.</value>
+  </data>
+  <data name="Settings_StartWithWindows" xml:space="preserve">
+    <value>Start with Windows</value>
+  </data>
+  <data name="Settings_StartWithWindows_Desc" xml:space="preserve">
+    <value>Launch CloudRedirect automatically on Windows startup (minimized to system tray).</value>
+  </data>
+  <data name="Settings_MinimizeToTray" xml:space="preserve">
+    <value>Minimize to Tray on Close</value>
+  </data>
+  <data name="Settings_MinimizeToTray_Desc" xml:space="preserve">
+    <value>Closing the window keeps CloudRedirect running in the background system tray.</value>
+  </data>
+  <data name="Settings_SyncNotifications" xml:space="preserve">
+    <value>Save Sync Desktop Notifications</value>
+  </data>
+  <data name="Settings_SyncNotifications_Desc" xml:space="preserve">
+    <value>Show custom Steam-styled animated notifications with mini symbols when backups, restores, or cloud sync events occur.</value>
+  </data>
+  <data name="Settings_AutoFitWindow" xml:space="preserve">
+    <value>Auto-Fit Window Scale</value>
+  </data>
+  <data name="Settings_AutoFitWindow_Desc" xml:space="preserve">
+    <value>Automatically scale the interface so all cards and controls fit without requiring vertical scrolling.</value>
+  </data>
+  <data name="Settings_AutoProtectIntercepted" xml:space="preserve">
+    <value>Universal Saves Safe Mode</value>
+  </data>
+  <data name="Settings_AutoProtectIntercepted_Desc" xml:space="preserve">
+    <value>Automatically protect non-genuine and intercepted Steam games lacking cloud saves with Universal Cloud Saves.</value>
+  </data>
+  <data name="Settings_CategoryCloud" xml:space="preserve">
+    <value>Cloud Saves &amp; Redundancy</value>
+  </data>
+  <data name="Settings_CategoryBoost" xml:space="preserve">
+    <value>Gaming &amp; Performance Boost</value>
+  </data>
+  <data name="Settings_CategorySteam" xml:space="preserve">
+    <value>Steam &amp; Integrations</value>
+  </data>
+  <data name="Settings_CategorySystem" xml:space="preserve">
+    <value>System &amp; Preferences</value>
   </data>
 
   <!-- ═══════════════════════════════════════════════════════════════════ -->

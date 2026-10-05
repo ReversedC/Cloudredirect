@@ -5,14 +5,77 @@
       xmlns:res="clr-namespace:CloudRedirect.Resources"
       ScrollViewer.CanContentScroll="False">
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="28,16">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="28,16">
         <DockPanel LastChildFill="True">
-            <TextBlock DockPanel.Dock="Top"
-                       Text="{res:Loc Settings_Title}"
-                       FontSize="26" FontWeight="SemiBold"
-                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                       Margin="0,0,0,16" />
 
+            <!-- 1. Clean Steam Settings Hero Header (No Colliding Badges) -->
+            <Border DockPanel.Dock="Top"
+                    Background="#101923"
+                    BorderBrush="#1F3347"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="16,12"
+                    Margin="0,0,0,16">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Settings Icon -->
+                    <Border Grid.Column="0"
+                            Background="#182E42"
+                            BorderBrush="#254A6B"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="8,8"
+                            Margin="0,0,14,0"
+                            VerticalAlignment="Center">
+                        <ui:SymbolIcon Symbol="Settings24" FontSize="20" Foreground="#66C0F4" />
+                    </Border>
+
+                    <!-- Title & Subtitle (Auto-Wrapping) -->
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,16,0">
+                        <TextBlock Text="{res:Loc Settings_Title}"
+                                   FontSize="18" FontWeight="Bold"
+                                   Foreground="#FFFFFF"
+                                   TextWrapping="Wrap" />
+                        <TextBlock Text="{res:Loc Settings_HeroSubtitle}"
+                                   FontSize="11" Foreground="#8F98A0" Margin="0,3,0,0" TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <!-- Live Language Switcher Dock (Full Height & Auto-Fit) -->
+                    <Border Grid.Column="2"
+                            Background="#142230"
+                            BorderBrush="#233A52"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="8,0,6,0"
+                            MinHeight="34"
+                            VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <ui:SymbolIcon Symbol="Globe24" FontSize="15" Foreground="#66C0F4" Margin="4,0,8,0" VerticalAlignment="Center" />
+                            <ComboBox x:Name="SettingsLanguageComboBox"
+                                      MinWidth="160"
+                                      Height="32"
+                                      MinHeight="32"
+                                      Background="Transparent"
+                                      BorderThickness="0"
+                                      Padding="4,2,24,2"
+                                      VerticalAlignment="Center"
+                                      VerticalContentAlignment="Center"
+                                      SelectionChanged="SettingsLanguageComboBox_SelectionChanged"
+                                      FontSize="12"
+                                      MaxDropDownHeight="320"
+                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                      ToolTip="Change application language on the fly" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- 2. Balanced Two-Column Operational Layout -->
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -20,505 +83,31 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <!-- Left Column: Quality of Life, Danger Zone -->
+                <!-- ══════════════════════════════════════════════════════════════ -->
+                <!-- LEFT COLUMN: Cloud Saves & Steam Platform Integrations        -->
+                <!-- ══════════════════════════════════════════════════════════════ -->
                 <StackPanel Grid.Column="0">
 
-                    <!-- Quality of Life Section -->
-                    <StackPanel x:Name="ExtraSection" Margin="0,0,0,16">
-                        <TextBlock Text="{res:Loc Settings_Extra}"
-                                   FontSize="17" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                   Margin="0,0,0,8" />
-                        <StackPanel>
-                            <!-- Platform & Integration Status Card (Steam, Beta/Stable, SUO, Online/Offline) -->
-                            <ui:CardControl x:Name="PlatformStatusCard" Margin="0,0,0,8">
-                                <ui:CardControl.Header>
-                                    <Grid>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="1" />
-                                            <RowDefinition Height="Auto" />
-                                        </Grid.RowDefinitions>
-
-                                        <!-- Steam Client Status -->
-                                        <Grid Grid.Row="0" Margin="0,2,0,10">
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="Auto" />
-                                                <RowDefinition Height="Auto" />
-                                            </Grid.RowDefinitions>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <ui:SymbolIcon Grid.Row="0" Grid.Column="0" Symbol="Games24" FontSize="20"
-                                                           Foreground="{StaticResource SteamAccentCyanBrush}"
-                                                           Margin="0,0,12,0" VerticalAlignment="Top" />
-                                            <StackPanel Grid.Row="0" Grid.Column="1" VerticalAlignment="Center">
-                                                <TextBlock Text="Steam Client" FontWeight="SemiBold"
-                                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                                <TextBlock x:Name="SteamVersionText" Text="Detecting Steam..."
-                                                           FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                            </StackPanel>
-                                            <Border Grid.Row="0" Grid.Column="2" x:Name="SteamBranchBadge"
-                                                    Background="#162B3D" BorderBrush="#00D2FF" BorderThickness="1"
-                                                    CornerRadius="4" Padding="8,2" VerticalAlignment="Top">
-                                                <TextBlock x:Name="SteamBranchText" Text="Stable Client"
-                                                           FontSize="11" FontWeight="Bold" Foreground="#00D2FF" />
-                                            </Border>
-
-                                            <!-- Detailed About Steam Metadata -->
-                                            <Border Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
-                                                    Background="#0D1622" BorderBrush="#1B2838" BorderThickness="1"
-                                                    CornerRadius="4" Padding="10,6" Margin="0,8,0,0">
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="Auto" />
-                                                        <ColumnDefinition Width="*" />
-                                                    </Grid.ColumnDefinitions>
-                                                    <Grid.RowDefinitions>
-                                                        <RowDefinition Height="Auto" />
-                                                        <RowDefinition Height="Auto" />
-                                                        <RowDefinition Height="Auto" />
-                                                        <RowDefinition Height="Auto" />
-                                                    </Grid.RowDefinitions>
-
-                                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Steam Version:" FontSize="11" Foreground="#8F98A0" Margin="0,1,12,1" />
-                                                    <TextBlock Grid.Row="0" Grid.Column="1" x:Name="SteamManifestVersionText" Text="--" FontSize="11" Foreground="#C7D5E0" FontWeight="SemiBold" />
-
-                                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Client Build Date:" FontSize="11" Foreground="#8F98A0" Margin="0,1,12,1" />
-                                                    <TextBlock Grid.Row="1" Grid.Column="1" x:Name="SteamClientBuildDateText" Text="--" FontSize="11" Foreground="#C7D5E0" />
-
-                                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Web Build Date:" FontSize="11" Foreground="#8F98A0" Margin="0,1,12,1" />
-                                                    <TextBlock Grid.Row="2" Grid.Column="1" x:Name="SteamWebBuildDateText" Text="--" FontSize="11" Foreground="#C7D5E0" />
-
-                                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Steam API Version:" FontSize="11" Foreground="#8F98A0" Margin="0,1,12,1" />
-                                                    <TextBlock Grid.Row="3" Grid.Column="1" x:Name="SteamApiVersionText" Text="--" FontSize="11" Foreground="#00D2FF" FontWeight="SemiBold" />
-                                                </Grid>
-                                            </Border>
-                                        </Grid>
-
-                                        <!-- Subtle Separator -->
-                                        <Border Grid.Row="1" Height="1" Background="#1D2A3A" Margin="0,0,0,10" />
-
-                                        <!-- Steam Unlock ONENNABE (SUO) Status -->
-                                        <Grid Grid.Row="2" Margin="0,0,0,2">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <ui:SymbolIcon Grid.Column="0" Symbol="ShieldKeyhole24" FontSize="20"
-                                                           Foreground="#A4D007"
-                                                           Margin="0,0,12,0" VerticalAlignment="Center" />
-                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                <TextBlock Text="Steam Unlock ONENNABE (SUO)" FontWeight="SemiBold"
-                                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                                <TextBlock x:Name="SuoVersionText" Text="Detecting SUO..."
-                                                           FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                            </StackPanel>
-                                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                                <Border x:Name="SuoStatusBadge"
-                                                        Background="#143224" BorderBrush="#5BA32B" BorderThickness="1"
-                                                        CornerRadius="4" Padding="8,2" VerticalAlignment="Center" Margin="0,0,8,0">
-                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                        <Ellipse x:Name="SuoStatusDot" Width="6" Height="6" Fill="#A4D007" Margin="0,0,6,0" VerticalAlignment="Center" />
-                                                        <TextBlock x:Name="SuoStatusText" Text="Online"
-                                                                   FontSize="11" FontWeight="Bold" Foreground="#A4D007" />
-                                                    </StackPanel>
-                                                </Border>
-                                                <ui:Button x:Name="OpenSuoRemoteSettingsBtn"
-                                                           Appearance="Secondary"
-                                                           Content="Open Remote"
-                                                           Icon="{ui:SymbolIcon Globe24}"
-                                                           Click="OpenSuoRemote_Click"
-                                                           Visibility="Collapsed"
-                                                           Padding="10,4"
-                                                           Cursor="Hand" />
-                                            </StackPanel>
-                                        </Grid>
-                                    </Grid>
-                                </ui:CardControl.Header>
-                            </ui:CardControl>
-
-                            <ui:CardControl Margin="0,0,0,8">
-                                <ui:CardControl.Header>
-                                    <StackPanel>
-                                        <TextBlock Text="{res:Loc Settings_AutoUpdate}"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                        <TextBlock Text="{res:Loc Settings_AutoUpdate_Description}"
-                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                   TextWrapping="Wrap" />
-                                    </StackPanel>
-                                </ui:CardControl.Header>
-                                <ui:ToggleSwitch x:Name="AutoUpdateDllToggle"
-                                                 Checked="SyncToggle_Changed"
-                                                 Unchecked="SyncToggle_Changed" />
-                            </ui:CardControl>
-
-                            <!-- cloud_redirect-only QoL card. -->
-                            <ui:CardControl x:Name="ShowNonSteamGameCard" Margin="0,0,0,0">
-                                <ui:CardControl.Header>
-                                    <StackPanel>
-                                        <TextBlock Text="{res:Loc Settings_ShowNonSteamGame}"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                        <TextBlock Text="{res:Loc Settings_ShowNonSteamGameHint}"
-                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                   TextWrapping="Wrap" />
-                                    </StackPanel>
-                                </ui:CardControl.Header>
-                                <ui:ToggleSwitch x:Name="ShowNonSteamGameToggle"
-                                                 Checked="SyncToggle_Changed"
-                                                 Unchecked="SyncToggle_Changed" />
-                            </ui:CardControl>
-
-                            <!-- Start with Windows -->
-                            <ui:CardControl Margin="0,8,0,0">
-                                <ui:CardControl.Header>
-                                    <StackPanel>
-                                        <TextBlock Text="Start with Windows"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                        <TextBlock Text="Launch CloudRedirect automatically on Windows startup (minimized to system tray)."
-                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                   TextWrapping="Wrap" />
-                                    </StackPanel>
-                                </ui:CardControl.Header>
-                                <ui:ToggleSwitch x:Name="StartWithWindowsToggle"
-                                                 Checked="AppSettingsToggle_Changed"
-                                                 Unchecked="AppSettingsToggle_Changed" />
-                            </ui:CardControl>
-
-                            <!-- Minimize to Tray on Close -->
-                            <ui:CardControl Margin="0,8,0,0">
-                                <ui:CardControl.Header>
-                                    <StackPanel>
-                                        <TextBlock Text="Minimize to Tray on Close"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                        <TextBlock Text="Closing the window keeps CloudRedirect running in the background system tray."
-                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                   TextWrapping="Wrap" />
-                                    </StackPanel>
-                                </ui:CardControl.Header>
-                                <ui:ToggleSwitch x:Name="MinimizeToTrayToggle"
-                                                 Checked="AppSettingsToggle_Changed"
-                                                 Unchecked="AppSettingsToggle_Changed" />
-                            </ui:CardControl>
-
-                            <!-- Sync Notifications -->
-                            <ui:CardControl Margin="0,8,0,0">
-                                <ui:CardControl.Header>
-                                    <StackPanel>
-                                        <TextBlock Text="Save Sync Desktop Notifications"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                        <TextBlock Text="Show custom Steam-styled animated notifications with mini symbols when backups, restores, or cloud sync events occur."
-                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                   TextWrapping="Wrap" />
-                                    </StackPanel>
-                                </ui:CardControl.Header>
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <ui:Button x:Name="NotificationTestButton"
-                                               Content="Test Toast"
-                                               Appearance="Secondary"
-                                               Margin="0,0,10,0"
-                                               Click="NotificationTestButton_Click"
-                                               ToolTip="Preview animated Steam sync toast" />
-                                    <ui:ToggleSwitch x:Name="ShowNotificationsToggle"
-                                                     Checked="AppSettingsToggle_Changed"
-                                                     Unchecked="AppSettingsToggle_Changed" />
-                                </StackPanel>
-                            </ui:CardControl>
-
-                            <!-- Global Keyboard Shortcut (Summon / Toggle CloudRedirect) -->
-                            <ui:CardControl Margin="0,8,0,0">
-                                <ui:CardControl.Header>
-                                    <StackPanel>
-                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <TextBlock Text="{res:Loc Settings_GlobalHotkey}"
-                                                       FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                            <Border Background="#162332" BorderBrush="#25425F" BorderThickness="1"
-                                                    CornerRadius="4" Padding="6,2" Margin="8,0,0,0">
-                                                <TextBlock x:Name="HotkeyBadgeText" Text="Ctrl+Shift+C" FontSize="11" FontWeight="Bold" Foreground="#66C0F4" />
-                                            </Border>
-                                        </StackPanel>
-                                        <TextBlock Text="{res:Loc Settings_GlobalHotkeyHint}"
-                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                   TextWrapping="Wrap" />
-                                    </StackPanel>
-                                </ui:CardControl.Header>
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <ComboBox x:Name="HotkeyPresetCombo"
-                                              Width="140" Height="32"
-                                              VerticalAlignment="Center"
-                                              Margin="0,0,10,0"
-                                              SelectionChanged="HotkeyPresetCombo_SelectionChanged" />
-                                    <ui:ToggleSwitch x:Name="GlobalHotkeyToggle"
-                                                     Checked="GlobalHotkeyToggle_Changed"
-                                                     Unchecked="GlobalHotkeyToggle_Changed" />
-                                </StackPanel>
-                            </ui:CardControl>
-
-                            <!-- Game Boost (Performance & Power Optimization) -->
-                            <ui:CardControl Margin="0,8,0,0">
-                                <ui:CardControl.Header>
-                                    <StackPanel>
-                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <TextBlock Text="🚀 Game Boost"
-                                                       FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                            <Border Background="#162B3D" BorderBrush="#00D2FF" BorderThickness="1"
-                                                    CornerRadius="4" Padding="6,2" Margin="8,0,0,0">
-                                                <TextBlock Text="HIGH PERFORMANCE" FontSize="11" FontWeight="Bold" Foreground="#00D2FF" />
-                                            </Border>
-                                        </StackPanel>
-                                        <TextBlock Text="Automatically optimize CPU and I/O priority, switch Windows to High Performance power plan, and trim background standby RAM when a game launches."
-                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                   TextWrapping="Wrap" />
-                                    </StackPanel>
-                                </ui:CardControl.Header>
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <ui:Button x:Name="GameBoostTestButton"
-                                               Content="Test Overlay"
-                                               Appearance="Secondary"
-                                               Margin="0,0,10,0"
-                                               Click="GameBoostTestButton_Click"
-                                               ToolTip="Preview the animated Game Boost toast overlay" />
-                                    <ui:ToggleSwitch x:Name="GameBoostToggle"
-                                                     Checked="AppSettingsToggle_Changed"
-                                                     Unchecked="AppSettingsToggle_Changed" />
-                                </StackPanel>
-                            </ui:CardControl>
-
-                            <!-- Game Boost Sub-Options (Dedicated GPU, Background Freeze, Smart RAM Purge) -->
-                            <StackPanel Margin="16,4,0,0" x:Name="GameBoostSubOptionsPanel">
-                                <!-- Auto-Assign High-Performance Dedicated GPU -->
-                                <ui:CardControl Margin="0,4,0,0">
-                                    <ui:CardControl.Header>
-                                        <StackPanel>
-                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <TextBlock Text="⚡ Auto-Assign High-Performance Dedicated GPU"
-                                                           FontWeight="SemiBold"
-                                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                                <Border Background="#1A2D1B" BorderBrush="#5BA32B" BorderThickness="1"
-                                                        CornerRadius="4" Padding="6,1" Margin="8,0,0,0">
-                                                    <TextBlock Text="TOP PICK FOR LAPTOPS" FontSize="10" FontWeight="Bold" Foreground="#A4D007" />
-                                                </Border>
-                                            </StackPanel>
-                                            <TextBlock Text="Forces Windows DirectX graphics settings to run games on the discrete high-performance GPU, preventing accidental lag on integrated graphics."
-                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                       FontSize="12"
-                                                       TextWrapping="Wrap" />
-                                        </StackPanel>
-                                    </ui:CardControl.Header>
-                                    <ui:ToggleSwitch x:Name="GameBoostGpuToggle"
-                                                     Checked="AppSettingsToggle_Changed"
-                                                     Unchecked="AppSettingsToggle_Changed" />
-                                </ui:CardControl>
-
-                                <!-- Auto-Freeze Background Apps on Launch -->
-                                <ui:CardControl Margin="0,4,0,0">
-                                    <ui:CardControl.Header>
-                                        <StackPanel>
-                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <TextBlock Text="❄️ Auto-Freeze Background Apps on Launch"
-                                                           FontWeight="SemiBold"
-                                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                                <Border Background="#162B3D" BorderBrush="#00D2FF" BorderThickness="1"
-                                                        CornerRadius="4" Padding="6,1" Margin="8,0,0,0">
-                                                    <TextBlock Text="AUTOMATIC MODE" FontSize="10" FontWeight="Bold" Foreground="#66C0F4" />
-                                                </Border>
-                                            </StackPanel>
-                                            <TextBlock Text="Silences background browsers (Chrome, Edge), Discord, and game launchers to Idle priority and flushes their RAM while in-game, automatically restoring them on exit."
-                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                       FontSize="12"
-                                                       TextWrapping="Wrap" />
-                                        </StackPanel>
-                                    </ui:CardControl.Header>
-                                    <ui:ToggleSwitch x:Name="GameBoostAutoFreezeToggle"
-                                                     Checked="AppSettingsToggle_Changed"
-                                                     Unchecked="AppSettingsToggle_Changed" />
-                                </ui:CardControl>
-
-                                <!-- Periodic Smart RAM Auto-Purge -->
-                                <ui:CardControl Margin="0,4,0,0">
-                                    <ui:CardControl.Header>
-                                        <StackPanel>
-                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <TextBlock Text="🧹 Periodic Smart RAM Auto-Purge"
-                                                           FontWeight="SemiBold"
-                                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                                <Border Background="#2B2114" BorderBrush="#D1892B" BorderThickness="1"
-                                                        CornerRadius="4" Padding="6,1" Margin="8,0,0,0">
-                                                    <TextBlock Text="FOR LONG GAMING SESSIONS" FontSize="10" FontWeight="Bold" Foreground="#FFA500" />
-                                                </Border>
-                                            </StackPanel>
-                                            <TextBlock Text="Monitors memory load during long sessions; automatically flushes background standby RAM if total system memory usage exceeds 80% to eliminate micro-stutters."
-                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                       FontSize="12"
-                                                       TextWrapping="Wrap" />
-                                        </StackPanel>
-                                    </ui:CardControl.Header>
-                                    <ui:ToggleSwitch x:Name="GameBoostPeriodicRamToggle"
-                                                     Checked="AppSettingsToggle_Changed"
-                                                     Unchecked="AppSettingsToggle_Changed" />
-                                </ui:CardControl>
-                            </StackPanel>
-
-                            <!-- Game Space In-Game Overlay (Android-Style Companion) -->
-                            <ui:CardControl Margin="0,8,0,0">
-                                <ui:CardControl.Header>
-                                    <StackPanel>
-                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <TextBlock Text="🎮 Game Space"
-                                                       FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                            <Border Background="#1C354A" BorderBrush="#25425F" BorderThickness="1"
-                                                    CornerRadius="4" Padding="6,2" Margin="8,0,0,0">
-                                                <TextBlock Text="IN-GAME OVERLAY • CTRL+SPACE" FontSize="11" FontWeight="Bold" Foreground="#66C0F4" />
-                                            </Border>
-                                        </StackPanel>
-                                        <TextBlock Text="In-game slide-out drawer with live telemetry, on-demand RAM purge, named save checkpoints, and scratchpad notes. (Auto-disabled on owned, free, or anti-cheat games)."
-                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                   TextWrapping="Wrap" />
-                                    </StackPanel>
-                                </ui:CardControl.Header>
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <ui:Button x:Name="GameSpaceTestButton"
-                                               Content="Preview Game Space"
-                                               Appearance="Secondary"
-                                               Margin="0,0,10,0"
-                                               Click="GameSpaceTestButton_Click"
-                                               ToolTip="Toggle and preview the in-game Game Space overlay (Ctrl+Space)" />
-                                    <ui:ToggleSwitch x:Name="GameSpaceToggle"
-                                                     Checked="AppSettingsToggle_Changed"
-                                                     Unchecked="AppSettingsToggle_Changed" />
-                                </StackPanel>
-                            </ui:CardControl>
-
-                            <!-- Auto-Protect Intercepted Games Without Cloud Saves -->
-                            <ui:CardControl Margin="0,8,0,0">
-                                <ui:CardControl.Header>
-                                    <StackPanel>
-                                        <TextBlock Text="Auto-Protect Intercepted Games Without Cloud Saves"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                        <TextBlock Text="Automatically protect non-genuine and intercepted Steam games lacking cloud saves with Universal Cloud Saves."
-                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                   TextWrapping="Wrap" />
-                                    </StackPanel>
-                                </ui:CardControl.Header>
-                                <ui:ToggleSwitch x:Name="AutoProtectNonCloudToggle"
-                                                 Checked="AppSettingsToggle_Changed"
-                                                 Unchecked="AppSettingsToggle_Changed" />
-                            </ui:CardControl>
-
-                            <!-- Steam Millennium Native Plugin -->
-                            <ui:CardControl Margin="0,8,0,0">
-                                <ui:CardControl.Header>
-                                    <StackPanel>
-                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <TextBlock Text="{res:Loc Settings_MillenniumPluginTitle}"
-                                                       FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                            <Border x:Name="MillenniumStatusBorder" Background="#162332" BorderBrush="#25425F" BorderThickness="1"
-                                                    CornerRadius="4" Padding="6,2" Margin="8,0,0,0">
-                                                <TextBlock x:Name="MillenniumStatusText" Text="Millennium Active" FontSize="11" FontWeight="Bold" Foreground="#66C0F4" />
-                                            </Border>
-                                        </StackPanel>
-                                        <TextBlock Text="{res:Loc Settings_MillenniumPluginDescription}"
-                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                   TextWrapping="Wrap" />
-                                    </StackPanel>
-                                </ui:CardControl.Header>
-                                <ui:ToggleSwitch x:Name="MillenniumPluginToggle"
-                                                 Checked="AppSettingsToggle_Changed"
-                                                 Unchecked="AppSettingsToggle_Changed" />
-                            </ui:CardControl>
-
-                            <!-- Auto-Restart Steam on Launch (to load plugins) -->
-                            <ui:CardControl Margin="0,8,0,0">
-                                <ui:CardControl.Header>
-                                    <StackPanel>
-                                        <TextBlock Text="{res:Loc Settings_AutoRestartSteamOnLaunchTitle}"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                        <TextBlock Text="{res:Loc Settings_AutoRestartSteamOnLaunchDescription}"
-                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                   TextWrapping="Wrap" />
-                                    </StackPanel>
-                                </ui:CardControl.Header>
-                                <ui:ToggleSwitch x:Name="AutoRestartSteamOnLaunchToggle"
-                                                 Checked="AppSettingsToggle_Changed"
-                                                 Unchecked="AppSettingsToggle_Changed" />
-                            </ui:CardControl>
-
-                            <!-- Auto-Fit Window (No Scrolling) -->
-                            <ui:CardControl Margin="0,8,0,0">
-                                <ui:CardControl.Header>
-                                    <StackPanel>
-                                        <TextBlock Text="Auto-Fit Window (Single Interface / No Scrolling)"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                        <TextBlock Text="Automatically scale the interface so all cards and controls fit without requiring vertical scrolling."
-                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                   TextWrapping="Wrap" />
-                                    </StackPanel>
-                                </ui:CardControl.Header>
-                                <ui:ToggleSwitch x:Name="AutoFitZoomToggle"
-                                                 Checked="AutoFitZoomToggle_Changed"
-                                                 Unchecked="AutoFitZoomToggle_Changed" />
-                            </ui:CardControl>
-                        </StackPanel>
-                    </StackPanel>
-
-                    <!-- Danger Zone Section -->
-                    <TextBlock Text="{res:Loc Settings_DangerZone}"
-                               FontSize="17" FontWeight="SemiBold"
-                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                               Margin="0,0,0,8" />
-
-                    <ui:CardControl Margin="0,0,0,0">
-                        <ui:CardControl.Header>
-                            <StackPanel>
-                                <TextBlock Text="{res:Loc Settings_ResetCacheTitle}" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                <TextBlock Text="{res:Loc Settings_ResetCacheDescription}"
-                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                           TextWrapping="Wrap" />
-                            </StackPanel>
-                        </ui:CardControl.Header>
-                        <ui:Button Content="{res:Loc Settings_Reset}"
-                                   Appearance="Danger"
-                                   Click="ResetData_Click" />
-                    </ui:CardControl>
-                </StackPanel>
-
-                <!-- Right Column: Auto-Everything & Experimental -->
-                <StackPanel Grid.Column="2">
-                    <!-- Auto-Everything Cloud Save System -->
+                    <!-- SECTION 1: Cloud Saves & Automation -->
                     <StackPanel x:Name="AutoEverythingSection" Margin="0,0,0,16">
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                            <ui:SymbolIcon Symbol="Flash24" FontSize="18" Foreground="{StaticResource SteamAccentCyanBrush}" Margin="0,0,8,0" VerticalAlignment="Center" />
-                            <TextBlock Text="{res:Loc Settings_AutoEverything_Title}"
-                                       FontSize="17" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <ui:SymbolIcon Symbol="CloudSync24" FontSize="16" Foreground="#66C0F4" Margin="0,0,8,0" VerticalAlignment="Center" />
+                            <TextBlock Text="{res:Loc Settings_CategoryCloud}"
+                                       FontSize="15" FontWeight="Bold"
+                                       Foreground="#66C0F4" />
                         </StackPanel>
 
                         <!-- Auto-Sync on Game Exit -->
                         <ui:CardControl Margin="0,0,0,8">
                             <ui:CardControl.Header>
-                                <StackPanel>
+                                <StackPanel Margin="0,0,16,0">
                                     <TextBlock Text="{res:Loc Settings_AutoSyncExit}"
                                                FontWeight="SemiBold"
-                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                               TextWrapping="Wrap" />
                                     <TextBlock Text="{res:Loc Settings_AutoSyncExitHint}"
                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                               TextWrapping="Wrap" />
+                                               FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0" />
                                 </StackPanel>
                             </ui:CardControl.Header>
                             <ui:ToggleSwitch x:Name="AutoSyncExitToggle"
@@ -529,13 +118,14 @@
                         <!-- Auto-Checkpoint Mid-Game -->
                         <ui:CardControl Margin="0,0,0,8">
                             <ui:CardControl.Header>
-                                <StackPanel>
+                                <StackPanel Margin="0,0,16,0">
                                     <TextBlock Text="{res:Loc Settings_AutoCheckpoint}"
                                                FontWeight="SemiBold"
-                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                               TextWrapping="Wrap" />
                                     <TextBlock Text="{res:Loc Settings_AutoCheckpointHint}"
                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                               TextWrapping="Wrap" />
+                                               FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0" />
                                 </StackPanel>
                             </ui:CardControl.Header>
                             <ui:ToggleSwitch x:Name="AutoCheckpointToggle"
@@ -546,13 +136,14 @@
                         <!-- Auto-Conflict Resolution & Auto-Healing -->
                         <ui:CardControl Margin="0,0,0,8">
                             <ui:CardControl.Header>
-                                <StackPanel>
+                                <StackPanel Margin="0,0,16,0">
                                     <TextBlock Text="{res:Loc Settings_AutoConflictHealing}"
                                                FontWeight="SemiBold"
-                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                               TextWrapping="Wrap" />
                                     <TextBlock Text="{res:Loc Settings_AutoConflictHealingHint}"
                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                               TextWrapping="Wrap" />
+                                               FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0" />
                                 </StackPanel>
                             </ui:CardControl.Header>
                             <ui:ToggleSwitch x:Name="AutoConflictHealingToggle"
@@ -563,13 +154,14 @@
                         <!-- Auto-Storage Compression & Pruning -->
                         <ui:CardControl Margin="0,0,0,8">
                             <ui:CardControl.Header>
-                                <StackPanel>
+                                <StackPanel Margin="0,0,16,0">
                                     <TextBlock Text="{res:Loc Settings_AutoCompression}"
                                                FontWeight="SemiBold"
-                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                               TextWrapping="Wrap" />
                                     <TextBlock Text="{res:Loc Settings_AutoCompressionHint}"
                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                               TextWrapping="Wrap" />
+                                               FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0" />
                                 </StackPanel>
                             </ui:CardControl.Header>
                             <ui:ToggleSwitch x:Name="AutoCompressionToggle"
@@ -577,62 +169,649 @@
                                              Unchecked="AppSettingsToggle_Changed" />
                         </ui:CardControl>
 
-                        <!-- Community Database Sync -->
+                        <!-- Community Save Database Sync -->
                         <ui:CardControl Margin="0,0,0,8">
                             <ui:CardControl.Header>
-                                <StackPanel>
+                                <StackPanel Margin="0,0,16,0">
                                     <TextBlock Text="{res:Loc Settings_AutoCommunityDb}"
                                                FontWeight="SemiBold"
-                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                               TextWrapping="Wrap" />
                                     <TextBlock Text="{res:Loc Settings_AutoCommunityDbHint}"
                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                               TextWrapping="Wrap" />
+                                               FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0" />
                                 </StackPanel>
                             </ui:CardControl.Header>
                             <ui:ToggleSwitch x:Name="AutoCommunityDbToggle"
                                              Checked="AppSettingsToggle_Changed"
                                              Unchecked="AppSettingsToggle_Changed" />
                         </ui:CardControl>
-                    </StackPanel>
 
-                    <!-- Experimental Features -->
-                    <StackPanel x:Name="ExperimentalSection">
-                        <TextBlock Text="{res:Loc Settings_Experimental}"
-                                   FontSize="17" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                   Margin="0,0,0,8" />
+                        <!-- Universal Saves Safe Mode for Intercepted Games -->
                         <ui:CardControl Margin="0,0,0,8">
                             <ui:CardControl.Header>
-                                <StackPanel>
-                                    <TextBlock Text="{res:Loc Settings_SyncAchievements}"
+                                <StackPanel Margin="0,0,16,0">
+                                    <TextBlock Text="{res:Loc Settings_AutoProtectIntercepted}"
                                                FontWeight="SemiBold"
-                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                    <TextBlock Text="{res:Loc Settings_SyncAchievementsHint}"
-                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                                TextWrapping="Wrap" />
+                                    <TextBlock Text="{res:Loc Settings_AutoProtectIntercepted_Desc}"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0" />
                                 </StackPanel>
                             </ui:CardControl.Header>
-                            <ui:ToggleSwitch x:Name="SyncAchievementsToggle"
+                            <ui:ToggleSwitch x:Name="AutoProtectNonCloudToggle"
+                                             Checked="AppSettingsToggle_Changed"
+                                             Unchecked="AppSettingsToggle_Changed" />
+                        </ui:CardControl>
+
+                        <!-- Experimental: Achievements & Playtime Sync -->
+                        <StackPanel x:Name="ExperimentalSection" Margin="0,4,0,0">
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel Margin="0,0,16,0">
+                                        <TextBlock Text="{res:Loc Settings_SyncAchievements}"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                   TextWrapping="Wrap" />
+                                        <TextBlock Text="{res:Loc Settings_SyncAchievementsHint}"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch x:Name="SyncAchievementsToggle"
+                                                 Checked="SyncToggle_Changed"
+                                                 Unchecked="SyncToggle_Changed" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,0">
+                                <ui:CardControl.Header>
+                                    <StackPanel Margin="0,0,16,0">
+                                        <TextBlock Text="{res:Loc Settings_SyncPlaytime}"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                   TextWrapping="Wrap" />
+                                        <TextBlock Text="{res:Loc Settings_SyncPlaytimeHint}"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch x:Name="SyncPlaytimeToggle"
+                                                 Checked="SyncToggle_Changed"
+                                                 Unchecked="SyncToggle_Changed" />
+                            </ui:CardControl>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- SECTION 2: Steam & Platform Integrations -->
+                    <StackPanel x:Name="ExtraSection" Margin="0,0,0,16">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <ui:SymbolIcon Symbol="Games24" FontSize="16" Foreground="#66C0F4" Margin="0,0,8,0" VerticalAlignment="Center" />
+                            <TextBlock Text="{res:Loc Settings_CategorySteam}"
+                                       FontSize="15" FontWeight="Bold"
+                                       Foreground="#66C0F4" />
+                        </StackPanel>
+
+                        <!-- Platform & Integration Status Card (Steam Client & SUO) -->
+                        <ui:CardControl x:Name="PlatformStatusCard" Margin="0,0,0,8">
+                            <ui:CardControl.Header>
+                                <Grid Margin="0,0,8,0">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="1" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <!-- Steam Client Status -->
+                                    <Grid Grid.Row="0" Margin="0,2,0,10">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ui:SymbolIcon Grid.Row="0" Grid.Column="0" Symbol="Games24" FontSize="20"
+                                                       Foreground="{StaticResource SteamAccentCyanBrush}"
+                                                       Margin="0,0,12,0" VerticalAlignment="Top" />
+                                        <StackPanel Grid.Row="0" Grid.Column="1" VerticalAlignment="Center" Margin="0,0,8,0">
+                                            <TextBlock Text="Steam Client" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                       TextWrapping="Wrap" />
+                                            <TextBlock x:Name="SteamVersionText" Text="Detecting Steam..."
+                                                       FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                       TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <Border Grid.Row="0" Grid.Column="2" x:Name="SteamBranchBadge"
+                                                Background="#162B3D" BorderBrush="#00D2FF" BorderThickness="1"
+                                                CornerRadius="4" Padding="8,2" VerticalAlignment="Top">
+                                            <TextBlock x:Name="SteamBranchText" Text="Stable Client"
+                                                       FontSize="10" FontWeight="Bold" Foreground="#00D2FF" />
+                                        </Border>
+
+                                        <!-- Detailed About Steam Metadata -->
+                                        <Border Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
+                                                Background="#0D1622" BorderBrush="#1B2838" BorderThickness="1"
+                                                CornerRadius="4" Padding="10,6" Margin="0,8,0,0">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                </Grid.RowDefinitions>
+
+                                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Steam Version:" FontSize="10" Foreground="#8F98A0" Margin="0,1,12,1" />
+                                                <TextBlock Grid.Row="0" Grid.Column="1" x:Name="SteamManifestVersionText" Text="--" FontSize="10" Foreground="#C7D5E0" FontWeight="SemiBold" />
+
+                                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Client Build Date:" FontSize="10" Foreground="#8F98A0" Margin="0,1,12,1" />
+                                                <TextBlock Grid.Row="1" Grid.Column="1" x:Name="SteamClientBuildDateText" Text="--" FontSize="10" Foreground="#C7D5E0" />
+
+                                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Web Build Date:" FontSize="10" Foreground="#8F98A0" Margin="0,1,12,1" />
+                                                <TextBlock Grid.Row="2" Grid.Column="1" x:Name="SteamWebBuildDateText" Text="--" FontSize="10" Foreground="#C7D5E0" />
+
+                                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Steam API Version:" FontSize="10" Foreground="#8F98A0" Margin="0,1,12,1" />
+                                                <TextBlock Grid.Row="3" Grid.Column="1" x:Name="SteamApiVersionText" Text="--" FontSize="10" Foreground="#00D2FF" FontWeight="SemiBold" />
+                                            </Grid>
+                                        </Border>
+                                    </Grid>
+
+                                    <!-- Subtle Separator -->
+                                    <Border Grid.Row="1" Height="1" Background="#1D2A3A" Margin="0,0,0,10" />
+
+                                    <!-- Steam Unlock ONENNABE (SUO) Status -->
+                                    <Grid Grid.Row="2" Margin="0,0,0,2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ui:SymbolIcon Grid.Column="0" Symbol="ShieldKeyhole24" FontSize="20"
+                                                       Foreground="#A4D007"
+                                                       Margin="0,0,12,0" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,8,0">
+                                            <TextBlock Text="Steam Unlock ONENNABE (SUO)" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                       TextWrapping="Wrap" />
+                                            <TextBlock x:Name="SuoVersionText" Text="Detecting SUO..."
+                                                       FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                       TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Border x:Name="SuoStatusBadge"
+                                                    Background="#143224" BorderBrush="#5BA32B" BorderThickness="1"
+                                                    CornerRadius="4" Padding="8,2" VerticalAlignment="Center" Margin="0,0,8,0">
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <Ellipse x:Name="SuoStatusDot" Width="6" Height="6" Fill="#A4D007" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                                    <TextBlock x:Name="SuoStatusText" Text="Online"
+                                                               FontSize="10" FontWeight="Bold" Foreground="#A4D007" />
+                                                </StackPanel>
+                                            </Border>
+                                            <ui:Button x:Name="OpenSuoRemoteSettingsBtn"
+                                                       Appearance="Secondary"
+                                                       Content="Open Remote"
+                                                       Icon="{ui:SymbolIcon Globe24}"
+                                                       Click="OpenSuoRemote_Click"
+                                                       Visibility="Collapsed"
+                                                       Padding="8,3"
+                                                       FontSize="11"
+                                                       Cursor="Hand" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Grid>
+                            </ui:CardControl.Header>
+                        </ui:CardControl>
+
+                        <!-- Steam Millennium Native Plugin -->
+                        <ui:CardControl Margin="0,0,0,8">
+                            <ui:CardControl.Header>
+                                <StackPanel Margin="0,0,16,0">
+                                    <WrapPanel Margin="0,0,0,2" VerticalAlignment="Center">
+                                        <TextBlock Text="{res:Loc Settings_MillenniumPluginTitle}"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                   TextWrapping="Wrap"
+                                                   Margin="0,0,8,0"
+                                                   VerticalAlignment="Center" />
+                                        <Border x:Name="MillenniumStatusBorder" Background="#162332" BorderBrush="#25425F" BorderThickness="1"
+                                                CornerRadius="4" Padding="6,1" VerticalAlignment="Center">
+                                            <TextBlock x:Name="MillenniumStatusText" Text="Millennium Active" FontSize="9" FontWeight="Bold" Foreground="#66C0F4" />
+                                        </Border>
+                                    </WrapPanel>
+                                    <TextBlock Text="{res:Loc Settings_MillenniumPluginDescription}"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               FontSize="11" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <ui:ToggleSwitch x:Name="MillenniumPluginToggle"
+                                             Checked="AppSettingsToggle_Changed"
+                                             Unchecked="AppSettingsToggle_Changed" />
+                        </ui:CardControl>
+
+                        <!-- Auto-Restart Steam on Launch -->
+                        <ui:CardControl Margin="0,0,0,8">
+                            <ui:CardControl.Header>
+                                <StackPanel Margin="0,0,16,0">
+                                    <TextBlock Text="{res:Loc Settings_AutoRestartSteamOnLaunchTitle}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Text="{res:Loc Settings_AutoRestartSteamOnLaunchDescription}"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <ui:ToggleSwitch x:Name="AutoRestartSteamOnLaunchToggle"
+                                             Checked="AppSettingsToggle_Changed"
+                                             Unchecked="AppSettingsToggle_Changed" />
+                        </ui:CardControl>
+
+                        <!-- Show Non-Steam Games Toggle -->
+                        <ui:CardControl x:Name="ShowNonSteamGameCard" Margin="0,0,0,0" Visibility="Collapsed">
+                            <ui:CardControl.Header>
+                                <StackPanel Margin="0,0,16,0">
+                                    <TextBlock Text="{res:Loc Settings_ShowNonSteamGame}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Text="{res:Loc Settings_ShowNonSteamGameHint}"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <ui:ToggleSwitch x:Name="ShowNonSteamGameToggle"
                                              Checked="SyncToggle_Changed"
                                              Unchecked="SyncToggle_Changed" />
                         </ui:CardControl>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- ══════════════════════════════════════════════════════════════ -->
+                <!-- RIGHT COLUMN: Gaming Boost Suite, System, & Maintenance        -->
+                <!-- ══════════════════════════════════════════════════════════════ -->
+                <StackPanel Grid.Column="2">
+
+                    <!-- SECTION 3: Gaming & Performance Boost Suite -->
+                    <StackPanel Margin="0,0,0,16">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <ui:SymbolIcon Symbol="Flash24" FontSize="16" Foreground="#A4D007" Margin="0,0,8,0" VerticalAlignment="Center" />
+                            <TextBlock Text="{res:Loc Settings_CategoryBoost}"
+                                       FontSize="15" FontWeight="Bold"
+                                       Foreground="#A4D007" />
+                        </StackPanel>
+
+                        <!-- Master Game Boost Card (Clean Header, No Badge Collision) -->
+                        <ui:CardControl Margin="0,0,0,8">
+                            <ui:CardControl.Header>
+                                <StackPanel Margin="0,0,16,0">
+                                    <TextBlock Text="{res:Loc Settings_GameBoost}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Text="{res:Loc Settings_GameBoost_Desc}"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <ui:Button x:Name="GameBoostTestButton"
+                                           Content="Test Toast"
+                                           Appearance="Secondary"
+                                           Margin="0,0,8,0"
+                                           FontSize="11" Padding="8,4"
+                                           Click="GameBoostTestButton_Click"
+                                           ToolTip="Preview the animated Game Boost toast overlay" />
+                                <ui:ToggleSwitch x:Name="GameBoostToggle"
+                                                 Checked="AppSettingsToggle_Changed"
+                                                 Unchecked="AppSettingsToggle_Changed" />
+                            </StackPanel>
+                        </ui:CardControl>
+
+                        <!-- Game Boost Sub-Options Panel (Clean Headers, No Colliding Badges) -->
+                        <StackPanel Margin="12,0,0,0" x:Name="GameBoostSubOptionsPanel">
+
+                            <!-- Network Boost (Anti-Lag & 0ms Packet Throttling) -->
+                            <ui:CardControl Margin="0,0,0,6">
+                                <ui:CardControl.Header>
+                                    <StackPanel Margin="0,0,16,0">
+                                        <TextBlock Text="{res:Loc Settings_GameBoost_Network}"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                   TextWrapping="Wrap" />
+                                        <TextBlock Text="{res:Loc Settings_GameBoost_Network_Desc}"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch x:Name="GameBoostNetworkBoostToggle"
+                                                 Checked="AppSettingsToggle_Changed"
+                                                 Unchecked="AppSettingsToggle_Changed" />
+                            </ui:CardControl>
+
+                            <!-- Bluetooth Low-Latency Boost -->
+                            <ui:CardControl Margin="0,0,0,6">
+                                <ui:CardControl.Header>
+                                    <StackPanel Margin="0,0,16,0">
+                                        <TextBlock Text="{res:Loc Settings_GameBoost_Bluetooth}"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                   TextWrapping="Wrap" />
+                                        <TextBlock Text="{res:Loc Settings_GameBoost_Bluetooth_Desc}"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch x:Name="GameBoostBluetoothBoostToggle"
+                                                 Checked="AppSettingsToggle_Changed"
+                                                 Unchecked="AppSettingsToggle_Changed" />
+                            </ui:CardControl>
+
+                            <!-- Auto-Assign High-Performance Dedicated GPU -->
+                            <ui:CardControl Margin="0,0,0,6">
+                                <ui:CardControl.Header>
+                                    <StackPanel Margin="0,0,16,0">
+                                        <TextBlock Text="{res:Loc Settings_GameBoost_Gpu}"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                   TextWrapping="Wrap" />
+                                        <TextBlock Text="{res:Loc Settings_GameBoost_Gpu_Desc}"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch x:Name="GameBoostGpuToggle"
+                                                 Checked="AppSettingsToggle_Changed"
+                                                 Unchecked="AppSettingsToggle_Changed" />
+                            </ui:CardControl>
+
+                            <!-- Auto-Freeze Background Apps on Launch -->
+                            <ui:CardControl Margin="0,0,0,6">
+                                <ui:CardControl.Header>
+                                    <StackPanel Margin="0,0,16,0">
+                                        <TextBlock Text="{res:Loc Settings_GameBoost_Freeze}"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                   TextWrapping="Wrap" />
+                                        <TextBlock Text="{res:Loc Settings_GameBoost_Freeze_Desc}"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch x:Name="GameBoostAutoFreezeToggle"
+                                                 Checked="AppSettingsToggle_Changed"
+                                                 Unchecked="AppSettingsToggle_Changed" />
+                            </ui:CardControl>
+
+                            <!-- Periodic Smart RAM Auto-Purge -->
+                            <ui:CardControl Margin="0,0,0,6">
+                                <ui:CardControl.Header>
+                                    <StackPanel Margin="0,0,16,0">
+                                        <TextBlock Text="{res:Loc Settings_GameBoost_RamPurge}"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                   TextWrapping="Wrap" />
+                                        <TextBlock Text="{res:Loc Settings_GameBoost_RamPurge_Desc}"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch x:Name="GameBoostPeriodicRamToggle"
+                                                 Checked="AppSettingsToggle_Changed"
+                                                 Unchecked="AppSettingsToggle_Changed" />
+                            </ui:CardControl>
+                        </StackPanel>
+
+                        <!-- Game Space In-Game Overlay -->
+                        <ui:CardControl Margin="0,4,0,8">
+                            <ui:CardControl.Header>
+                                <StackPanel Margin="0,0,16,0">
+                                    <TextBlock Text="{res:Loc Settings_GameSpace}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Text="{res:Loc Settings_GameSpace_Desc}"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <ui:Button x:Name="GameSpaceTestButton"
+                                           Content="Preview"
+                                           Appearance="Secondary"
+                                           Margin="0,0,8,0"
+                                           FontSize="11" Padding="8,4"
+                                           Click="GameSpaceTestButton_Click"
+                                           ToolTip="Toggle and preview the in-game Game Space overlay (Ctrl+Space)" />
+                                <ui:ToggleSwitch x:Name="GameSpaceToggle"
+                                                 Checked="AppSettingsToggle_Changed"
+                                                 Unchecked="AppSettingsToggle_Changed" />
+                            </StackPanel>
+                        </ui:CardControl>
+
+                        <!-- Sticky Notes In-Game Hotkey -->
+                        <ui:CardControl Margin="0,4,0,8">
+                            <ui:CardControl.Header>
+                                <StackPanel Margin="0,0,16,0">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="In-Game Sticky Notes Hotkey"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                   TextWrapping="Wrap" />
+                                        <Border Background="#162D38" BorderBrush="#255169" BorderThickness="1" CornerRadius="3" Padding="5,1" Margin="8,0,0,0">
+                                            <TextBlock Text="Alt + N" FontSize="9.5" FontWeight="Bold" Foreground="#66C0F4" />
+                                        </Border>
+                                    </StackPanel>
+                                    <TextBlock Text="Summon a new floating translucent sticky note anywhere while in-game or on desktop without alt-tabbing."
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <ui:Button x:Name="StickyNoteTestButton"
+                                           Content="Test Note"
+                                           Appearance="Secondary"
+                                           Margin="0,0,8,0"
+                                           FontSize="11" Padding="8,4"
+                                           Click="StickyNoteTestButton_Click"
+                                           ToolTip="Create and test a floating sticky note (Alt+N)" />
+                                <ui:ToggleSwitch x:Name="StickyNoteHotkeyToggle"
+                                                 Checked="AppSettingsToggle_Changed"
+                                                 Unchecked="AppSettingsToggle_Changed" />
+                            </StackPanel>
+                        </ui:CardControl>
+                    </StackPanel>
+
+                    <!-- SECTION 4: System & Preferences -->
+                    <StackPanel Margin="0,0,0,16">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <ui:SymbolIcon Symbol="Desktop24" FontSize="16" Foreground="#66C0F4" Margin="0,0,8,0" VerticalAlignment="Center" />
+                            <TextBlock Text="{res:Loc Settings_CategorySystem}"
+                                       FontSize="15" FontWeight="Bold"
+                                       Foreground="#66C0F4" />
+                        </StackPanel>
+
+                        <!-- Auto-Update DLL -->
+                        <ui:CardControl Margin="0,0,0,8">
+                            <ui:CardControl.Header>
+                                <StackPanel Margin="0,0,16,0">
+                                    <TextBlock Text="{res:Loc Settings_AutoUpdate}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Text="{res:Loc Settings_AutoUpdate_Description}"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <ui:ToggleSwitch x:Name="AutoUpdateDllToggle"
+                                             Checked="SyncToggle_Changed"
+                                             Unchecked="SyncToggle_Changed" />
+                        </ui:CardControl>
+
+                        <!-- View Release Changelog -->
+                        <ui:CardControl Margin="0,0,0,8">
+                            <ui:CardControl.Header>
+                                <StackPanel Margin="0,0,16,0">
+                                    <TextBlock Text="{res:Loc Nav_Changelog}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Text="View release notes, highlights, and history of updates across all versions."
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <ui:Button Content="View Changelog"
+                                       Icon="{ui:SymbolIcon History24}"
+                                       Appearance="Secondary"
+                                       FontSize="11" Padding="12,5"
+                                       Click="ViewChangelog_Click" />
+                        </ui:CardControl>
+
+                        <!-- Start with Windows -->
+                        <ui:CardControl Margin="0,0,0,8">
+                            <ui:CardControl.Header>
+                                <StackPanel Margin="0,0,16,0">
+                                    <TextBlock Text="{res:Loc Settings_StartWithWindows}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Text="{res:Loc Settings_StartWithWindows_Desc}"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <ui:ToggleSwitch x:Name="StartWithWindowsToggle"
+                                             Checked="AppSettingsToggle_Changed"
+                                             Unchecked="AppSettingsToggle_Changed" />
+                        </ui:CardControl>
+
+                        <!-- Minimize to Tray on Close -->
+                        <ui:CardControl Margin="0,0,0,8">
+                            <ui:CardControl.Header>
+                                <StackPanel Margin="0,0,16,0">
+                                    <TextBlock Text="{res:Loc Settings_MinimizeToTray}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Text="{res:Loc Settings_MinimizeToTray_Desc}"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <ui:ToggleSwitch x:Name="MinimizeToTrayToggle"
+                                             Checked="AppSettingsToggle_Changed"
+                                             Unchecked="AppSettingsToggle_Changed" />
+                        </ui:CardControl>
+
+                        <!-- Sync Desktop Notifications -->
+                        <ui:CardControl Margin="0,0,0,8">
+                            <ui:CardControl.Header>
+                                <StackPanel Margin="0,0,16,0">
+                                    <TextBlock Text="{res:Loc Settings_SyncNotifications}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Text="{res:Loc Settings_SyncNotifications_Desc}"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <ui:Button x:Name="NotificationTestButton"
+                                           Content="Test Toast"
+                                           Appearance="Secondary"
+                                           Margin="0,0,8,0"
+                                           FontSize="11" Padding="8,4"
+                                           Click="NotificationTestButton_Click"
+                                           ToolTip="Preview animated Steam sync toast" />
+                                <ui:ToggleSwitch x:Name="ShowNotificationsToggle"
+                                                 Checked="AppSettingsToggle_Changed"
+                                                 Unchecked="AppSettingsToggle_Changed" />
+                            </StackPanel>
+                        </ui:CardControl>
+
+                        <!-- Global Keyboard Shortcut -->
+                        <ui:CardControl Margin="0,0,0,8">
+                            <ui:CardControl.Header>
+                                <StackPanel Margin="0,0,16,0">
+                                    <TextBlock Text="{res:Loc Settings_GlobalHotkey}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                               TextWrapping="Wrap" />
+                                    <!-- Hidden dummy textblock to preserve code-behind reference without visual clutter -->
+                                    <TextBlock x:Name="HotkeyBadgeText" Visibility="Collapsed" />
+                                    <TextBlock Text="{res:Loc Settings_GlobalHotkeyHint}"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <ComboBox x:Name="HotkeyPresetCombo"
+                                          Width="130" MinHeight="30"
+                                          VerticalAlignment="Center"
+                                          VerticalContentAlignment="Center"
+                                          FontSize="11"
+                                          Margin="0,0,8,0"
+                                          SelectionChanged="HotkeyPresetCombo_SelectionChanged" />
+                                <ui:ToggleSwitch x:Name="GlobalHotkeyToggle"
+                                                 Checked="GlobalHotkeyToggle_Changed"
+                                                 Unchecked="GlobalHotkeyToggle_Changed" />
+                            </StackPanel>
+                        </ui:CardControl>
+
+                        <!-- Auto-Fit Window Scale -->
+                        <ui:CardControl Margin="0,0,0,8">
+                            <ui:CardControl.Header>
+                                <StackPanel Margin="0,0,16,0">
+                                    <TextBlock Text="{res:Loc Settings_AutoFitWindow}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Text="{res:Loc Settings_AutoFitWindow_Desc}"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <ui:ToggleSwitch x:Name="AutoFitZoomToggle"
+                                             Checked="AutoFitZoomToggle_Changed"
+                                             Unchecked="AutoFitZoomToggle_Changed" />
+                        </ui:CardControl>
+                    </StackPanel>
+
+                    <!-- SECTION 5: Maintenance & Danger Zone -->
+                    <StackPanel Margin="0,0,0,8">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <ui:SymbolIcon Symbol="Warning24" FontSize="16" Foreground="#FF6B72" Margin="0,0,8,0" VerticalAlignment="Center" />
+                            <TextBlock Text="{res:Loc Settings_DangerZone}"
+                                       FontSize="15" FontWeight="Bold"
+                                       Foreground="#FF6B72" />
+                        </StackPanel>
 
                         <ui:CardControl Margin="0,0,0,0">
                             <ui:CardControl.Header>
-                                <StackPanel>
-                                    <TextBlock Text="{res:Loc Settings_SyncPlaytime}"
-                                               FontWeight="SemiBold"
-                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                    <TextBlock Text="{res:Loc Settings_SyncPlaytimeHint}"
-                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                <StackPanel Margin="0,0,16,0">
+                                    <TextBlock Text="{res:Loc Settings_ResetCacheTitle}" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                                TextWrapping="Wrap" />
+                                    <TextBlock Text="{res:Loc Settings_ResetCacheDescription}"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0" />
                                 </StackPanel>
                             </ui:CardControl.Header>
-                            <ui:ToggleSwitch x:Name="SyncPlaytimeToggle"
-                                             Checked="SyncToggle_Changed"
-                                             Unchecked="SyncToggle_Changed" />
+                            <ui:Button Content="{res:Loc Settings_Reset}"
+                                       Appearance="Danger"
+                                       FontSize="11" Padding="12,5"
+                                       Click="ResetData_Click" />
                         </ui:CardControl>
                     </StackPanel>
+
                 </StackPanel>
             </Grid>
         </DockPanel>

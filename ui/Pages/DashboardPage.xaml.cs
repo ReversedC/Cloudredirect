@@ -533,6 +533,14 @@ public partial class DashboardPage : Page
         }
     }
 
+    private void UniversalSavesAction_Click(object sender, RoutedEventArgs e)
+    {
+        if (Window.GetWindow(this) is MainWindow mw)
+        {
+            mw.NavigateTo(typeof(UniversalSavesPage));
+        }
+    }
+
     private void UpdateProviderAuthStatus(Services.CloudConfig config, Services.TokenStatus preCheckedStatus)
     {
         if (config.IsLocal)
@@ -808,6 +816,16 @@ public partial class DashboardPage : Page
         (Application.Current.MainWindow as MainWindow)?.NavigateTo(typeof(Pages.MigrationPage));
     }
 
+    private void ChangelogAction_Click(object sender, RoutedEventArgs e)
+    {
+        var win = Window.GetWindow(this) ?? Application.Current.MainWindow;
+        var dialog = new Dialogs.UpdateChangelogDialog
+        {
+            Owner = win
+        };
+        dialog.ShowDialog();
+    }
+
     private void SettingsAction_Click(object sender, RoutedEventArgs e)
     {
         (Application.Current.MainWindow as MainWindow)?.NavigateTo(typeof(Pages.SettingsPage));
@@ -817,6 +835,28 @@ public partial class DashboardPage : Page
     private void LuaFilesCard_Click(object sender, RoutedEventArgs e)
     {
         (Application.Current.MainWindow as MainWindow)?.NavigateTo(typeof(Pages.LuaSyncPage));
+    }
+
+    private async void SyncNow_Click(object sender, RoutedEventArgs e)
+    {
+        var btn = sender as Wpf.Ui.Controls.Button;
+        if (btn != null) btn.IsEnabled = false;
+
+        try
+        {
+            ActivityProgressBar.Visibility = Visibility.Visible;
+            if (_steamPath != null)
+            {
+                await Task.Run(() => Services.LuaSyncHelper.ManualBackup(_steamPath));
+            }
+            await LoadStatusAsync();
+        }
+        catch { }
+        finally
+        {
+            ActivityProgressBar.Visibility = Visibility.Collapsed;
+            if (btn != null) btn.IsEnabled = true;
+        }
     }
 
     private void InitializeLanguageSelector()
@@ -836,7 +876,17 @@ public partial class DashboardPage : Page
                     ? S.Get(lang.ResourceKey)
                     : lang.DisplayName;
 
-                LanguageComboBox.Items.Add(itemText);
+                var cbi = new ComboBoxItem
+                {
+                    Content = itemText,
+                    Tag = lang.Code,
+                    FontSize = 12,
+                    Padding = new Thickness(6, 4, 12, 4),
+                    VerticalContentAlignment = VerticalAlignment.Center,
+                    HorizontalContentAlignment = HorizontalAlignment.Left
+                };
+
+                LanguageComboBox.Items.Add(cbi);
                 if (string.Equals(lang.Code, currentCode, StringComparison.OrdinalIgnoreCase))
                 {
                     selectedIndex = i;
@@ -855,11 +905,18 @@ public partial class DashboardPage : Page
     {
         if (_languageLoading) return;
 
-        var idx = LanguageComboBox.SelectedIndex;
-        var languages = Services.LanguageService.SupportedLanguages;
-        if (idx < 0 || idx >= languages.Length) return;
-
-        var selectedCode = languages[idx].Code;
-        Services.LanguageService.ApplyLanguage(selectedCode, save: true);
+        if (LanguageComboBox.SelectedItem is ComboBoxItem cbi && cbi.Tag is string code)
+        {
+            Services.LanguageService.ApplyLanguage(code, save: true);
+        }
+        else
+        {
+            var idx = LanguageComboBox.SelectedIndex;
+            var languages = Services.LanguageService.SupportedLanguages;
+            if (idx >= 0 && idx < languages.Length)
+            {
+                Services.LanguageService.ApplyLanguage(languages[idx].Code, save: true);
+            }
+        }
     }
 }

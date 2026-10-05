@@ -12,6 +12,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using CloudRedirect.Models;
 using CloudRedirect.Services;
 using Microsoft.Web.WebView2.Core;
 
@@ -29,7 +30,6 @@ public partial class GameSpaceOverlayWindow : Window
     private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
     private readonly DispatcherTimer _updateTimer;
-    private readonly DispatcherTimer _notesDebounceTimer;
     private readonly DispatcherTimer _forceKillResetTimer;
 
     private bool _isClosing;
@@ -46,25 +46,9 @@ public partial class GameSpaceOverlayWindow : Window
         };
         _updateTimer.Tick += UpdateTimer_Tick;
 
-        _notesDebounceTimer = new DispatcherTimer
+        StickyNotesService.OnNotesChanged += () =>
         {
-            Interval = TimeSpan.FromMilliseconds(500)
-        };
-        _notesDebounceTimer.Tick += (_, _) =>
-        {
-            _notesDebounceTimer.Stop();
-            if (!string.IsNullOrEmpty(_currentGameName))
-            {
-                GameSpaceService.SaveGameNotes(_currentGameName, GameNotesTextBox.Text);
-                NotesSavedIndicator.Visibility = Visibility.Visible;
-                var fadeTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
-                fadeTimer.Tick += (_, _) =>
-                {
-                    fadeTimer.Stop();
-                    NotesSavedIndicator.Visibility = Visibility.Collapsed;
-                };
-                fadeTimer.Start();
-            }
+            Dispatcher.Invoke(RefreshStickyNotesList);
         };
 
         _forceKillResetTimer = new DispatcherTimer
@@ -95,9 +79,9 @@ public partial class GameSpaceOverlayWindow : Window
     {
         _isClosing = false;
         var workArea = SystemParameters.WorkArea;
-        Width = 380;
-        DrawerBorder.Width = 380;
-        Left = workArea.Right - 380;
+        Width = 390;
+        DrawerBorder.Width = 390;
+        Left = workArea.Right - 390;
         Top = workArea.Top;
         Height = workArea.Height;
 
@@ -105,6 +89,7 @@ public partial class GameSpaceOverlayWindow : Window
         RefreshTelemetryStats();
         RefreshRecentSnapshots();
         UpdateFreezeButtonState();
+        UpdateAntiLagButtonState();
 
         Show();
         Activate();
@@ -180,8 +165,8 @@ public partial class GameSpaceOverlayWindow : Window
                 GamePosterFallback.Visibility = Visibility.Visible;
             }
 
-            // Load game notes
-            GameNotesTextBox.Text = GameSpaceService.LoadGameNotes(game.Name);
+            // Load game sticky notes
+            RefreshStickyNotesList();
         }
         else
         {
@@ -192,10 +177,11 @@ public partial class GameSpaceOverlayWindow : Window
             ForceKillContainer.Visibility = Visibility.Collapsed;
             GamePosterFallback.Visibility = Visibility.Visible;
             GamePosterImage.Source = null;
-            GameNotesTextBox.Text = GameSpaceService.LoadGameNotes("Desktop");
+            RefreshStickyNotesList();
         }
 
         ResetForceKillButton();
+        UpdateAntiLagButtonState();
     }
 
     private void UpdateTimer_Tick(object? sender, EventArgs e)
@@ -302,12 +288,12 @@ public partial class GameSpaceOverlayWindow : Window
             var snap = snapshots[i];
             var row = new Border
             {
-                Background = new SolidColorBrush(Color.FromRgb(0x11, 0x1A, 0x24)),
-                BorderBrush = new SolidColorBrush(Color.FromRgb(0x21, 0x34, 0x47)),
+                Background = new SolidColorBrush(Color.FromRgb(0x0E, 0x16, 0x22)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(0x1D, 0x2E, 0x40)),
                 BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(4),
-                Padding = new Thickness(8, 5, 8, 5),
-                Margin = new Thickness(0, 0, 0, 4)
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(10, 7, 10, 7),
+                Margin = new Thickness(0, 0, 0, 6)
             };
 
             var grid = new Grid();
@@ -320,7 +306,7 @@ public partial class GameSpaceOverlayWindow : Window
                 Text = string.IsNullOrWhiteSpace(snap.Trigger) ? "Checkpoint" : snap.Trigger,
                 FontSize = 11,
                 FontWeight = FontWeights.SemiBold,
-                Foreground = new SolidColorBrush(Color.FromRgb(0xC6, 0xD4, 0xDF)),
+                Foreground = new SolidColorBrush(Color.FromRgb(0xF0, 0xF4, 0xF8)),
                 TextTrimming = TextTrimming.CharacterEllipsis
             });
 
@@ -332,9 +318,10 @@ public partial class GameSpaceOverlayWindow : Window
 
             infoPanel.Children.Add(new TextBlock
             {
-                Text = $"{timeStr} • {snap.FileCount} files ({FormatBytes(snap.TotalBytes)})",
+                Text = $"{timeStr} • {snap.FileCount} file(s) ({FormatBytes(snap.TotalBytes)})",
                 FontSize = 10,
-                Foreground = new SolidColorBrush(Color.FromRgb(0x8F, 0x98, 0xA0))
+                Foreground = new SolidColorBrush(Color.FromRgb(0x8F, 0x98, 0xA0)),
+                Margin = new Thickness(0, 2, 0, 0)
             });
 
             Grid.SetColumn(infoPanel, 0);
@@ -345,12 +332,13 @@ public partial class GameSpaceOverlayWindow : Window
                 Content = "↺ Restore",
                 FontSize = 10,
                 FontWeight = FontWeights.SemiBold,
-                Padding = new Thickness(8, 3, 8, 3),
-                Margin = new Thickness(6, 0, 0, 0),
+                Padding = new Thickness(10, 4, 10, 4),
+                Margin = new Thickness(8, 0, 0, 0),
                 Cursor = Cursors.Hand,
-                Background = new SolidColorBrush(Color.FromRgb(0x22, 0x36, 0x4B)),
+                Background = new SolidColorBrush(Color.FromRgb(0x1B, 0x36, 0x50)),
                 Foreground = new SolidColorBrush(Color.FromRgb(0x66, 0xC0, 0xF4)),
-                BorderThickness = new Thickness(0)
+                BorderBrush = new SolidColorBrush(Color.FromRgb(0x2B, 0x54, 0x7E)),
+                BorderThickness = new Thickness(1)
             };
             restoreBtn.Click += (_, _) =>
             {
@@ -383,6 +371,34 @@ public partial class GameSpaceOverlayWindow : Window
             row.Child = grid;
             RecentSnapshotsPanel.Children.Add(row);
         }
+    }
+
+    private void OptimizePingBt_Click(object sender, RoutedEventArgs e)
+    {
+        bool currentState = AppSettings.GameBoostNetworkBoost || AppSettings.GameBoostBluetoothBoost;
+        bool newState = !currentState;
+
+        AppSettings.GameBoostNetworkBoost = newState;
+        AppSettings.GameBoostBluetoothBoost = newState;
+
+        if (newState)
+        {
+            GameBoostService.ApplyNetworkBoost();
+            GameBoostService.ApplyBluetoothBoost();
+            SteamToastService.ShowAuto(
+                "Anti-Lag Active 🚀",
+                "Network throttling disabled (0ms) & Bluetooth low-latency active!");
+        }
+        else
+        {
+            GameBoostService.RevertNetworkBoost();
+            GameBoostService.RevertBluetoothBoost();
+            SteamToastService.ShowAuto(
+                "Anti-Lag Off ⏸️",
+                "Restored default Windows network and Bluetooth settings.");
+        }
+
+        UpdateAntiLagButtonState();
     }
 
     private async void PurgeRam_Click(object sender, RoutedEventArgs e)
@@ -466,17 +482,58 @@ public partial class GameSpaceOverlayWindow : Window
     {
         if (BackgroundAppFreezer.IsFrozen)
         {
-            FreezeBtnText.Text = "🧊 Thaw Apps";
+            FreezeBtnText.Text = "Thaw Apps";
             FreezeIcon.Foreground = new SolidColorBrush(Color.FromRgb(0xA4, 0xD0, 0x07));
             FreezeBgAppsBtn.Background = new SolidColorBrush(Color.FromRgb(0x1B, 0x33, 0x22));
             FreezeBgAppsBtn.BorderBrush = new SolidColorBrush(Color.FromRgb(0x3D, 0x6D, 0x24));
         }
         else
         {
-            FreezeBtnText.Text = "🧊 Freeze Apps";
+            FreezeBtnText.Text = "Freeze Apps";
             FreezeIcon.Foreground = new SolidColorBrush(Color.FromRgb(0x66, 0xC0, 0xF4));
             FreezeBgAppsBtn.Background = new SolidColorBrush(Color.FromRgb(0x22, 0x36, 0x4B));
             FreezeBgAppsBtn.BorderBrush = new SolidColorBrush(Color.FromRgb(0x32, 0x52, 0x72));
+        }
+    }
+
+    private void UpdateAntiLagButtonState()
+    {
+        bool isAntiLagOn = AppSettings.GameBoostNetworkBoost || AppSettings.GameBoostBluetoothBoost;
+        if (isAntiLagOn)
+        {
+            AntiLagBtnText.Text = "Anti-Lag: ON";
+            AntiLagBtnText.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0xFF, 0xFF));
+            AntiLagIcon.Foreground = new SolidColorBrush(Color.FromRgb(0xA4, 0xD0, 0x07));
+            AntiLagBtn.Background = new SolidColorBrush(Color.FromRgb(0x1B, 0x33, 0x22));
+            AntiLagBtn.BorderBrush = new SolidColorBrush(Color.FromRgb(0x3D, 0x6D, 0x24));
+
+            NetBoostChip.Background = new SolidColorBrush(Color.FromRgb(0x10, 0x1C, 0x27));
+            NetBoostChip.BorderBrush = new SolidColorBrush(Color.FromRgb(0x1F, 0x3D, 0x56));
+            NetBoostChipText.Text = "Net Boost: 0ms Throttling";
+            NetBoostChipText.Foreground = new SolidColorBrush(Color.FromRgb(0x66, 0xC0, 0xF4));
+
+            BtBoostChip.Background = new SolidColorBrush(Color.FromRgb(0x15, 0x29, 0x1C));
+            BtBoostChip.BorderBrush = new SolidColorBrush(Color.FromRgb(0x27, 0x55, 0x2E));
+            BtBoostChipText.Text = "BT Boost: Anti-Lag";
+            BtBoostChipText.Foreground = new SolidColorBrush(Color.FromRgb(0xA4, 0xD0, 0x07));
+        }
+        else
+        {
+            AntiLagBtnText.Text = "Anti-Lag: OFF";
+            AntiLagBtnText.Foreground = new SolidColorBrush(Color.FromRgb(0x8F, 0x98, 0xA0));
+            AntiLagIcon.Foreground = new SolidColorBrush(Color.FromRgb(0x8F, 0x98, 0xA0));
+            AntiLagBtn.Background = new SolidColorBrush(Color.FromRgb(0x16, 0x22, 0x2F));
+            AntiLagBtn.BorderBrush = new SolidColorBrush(Color.FromRgb(0x25, 0x38, 0x4C));
+
+            NetBoostChip.Background = new SolidColorBrush(Color.FromRgb(0x11, 0x17, 0x20));
+            NetBoostChip.BorderBrush = new SolidColorBrush(Color.FromRgb(0x1D, 0x26, 0x33));
+            NetBoostChipText.Text = "Net Boost: Default";
+            NetBoostChipText.Foreground = new SolidColorBrush(Color.FromRgb(0x6B, 0x77, 0x82));
+
+            BtBoostChip.Background = new SolidColorBrush(Color.FromRgb(0x11, 0x17, 0x20));
+            BtBoostChip.BorderBrush = new SolidColorBrush(Color.FromRgb(0x1D, 0x26, 0x33));
+            BtBoostChipText.Text = "BT Boost: Default";
+            BtBoostChipText.Foreground = new SolidColorBrush(Color.FromRgb(0x6B, 0x77, 0x82));
         }
     }
 
@@ -674,10 +731,192 @@ public partial class GameSpaceOverlayWindow : Window
         pillTimer.Start();
     }
 
-    private void GameNotesTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    private void NewNoteBtn_Click(object sender, RoutedEventArgs e)
     {
-        _notesDebounceTimer.Stop();
-        _notesDebounceTimer.Start();
+        var gameName = _currentGameName == "Desktop" ? "Global" : (_currentGameName ?? "Global");
+        var note = StickyNotesService.CreateNote(gameName, "New Note", "");
+        StickyNotesService.ShowNoteWindow(note);
+        RefreshStickyNotesList();
+    }
+
+    private void FloatAllPinned_Click(object sender, RoutedEventArgs e)
+    {
+        var gameName = _currentGameName == "Desktop" ? "Global" : (_currentGameName ?? "Global");
+        StickyNotesService.ShowAllPinnedNotes(gameName);
+        RefreshStickyNotesList();
+    }
+
+    private void HideAllFloating_Click(object sender, RoutedEventArgs e)
+    {
+        StickyNotesService.HideAllNotes();
+        RefreshStickyNotesList();
+    }
+
+    private void RefreshStickyNotesList()
+    {
+        StickyNotesListPanel.Children.Clear();
+        var notes = StickyNotesService.GetNotesForGame(_currentGameName);
+        NotesCountText.Text = $"{notes.Count} note(s)";
+
+        if (notes.Count == 0)
+        {
+            StickyNotesListPanel.Children.Add(new TextBlock
+            {
+                Text = "No notes yet. Click \"+ New Note\" to create an in-game HUD sticky note.",
+                FontSize = 10,
+                Foreground = new SolidColorBrush(Color.FromRgb(0x6B, 0x77, 0x82)),
+                FontStyle = FontStyles.Italic,
+                Margin = new Thickness(0, 4, 0, 4),
+                TextWrapping = TextWrapping.Wrap
+            });
+            return;
+        }
+
+        foreach (var note in notes)
+        {
+            var noteCard = new Border
+            {
+                Background = new SolidColorBrush(Color.FromRgb(0x10, 0x1A, 0x24)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(0x1D, 0x2E, 0x40)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(10, 8, 10, 8),
+                Margin = new Thickness(0, 0, 0, 6)
+            };
+
+            var stack = new StackPanel();
+
+            // Header line: Color accent bar, Title, Game tag, and Pin chip
+            var headerGrid = new Grid();
+            headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var titlePanel = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+
+            Color accentColor = Color.FromRgb(0x66, 0xC0, 0xF4);
+            try { accentColor = (Color)ColorConverter.ConvertFromString(note.AccentColor); } catch { }
+
+            titlePanel.Children.Add(new Border
+            {
+                Width = 4,
+                Height = 12,
+                Background = new SolidColorBrush(accentColor),
+                CornerRadius = new CornerRadius(2),
+                Margin = new Thickness(0, 0, 6, 0),
+                VerticalAlignment = VerticalAlignment.Center
+            });
+
+            titlePanel.Children.Add(new TextBlock
+            {
+                Text = string.IsNullOrWhiteSpace(note.Title) ? "Untitled Note" : note.Title,
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = new SolidColorBrush(Color.FromRgb(0xF0, 0xF4, 0xF8)),
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                MaxWidth = 180
+            });
+
+            Grid.SetColumn(titlePanel, 0);
+            headerGrid.Children.Add(titlePanel);
+
+            // Right side: Pinned indicator
+            var pinBadge = new Border
+            {
+                Background = note.IsPinned ? new SolidColorBrush(Color.FromRgb(0x14, 0x2E, 0x18)) : new SolidColorBrush(Color.FromRgb(0x14, 0x1E, 0x28)),
+                BorderBrush = note.IsPinned ? new SolidColorBrush(Color.FromRgb(0x2E, 0x66, 0x36)) : new SolidColorBrush(Color.FromRgb(0x23, 0x35, 0x48)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(3),
+                Padding = new Thickness(5, 1, 5, 1),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            pinBadge.Child = new TextBlock
+            {
+                Text = note.IsPinned ? "📌 Pinned" : "Unpinned",
+                FontSize = 9,
+                FontWeight = FontWeights.Bold,
+                Foreground = note.IsPinned ? new SolidColorBrush(Color.FromRgb(0xA4, 0xD0, 0x07)) : new SolidColorBrush(Color.FromRgb(0x8F, 0x98, 0xA0))
+            };
+            Grid.SetColumn(pinBadge, 1);
+            headerGrid.Children.Add(pinBadge);
+
+            stack.Children.Add(headerGrid);
+
+            // Snippet preview (first line)
+            var previewText = string.IsNullOrWhiteSpace(note.Content) ? "(Empty note)" : note.Content.Replace("\r\n", " ").Replace("\n", " ");
+            stack.Children.Add(new TextBlock
+            {
+                Text = previewText,
+                FontSize = 10,
+                Foreground = new SolidColorBrush(Color.FromRgb(0x8F, 0x98, 0xA0)),
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                Margin = new Thickness(10, 3, 0, 6)
+            });
+
+            // Action buttons row: Float / Edit, Pin Toggle, Delete
+            var actionDock = new DockPanel { LastChildFill = false };
+
+            var floatBtn = new Button
+            {
+                Content = StickyNotesService.IsWindowOpen(note.Id) ? "👁️ Floating" : "↗ Pop Out",
+                FontSize = 9.5,
+                FontWeight = FontWeights.SemiBold,
+                Padding = new Thickness(8, 3, 8, 3),
+                Cursor = Cursors.Hand,
+                Style = (Style)FindResource("SteamCyanButtonStyle"),
+                Margin = new Thickness(0, 0, 6, 0)
+            };
+            var capturedNote = note;
+            floatBtn.Click += (_, _) =>
+            {
+                StickyNotesService.ShowNoteWindow(capturedNote);
+                RefreshStickyNotesList();
+            };
+            DockPanel.SetDock(floatBtn, Dock.Left);
+            actionDock.Children.Add(floatBtn);
+
+            var togglePinBtn = new Button
+            {
+                Content = capturedNote.IsPinned ? "Unpin" : "Pin 📌",
+                FontSize = 9.5,
+                Padding = new Thickness(7, 3, 7, 3),
+                Cursor = Cursors.Hand,
+                Style = (Style)FindResource("SteamMiniActionButtonStyle"),
+                Margin = new Thickness(0, 0, 6, 0)
+            };
+            togglePinBtn.Click += (_, _) =>
+            {
+                capturedNote.IsPinned = !capturedNote.IsPinned;
+                StickyNotesService.SaveNotes();
+                RefreshStickyNotesList();
+            };
+            DockPanel.SetDock(togglePinBtn, Dock.Left);
+            actionDock.Children.Add(togglePinBtn);
+
+            var deleteBtn = new Button
+            {
+                Content = "🗑️",
+                FontSize = 10,
+                Padding = new Thickness(6, 2, 6, 2),
+                Cursor = Cursors.Hand,
+                Style = (Style)FindResource("SteamMiniActionButtonStyle"),
+                ToolTip = "Delete note"
+            };
+            deleteBtn.Click += (_, _) =>
+            {
+                var res = MessageBox.Show($"Delete note \"{capturedNote.Title}\"?", "Delete Sticky Note", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                if (res == MessageBoxResult.Yes)
+                {
+                    StickyNotesService.DeleteNote(capturedNote.Id);
+                    RefreshStickyNotesList();
+                }
+            };
+            DockPanel.SetDock(deleteBtn, Dock.Right);
+            actionDock.Children.Add(deleteBtn);
+
+            stack.Children.Add(actionDock);
+            noteCard.Child = stack;
+            StickyNotesListPanel.Children.Add(noteCard);
+        }
     }
 
     private void OpenMiniBrowser_Click(object sender, RoutedEventArgs e)
@@ -738,6 +977,16 @@ public partial class GameSpaceOverlayWindow : Window
         {
             e.Handled = true;
             HideOverlay();
+            return;
+        }
+
+        // Alt+N or Ctrl+N: Create new note
+        if ((Keyboard.Modifiers == ModifierKeys.Alt && (e.SystemKey == Key.N || e.Key == Key.N)) ||
+            (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.N))
+        {
+            e.Handled = true;
+            NewNoteBtn_Click(this, new RoutedEventArgs());
+            return;
         }
     }
 

@@ -35,6 +35,11 @@ public sealed class GameSpaceService
                 // Game has exited: automatically exit Game Space overlay and Mini Browser
                 CloseOverlay();
                 MiniBrowserWindow.CloseBrowser();
+                StickyNotesService.UpdateActiveGame(null);
+            }
+            else
+            {
+                StickyNotesService.UpdateActiveGame(game.Name);
             }
         };
     }

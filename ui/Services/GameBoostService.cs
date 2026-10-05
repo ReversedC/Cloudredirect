@@ -173,6 +173,18 @@ public static class GameBoostService
                     }
                 }
 
+                // 4b. Network Boost (Gaming Low-Latency & Packet Throttling Optimization)
+                if (AppSettings.GameBoostNetworkBoost)
+                {
+                    ApplyNetworkBoost();
+                }
+
+                // 4c. Bluetooth Boost (Wireless Controller Anti-Lag & Keep-Alive)
+                if (AppSettings.GameBoostBluetoothBoost)
+                {
+                    ApplyBluetoothBoost();
+                }
+
                 // 5. Fire Toast Notification & Events IMMEDIATELY
                 string ramText = freedBytes > 10 * 1024 * 1024
                     ? $"⚡ {freedBytes / (1024 * 1024):N0} MB Standby RAM Optimized"
@@ -543,6 +555,166 @@ public static class GameBoostService
         catch (Exception ex)
         {
             Debug.WriteLine($"[GameBoost] Could not set GPU preference for {exePath}: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Optimizes network latency for online multiplayer games:
+    /// - Disables Windows Multimedia Network Throttling (NetworkThrottlingIndex = 0xFFFFFFFF)
+    /// - Sets SystemResponsiveness = 0 for 100% foreground game responsiveness
+    /// - Flushes DNS cache to remove stale gaming server routes
+    /// </summary>
+    public static void ApplyNetworkBoost()
+    {
+        try
+        {
+            using (var sysProfileKey = Registry.LocalMachine.OpenSubKey(
+                @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile", true))
+            {
+                if (sysProfileKey != null)
+                {
+                    sysProfileKey.SetValue("NetworkThrottlingIndex", unchecked((int)0xFFFFFFFF), RegistryValueKind.DWord);
+                    sysProfileKey.SetValue("SystemResponsiveness", 0, RegistryValueKind.DWord);
+                }
+            }
+
+            using (var gamesKey = Registry.LocalMachine.OpenSubKey(
+                @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games", true))
+            {
+                if (gamesKey != null)
+                {
+                    gamesKey.SetValue("GPU Priority", 8, RegistryValueKind.DWord);
+                    gamesKey.SetValue("Priority", 6, RegistryValueKind.DWord);
+                    gamesKey.SetValue("Scheduling Category", "High", RegistryValueKind.String);
+                    gamesKey.SetValue("SFIO Priority", "High", RegistryValueKind.String);
+                }
+            }
+
+            _ = Task.Run(() =>
+            {
+                try
+                {
+                    var psi = new ProcessStartInfo("ipconfig", "/flushdns")
+                    {
+                        CreateNoWindow = true,
+                        UseShellExecute = false,
+                        WindowStyle = ProcessWindowStyle.Hidden
+                    };
+                    Process.Start(psi);
+                }
+                catch { }
+            });
+
+            Debug.WriteLine("[GameBoost] Network Boost applied: NetworkThrottling disabled, SystemResponsiveness=0, DNS flushed");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[GameBoost] Network Boost error: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Reduces Bluetooth latency for wireless controllers (Xbox, DualSense, Switch Pro) & wireless headsets:
+    /// - Disables Bluetooth radio selective suspend power-saving sleep state
+    /// - Prevents idle polling delay spikes
+    /// </summary>
+    public static void ApplyBluetoothBoost()
+    {
+        try
+        {
+            using (var bthKey = Registry.LocalMachine.OpenSubKey(
+                @"SYSTEM\CurrentControlSet\Services\BTHPORT\Parameters", true))
+            {
+                if (bthKey != null)
+                {
+                    bthKey.SetValue("DisableSelectiveSuspend", 1, RegistryValueKind.DWord);
+                }
+            }
+
+            using (var bthUsbKey = Registry.LocalMachine.OpenSubKey(
+                @"SYSTEM\CurrentControlSet\Services\BTHUSB\Parameters", true))
+            {
+                if (bthUsbKey != null)
+                {
+                    bthUsbKey.SetValue("DisableSelectiveSuspend", 1, RegistryValueKind.DWord);
+                }
+            }
+
+            Debug.WriteLine("[GameBoost] Bluetooth Boost applied: Selective Suspend disabled (low-latency controller mode)");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[GameBoost] Bluetooth Boost error: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Reverts network optimizations back to default Windows configurations.
+    /// </summary>
+    public static void RevertNetworkBoost()
+    {
+        try
+        {
+            using (var key = Registry.LocalMachine.OpenSubKey(
+                @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile", true))
+            {
+                if (key != null)
+                {
+                    key.SetValue("NetworkThrottlingIndex", 10, RegistryValueKind.DWord);
+                    key.SetValue("SystemResponsiveness", 20, RegistryValueKind.DWord);
+                }
+            }
+
+            using (var gamesKey = Registry.LocalMachine.OpenSubKey(
+                @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games", true))
+            {
+                if (gamesKey != null)
+                {
+                    gamesKey.SetValue("GPU Priority", 8, RegistryValueKind.DWord);
+                    gamesKey.SetValue("Priority", 2, RegistryValueKind.DWord);
+                    gamesKey.SetValue("Scheduling Category", "Medium", RegistryValueKind.String);
+                    gamesKey.SetValue("SFIO Priority", "Normal", RegistryValueKind.String);
+                }
+            }
+
+            Debug.WriteLine("[GameBoost] Network Boost reverted to Windows default settings.");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[GameBoost] Error reverting Network Boost: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Reverts Bluetooth Selective Suspend back to default power-saving behavior.
+    /// </summary>
+    public static void RevertBluetoothBoost()
+    {
+        try
+        {
+            using (var bthKey = Registry.LocalMachine.OpenSubKey(
+                @"SYSTEM\CurrentControlSet\Services\BTHPORT\Parameters", true))
+            {
+                if (bthKey != null)
+                {
+                    bthKey.SetValue("DisableSelectiveSuspend", 0, RegistryValueKind.DWord);
+                }
+            }
+
+            using (var bthUsbKey = Registry.LocalMachine.OpenSubKey(
+                @"SYSTEM\CurrentControlSet\Services\BTHUSB\Parameters", true))
+            {
+                if (bthUsbKey != null)
+                {
+                    bthUsbKey.SetValue("DisableSelectiveSuspend", 0, RegistryValueKind.DWord);
+                }
+            }
+
+            Debug.WriteLine("[GameBoost] Bluetooth Boost reverted: Selective Suspend restored to default.");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[GameBoost] Error reverting Bluetooth Boost: {ex.Message}");
         }
     }
 }
