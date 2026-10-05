@@ -2,6 +2,7 @@
 #include "cloud_intercept.h"
 #include "metadata_sync.h"
 #include "rpc_handlers.h"
+#include "cloud_rpc_utils.h"
 #include "stats_handlers.h"
 #include "stats_store.h"
 #include "app_state.h"
@@ -60,7 +61,7 @@ void Init(const std::string& steamPath, bool /*cloudSaveOnly*/, CR_NotifyFn /*no
 
     // Initialize core subsystems
     PendingOpsJournal::Init(g_steamPath);
-    StatsStore::Init(g_steamPath);
+    StatsStore::Init(blobRoot, g_steamPath);
 
     // Read config if present
     std::ifstream cfgFile(configPath);
@@ -68,19 +69,17 @@ void Init(const std::string& steamPath, bool /*cloudSaveOnly*/, CR_NotifyFn /*no
         std::string cfgStr((std::istreambuf_iterator<char>(cfgFile)),
                             std::istreambuf_iterator<char>());
         auto root = Json::Parse(cfgStr);
-        if (root && root->isObject()) {
-            auto appsArr = root->get("apps");
-            if (appsArr && appsArr->isArray()) {
+        if (root.type == Json::Type::Object) {
+            if (root.has("apps") && root["apps"].type == Json::Type::Array) {
                 std::lock_guard<std::mutex> lock(g_appMutex);
-                for (const auto& item : appsArr->asArray()) {
-                    if (item && item->isNumber()) {
-                        g_namespaceApps.insert(static_cast<uint32_t>(item->asInt64()));
+                for (const auto& item : root["apps"].arrVal) {
+                    if (item.type == Json::Type::Number) {
+                        g_namespaceApps.insert(static_cast<uint32_t>(item.integer()));
                     }
                 }
             }
-            auto allApps = root->get("all_apps");
-            if (allApps && allApps->isBool()) {
-                g_allAppsManaged.store(allApps->asBool());
+            if (root.has("all_apps") && root["all_apps"].type == Json::Type::Bool) {
+                g_allAppsManaged.store(root["all_apps"].boolean());
             }
         }
     }
@@ -93,8 +92,6 @@ void Shutdown() {
     if (!g_initialized.exchange(false)) return;
     LOG("[CloudIntercept-Linux] Shutting down subsystems...");
     HttpServer::Stop();
-    StatsStore::Shutdown();
-    PendingOpsJournal::Shutdown();
     ShutdownRpcHandlers();
     LOG("[CloudIntercept-Linux] Shutdown complete");
 }
@@ -191,10 +188,7 @@ bool OnSendPkt(void* /*thisptr*/, const uint8_t* data, uint32_t size) {
     auto hdrFields = PB::Parse(hdrData, hdrSize);
 
     // Target job / service method name is field 12 in the header
-    std::string method;
-    if (auto* f = PB::FindField(hdrFields, 12)) {
-        method = f->strVal;
-    }
+    std::string method(PB::GetString(hdrFields, 12));
     if (method.empty()) return false;
 
     const uint8_t* bodyData = data + 8 + hdrSize;
