@@ -189,7 +189,7 @@
                         CornerRadius="8"
                         Padding="18,14"
                         Margin="0,0,0,12">
-                    <StackPanel HorizontalAlignment="Center" MaxWidth="500">
+                    <StackPanel HorizontalAlignment="Center" MaxWidth="680">
                         <ui:SymbolIcon Symbol="ShieldKeyhole24" FontSize="36" Foreground="#66C0F4" HorizontalAlignment="Center" Margin="0,0,0,8" />
 
                         <TextBlock Text="{res:Loc Wizard_Step2_AuthCardTitle}"
@@ -228,7 +228,7 @@
                                 </Grid.ColumnDefinitions>
 
                                 <!-- QR Image Container & Quick Actions -->
-                                <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0" HorizontalAlignment="Center">
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,18,0" HorizontalAlignment="Center">
                                     <Border x:Name="WizardQrContainer"
                                             Background="White"
                                             CornerRadius="6"
@@ -265,19 +265,21 @@
                                         <TextBlock Text="{res:Loc Wizard_Step2_QrTitle}" FontWeight="SemiBold" FontSize="12.5" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                                     </StackPanel>
                                     <TextBlock Text="{res:Loc Wizard_Step2_QrDesc}"
-                                               FontSize="11.5" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,6" />
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                        <RadioButton x:Name="WizardQrWifiRadio" Content="{res:Loc Wizard_Step2_QrWifi}" IsChecked="True" GroupName="WizardQrGroup" FontSize="11" Checked="WizardQrMode_Checked" Margin="0,0,10,0" />
-                                        <RadioButton x:Name="WizardQrDirectRadio" Content="{res:Loc Wizard_Step2_QrDirect}" GroupName="WizardQrGroup" FontSize="11" Checked="WizardQrMode_Checked" />
-                                    </StackPanel>
+                                               FontSize="11.5" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,8" />
+
+                                    <!-- QR Mode Selector (WrapPanel so it never truncates) -->
+                                    <WrapPanel Margin="0,0,0,8">
+                                        <RadioButton x:Name="WizardQrWifiRadio" Content="{res:Loc Wizard_Step2_QrWifi}" IsChecked="True" GroupName="WizardQrGroup" FontSize="11.5" Checked="WizardQrMode_Checked" Margin="0,0,12,4" />
+                                        <RadioButton x:Name="WizardQrDirectRadio" Content="{res:Loc Wizard_Step2_QrDirect}" GroupName="WizardQrGroup" FontSize="11.5" Checked="WizardQrMode_Checked" Margin="0,0,0,4" />
+                                    </WrapPanel>
 
                                     <!-- QR Size Selector & Hint -->
-                                    <Border Background="#162230" BorderBrush="#253A50" BorderThickness="1" CornerRadius="4" Padding="8,4" Margin="0,2,0,0">
-                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <TextBlock Text="{res:Loc Wizard_Step2_QrSizeLabel}" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center" />
-                                            <RadioButton x:Name="WizardQrSizeNormalRadio" Content="{res:Loc Wizard_Step2_QrSizeNormal}" IsChecked="True" GroupName="WizardQrSizeGroup" FontSize="11" Checked="WizardQrSize_Checked" Margin="0,0,10,0" />
-                                            <RadioButton x:Name="WizardQrSizeLargeRadio" Content="{res:Loc Wizard_Step2_QrSizeLarge}" GroupName="WizardQrSizeGroup" FontSize="11" Checked="WizardQrSize_Checked" />
-                                        </StackPanel>
+                                    <Border Background="#162230" BorderBrush="#253A50" BorderThickness="1" CornerRadius="4" Padding="10,5" Margin="0,2,0,0" HorizontalAlignment="Left">
+                                        <WrapPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{res:Loc Wizard_Step2_QrSizeLabel}" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,10,0" VerticalAlignment="Center" />
+                                            <RadioButton x:Name="WizardQrSizeNormalRadio" Content="{res:Loc Wizard_Step2_QrSizeNormal}" IsChecked="True" GroupName="WizardQrSizeGroup" FontSize="11" Checked="WizardQrSize_Checked" Margin="0,0,10,0" VerticalAlignment="Center" />
+                                            <RadioButton x:Name="WizardQrSizeLargeRadio" Content="{res:Loc Wizard_Step2_QrSizeLarge}" GroupName="WizardQrSizeGroup" FontSize="11" Checked="WizardQrSize_Checked" VerticalAlignment="Center" />
+                                        </WrapPanel>
                                     </Border>
                                 </StackPanel>
                             </Grid>

@@ -356,18 +356,18 @@ public partial class SetupWizardPage : Page
         double zoom = UiZoomManager.Instance.CurrentScale;
         if (zoom <= 0.1) zoom = 1.0;
 
-        // Base physical size we want on screen: at least 140px in standard, or 200px in large
+        // Base physical size we want on screen: at least 120px in standard, or 170px in large
         bool isLarge = WizardQrSizeLargeRadio?.IsChecked == true;
         bool isDirect = WizardQrDirectRadio?.IsChecked == true;
         
-        double targetPhysicalPx = isLarge ? 200.0 : (isDirect ? 150.0 : 135.0);
+        double targetPhysicalPx = isLarge ? 170.0 : (isDirect ? 130.0 : 120.0);
 
-        // Compensate inversely for low zoom level (e.g., at 70% zoom, 150px / 0.7 = 214px layout size)
+        // Compensate inversely for low zoom level (e.g., at 60% zoom, 120px / 0.6 = 200px layout size)
         double compScale = 1.0 / zoom;
         double calculatedSize = Math.Round(targetPhysicalPx * compScale);
 
-        // Clamp to sensible range
-        calculatedSize = Math.Max(120.0, Math.Min(260.0, calculatedSize));
+        // Clamp to sensible range (capped at 190 to guarantee ample width for Column 1 options)
+        calculatedSize = Math.Max(110.0, Math.Min(190.0, calculatedSize));
 
         WizardQrContainer.Width = calculatedSize;
         WizardQrContainer.Height = calculatedSize;
