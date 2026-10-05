@@ -65,32 +65,45 @@ static uint32_t DetectAccountIdFromLoginUsers(const std::string& steamPath) {
     std::ifstream f(vdfPath);
     if (!f) return 0;
 
-    std::string content((std::istreambuf_iterator<char>(f)),
-                         std::istreambuf_iterator<char>());
-    auto root = VDF::Parse(content);
-    if (!root) return 0;
+    std::string line;
+    uint64_t currentSteamId = 0;
+    uint32_t fallbackAccountId = 0;
+    bool inUser = false;
+    int braceDepth = 0;
 
-    // Search for account where "MostRecent" == "1"
-    for (const auto& child : root->children) {
-        auto mostRecent = child->FindChild("MostRecent");
-        if (mostRecent && mostRecent->stringValue == "1") {
-            try {
-                uint64_t steamId64 = std::stoull(child->key);
-                return static_cast<uint32_t>(steamId64 & 0xFFFFFFFF);
-            } catch (...) {}
+    while (std::getline(f, line)) {
+        size_t start = line.find_first_not_of(" \t\r\n");
+        if (start == std::string::npos) continue;
+        std::string trimmed = line.substr(start);
+
+        if (trimmed == "{") { braceDepth++; continue; }
+        if (trimmed == "}") { braceDepth--; if (braceDepth == 1) inUser = false; continue; }
+
+        if (braceDepth == 1 && trimmed.size() > 2 && trimmed[0] == '"') {
+            size_t endQuote = trimmed.find('"', 1);
+            if (endQuote != std::string::npos) {
+                std::string key = trimmed.substr(1, endQuote - 1);
+                char* endp = nullptr;
+                uint64_t sid = strtoull(key.c_str(), &endp, 10);
+                if (endp == key.c_str() + key.size() && sid > 76561197960265728ULL) {
+                    currentSteamId = sid;
+                    if (fallbackAccountId == 0) {
+                        fallbackAccountId = static_cast<uint32_t>(sid & 0xFFFFFFFF);
+                    }
+                    inUser = true;
+                }
+            }
+        }
+
+        if (inUser && braceDepth == 2) {
+            if (trimmed.find("\"MostRecent\"") != std::string::npos &&
+                trimmed.find("\"1\"") != std::string::npos) {
+                return static_cast<uint32_t>(currentSteamId & 0xFFFFFFFF);
+            }
         }
     }
 
-    // Fallback: pick the first account key in loginusers.vdf
-    for (const auto& child : root->children) {
-        if (!child->key.empty() && std::isdigit(child->key[0])) {
-            try {
-                uint64_t steamId64 = std::stoull(child->key);
-                return static_cast<uint32_t>(steamId64 & 0xFFFFFFFF);
-            } catch (...) {}
-        }
-    }
-    return 0;
+    return fallbackAccountId;
 }
 
 static void InitializeCloudRedirectLinux() {
