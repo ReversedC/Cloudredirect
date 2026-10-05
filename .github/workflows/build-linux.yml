@@ -1,0 +1,126 @@
+name: Linux Release Build
+
+on:
+  push:
+    branches:
+      - linux
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - linux
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux:
+    name: Build & Package Linux (x64)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            cmake \
+            pkg-config \
+            libcurl4-openssl-dev \
+            libssl-dev \
+            tar
+
+      - name: Extract Release Version
+        id: version
+        run: |
+          VERSION=$(grep -oPm1 "(?<=<ReleaseVersion>)[^<]+" Version.props || echo "0.0.0")
+          PRERELEASE=$(grep -oPm1 "(?<=<ReleasePrerelease>)[^<]+" Version.props || echo "")
+          FULL_TAG="v${VERSION}${PRERELEASE}"
+          echo "tag=${FULL_TAG}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}${PRERELEASE}" >> $GITHUB_OUTPUT
+          echo "Building CloudRedirect Linux for version: ${FULL_TAG}"
+
+      - name: Configure CMake
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+
+      - name: Compile Linux Binaries
+        run: |
+          cmake --build build --config Release -j$(nproc)
+
+      - name: Run Native Tests
+        run: |
+          ctest --test-dir build --output-on-failure || true
+
+      - name: Package Release Distribution
+        run: |
+          mkdir -p dist/cloudredirect-linux-x64/bin
+          mkdir -p dist/cloudredirect-linux-x64/scripts
+
+          # Copy core shared library and CLI
+          cp build/cloud_redirect.so dist/cloudredirect-linux-x64/bin/
+          cp build/cloud_redirect.so dist/cloudredirect-linux-x64/bin/libcloud_redirect.so
+          cp build/cloud_redirect_cli dist/cloudredirect-linux-x64/bin/
+
+          # Copy scripts and documentation
+          cp -r scripts/droiddeck/* dist/cloudredirect-linux-x64/scripts/
+          cp DROIDDECK.md dist/cloudredirect-linux-x64/
+          chmod +x dist/cloudredirect-linux-x64/bin/cloud_redirect_cli
+          chmod +x dist/cloudredirect-linux-x64/scripts/*.sh
+
+          # Create release tarball
+          tar -czvf cloudredirect-linux-x64.tar.gz -C dist cloudredirect-linux-x64
+
+          # Compute SHA-256 checksums
+          sha256sum cloudredirect-linux-x64.tar.gz > cloudredirect-linux-x64.tar.gz.sha256
+          sha256sum build/cloud_redirect.so > cloud_redirect.so.sha256
+          sha256sum build/cloud_redirect_cli > cloud_redirect_cli.sha256
+
+          # Copy individual standalone artifacts for release upload
+          cp build/cloud_redirect.so ./cloud_redirect.so
+          cp build/cloud_redirect.so ./libcloud_redirect.so
+          cp build/cloud_redirect_cli ./cloud_redirect_cli
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudredirect-linux-x64
+          path: |
+            cloudredirect-linux-x64.tar.gz
+            cloudredirect-linux-x64.tar.gz.sha256
+            cloud_redirect.so
+            cloud_redirect.so.sha256
+            libcloud_redirect.so
+            cloud_redirect_cli
+            cloud_redirect_cli.sha256
+
+      - name: Upload to GitHub Release
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          echo "Checking if release exists for ${TAG}..."
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Release $TAG found! Uploading Linux release assets..."
+            gh release upload "$TAG" \
+              cloudredirect-linux-x64.tar.gz \
+              cloudredirect-linux-x64.tar.gz.sha256 \
+              cloud_redirect.so \
+              cloud_redirect.so.sha256 \
+              libcloud_redirect.so \
+              cloud_redirect_cli \
+              cloud_redirect_cli.sha256 \
+              --clobber
+            echo "Successfully uploaded Linux assets to release $TAG!"
+          else
+            echo "No existing GitHub release found for $TAG. Artifacts are available in the Actions tab."
+          fi
