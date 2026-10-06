@@ -15,7 +15,7 @@ permissions:
   contents: write
 
 jobs:
-  build-linux:
+  build-linux-x64:
     name: Build & Package Linux (x64)
     runs-on: ubuntu-latest
 
@@ -44,7 +44,7 @@ jobs:
           FULL_TAG="v${VERSION}${PRERELEASE}"
           echo "tag=${FULL_TAG}" >> $GITHUB_OUTPUT
           echo "version=${VERSION}${PRERELEASE}" >> $GITHUB_OUTPUT
-          echo "Building CloudRedirect Linux for version: ${FULL_TAG}"
+          echo "Building CloudRedirect Linux x64 for version: ${FULL_TAG}"
 
       - name: Configure CMake
         run: |
@@ -110,7 +110,7 @@ jobs:
           TAG="${{ steps.version.outputs.tag }}"
           echo "Checking if release exists for ${TAG}..."
           if gh release view "$TAG" > /dev/null 2>&1; then
-            echo "Release $TAG found! Uploading Linux release assets..."
+            echo "Release $TAG found! Uploading Linux x64 release assets..."
             gh release upload "$TAG" \
               cloudredirect-linux-x64.tar.gz \
               cloudredirect-linux-x64.tar.gz.sha256 \
@@ -120,7 +120,130 @@ jobs:
               cloud_redirect_cli \
               cloud_redirect_cli.sha256 \
               --clobber
-            echo "Successfully uploaded Linux assets to release $TAG!"
           else
-            echo "No existing GitHub release found for $TAG. Artifacts are available in the Actions tab."
+            echo "Release $TAG does not exist. Creating release..."
+            gh release create "$TAG" \
+              cloudredirect-linux-x64.tar.gz \
+              cloudredirect-linux-x64.tar.gz.sha256 \
+              cloud_redirect.so \
+              cloud_redirect.so.sha256 \
+              libcloud_redirect.so \
+              cloud_redirect_cli \
+              cloud_redirect_cli.sha256 \
+              --title "CloudRedirect Linux $TAG" \
+              --notes "Automated Linux Release $TAG"
+          fi
+
+  build-linux-arm64:
+    name: Build & Package Linux (ARM64)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract Release Version
+        id: version
+        run: |
+          VERSION=$(grep -oPm1 "(?<=<ReleaseVersion>)[^<]+" Version.props || echo "0.0.0")
+          PRERELEASE=$(grep -oPm1 "(?<=<ReleasePrerelease>)[^<]+" Version.props || echo "")
+          FULL_TAG="v${VERSION}${PRERELEASE}"
+          echo "tag=${FULL_TAG}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}${PRERELEASE}" >> $GITHUB_OUTPUT
+          echo "Building CloudRedirect Linux ARM64 for version: ${FULL_TAG}"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Compile Linux ARM64 Binaries in Container
+        run: |
+          docker run --rm --platform linux/arm64 -v ${{ github.workspace }}:/workspace -w /workspace arm64v8/ubuntu:24.04 bash -c '
+            set -euo pipefail
+            apt-get update
+            apt-get install -y --no-install-recommends \
+              build-essential \
+              cmake \
+              pkg-config \
+              libcurl4-openssl-dev \
+              libssl-dev \
+              tar
+            cmake -B build-arm64 \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+            cmake --build build-arm64 --config Release -j$(nproc)
+          '
+
+      - name: Package ARM64 Release Distribution
+        run: |
+          mkdir -p dist/cloudredirect-linux-arm64/bin
+          mkdir -p dist/cloudredirect-linux-arm64/scripts
+
+          # Copy core shared library and CLI
+          cp build-arm64/cloud_redirect.so dist/cloudredirect-linux-arm64/bin/
+          cp build-arm64/cloud_redirect.so dist/cloudredirect-linux-arm64/bin/libcloud_redirect.so
+          cp build-arm64/cloud_redirect_cli dist/cloudredirect-linux-arm64/bin/
+
+          # Copy scripts and documentation
+          cp -r scripts/droiddeck/* dist/cloudredirect-linux-arm64/scripts/
+          cp DROIDDECK.md dist/cloudredirect-linux-arm64/
+          chmod +x dist/cloudredirect-linux-arm64/bin/cloud_redirect_cli
+          chmod +x dist/cloudredirect-linux-arm64/scripts/*.sh
+
+          # Create release tarball
+          tar -czvf cloudredirect-linux-arm64.tar.gz -C dist cloudredirect-linux-arm64
+
+          # Compute SHA-256 checksums
+          sha256sum cloudredirect-linux-arm64.tar.gz > cloudredirect-linux-arm64.tar.gz.sha256
+          sha256sum build-arm64/cloud_redirect.so > cloud_redirect-arm64.so.sha256
+          sha256sum build-arm64/cloud_redirect_cli > cloud_redirect_cli-arm64.sha256
+
+          cp build-arm64/cloud_redirect.so ./cloud_redirect-arm64.so
+          cp build-arm64/cloud_redirect.so ./libcloud_redirect-arm64.so
+          cp build-arm64/cloud_redirect_cli ./cloud_redirect_cli-arm64
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudredirect-linux-arm64
+          path: |
+            cloudredirect-linux-arm64.tar.gz
+            cloudredirect-linux-arm64.tar.gz.sha256
+            cloud_redirect-arm64.so
+            cloud_redirect-arm64.so.sha256
+            libcloud_redirect-arm64.so
+            cloud_redirect_cli-arm64
+            cloud_redirect_cli-arm64.sha256
+
+      - name: Upload to GitHub Release
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          echo "Checking if release exists for ${TAG}..."
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Release $TAG found! Uploading Linux ARM64 release assets..."
+            gh release upload "$TAG" \
+              cloudredirect-linux-arm64.tar.gz \
+              cloudredirect-linux-arm64.tar.gz.sha256 \
+              cloud_redirect-arm64.so \
+              cloud_redirect-arm64.so.sha256 \
+              libcloud_redirect-arm64.so \
+              cloud_redirect_cli-arm64 \
+              cloud_redirect_cli-arm64.sha256 \
+              --clobber
+          else
+            echo "Release $TAG does not exist. Creating release..."
+            gh release create "$TAG" \
+              cloudredirect-linux-arm64.tar.gz \
+              cloudredirect-linux-arm64.tar.gz.sha256 \
+              cloud_redirect-arm64.so \
+              cloud_redirect-arm64.so.sha256 \
+              libcloud_redirect-arm64.so \
+              cloud_redirect_cli-arm64 \
+              cloud_redirect_cli-arm64.sha256 \
+              --title "CloudRedirect Linux $TAG" \
+              --notes "Automated Linux Release $TAG"
           fi

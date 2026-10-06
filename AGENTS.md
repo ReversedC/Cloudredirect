@@ -15,6 +15,14 @@
     & "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /target:winexe /platform:x64 /win32icon:ui\steam_logo3.ico /res:ui\bin\publish\CloudRedirect.Core.exe,MainAppPayload /out:ui\bin\publish\CloudRedirect.exe /r:System.dll,System.Windows.Forms.dll,System.Drawing.dll,System.Core.dll src\launcher\CloudRedirectLauncher.cs
     ```
 
+- **Branch Separation Directive (CRITICAL)**:
+  - **`master` branch**: Dedicated exclusively to the Windows companion application and Windows releases. **NEVER touch or push to `master` for Linux or DroidDeck changes**.
+  - **`linux` branch**: Dedicated to Linux native core, multiarch Linux builds (x64 and ARM64), and DroidDeck integration. All Linux development, fixes, workflows (`.github/workflows/build-linux.yml`), and Linux releases MUST be done on the `linux` branch.
+  - **DroidDeck Integration**: DroidDeck must ALWAYS consume CloudRedirect binaries from the `linux` branch releases, never from `master`.
+
+- **Mandatory Version Increment Rule**:
+  - **ALWAYS increase the version number when pushing to GitHub** (`<ReleaseVersion>` in `Version.props`). Never push commits to GitHub without bumping `<ReleaseVersion>`.
+
 - **Production Build & Release Directive (ONLY WHEN USER EXPLICITLY INSTRUCTS TO PUSH)**:
   - Once the user explicitly instructs to publish/push to GitHub:
     1. Clear `<ReleasePrerelease>` in `Version.props` and bump `<ReleaseVersion>` (e.g. `2.9.111` -> `2.9.112`).
