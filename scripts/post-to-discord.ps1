@@ -3,7 +3,10 @@ param(
     [string]$Version,
     [string]$Changelog = "Latest release updates and improvements.",
     [string]$ExePath,
-    [switch]$SkipFileUpload
+    [string]$GuideGifPath,
+    [string]$PhoneGuideGifPath,
+    [switch]$SkipFileUpload,
+    [switch]$SkipGuides
 )
 
 $ErrorActionPreference = "Stop"
@@ -39,9 +42,31 @@ if (-not $Version) {
     }
 }
 
-# 3. Determine Exe Path
+# 3. Determine Exe and Guide Paths
 if (-not $ExePath) {
     $ExePath = Join-Path $PSScriptRoot "..\ui\bin\publish\CloudRedirect.exe"
+}
+
+if (-not $GuideGifPath) {
+    $candidateGuidePaths = @(
+        (Join-Path $PSScriptRoot "..\assets\guides\guide.gif"),
+        (Join-Path $PSScriptRoot "..\docs\guide.gif"),
+        "C:\Users\admin\Downloads\guide\guide.gif"
+    )
+    foreach ($cand in $candidateGuidePaths) {
+        if (Test-Path $cand) { $GuideGifPath = $cand; break }
+    }
+}
+
+if (-not $PhoneGuideGifPath) {
+    $candidatePhonePaths = @(
+        (Join-Path $PSScriptRoot "..\assets\guides\setup_wizard_phone_copy_paste_guide.gif"),
+        (Join-Path $PSScriptRoot "..\docs\setup_wizard_phone_copy_paste_guide.gif"),
+        "C:\Users\admin\Downloads\guide\setup_wizard_phone_copy_paste_guide.gif"
+    )
+    foreach ($cand in $candidatePhonePaths) {
+        if (Test-Path $cand) { $PhoneGuideGifPath = $cand; break }
+    }
 }
 
 # 4. Compute SHA256 if Exe exists
@@ -104,7 +129,24 @@ $embed = @{
 if ($sha256) {
     $embed.fields += @{
         name   = "SHA-256 Checksum"
-        value  = "`$sha256`"
+        value  = ('`' + $sha256 + '`')
+        inline = $false
+    }
+}
+
+$hasGuides = (-not $SkipGuides) -and (($GuideGifPath -and (Test-Path $GuideGifPath)) -or ($PhoneGuideGifPath -and (Test-Path $PhoneGuideGifPath)))
+if ($hasGuides) {
+    $bullet = [char]::ConvertFromUtf32(0x2022)
+    $guideDesc = ""
+    if ($GuideGifPath -and (Test-Path $GuideGifPath)) {
+        $guideDesc += "$bullet **Google Drive Sync:** See ``guide.gif`` walkthrough attached below.`n"
+    }
+    if ($PhoneGuideGifPath -and (Test-Path $PhoneGuideGifPath)) {
+        $guideDesc += "$bullet **Phone Sign-In / QR Code:** See ``setup_wizard_phone_copy_paste_guide.gif`` below.`n"
+    }
+    $embed.fields += @{
+        name   = "Animated Setup Guides"
+        value  = $guideDesc.TrimEnd()
         inline = $false
     }
 }
@@ -119,32 +161,59 @@ $payloadJson = $payloadObj | ConvertTo-Json -Depth 5
 # Ensure ?wait=true is attached so Discord returns message object with id
 $postUrl = $WebhookUrl.Split('?')[0] + "?wait=true"
 
-# 7. Send Request (Multipart if attaching Exe, JSON otherwise)
-$canAttach = (-not $SkipFileUpload) -and (Test-Path $ExePath)
-if ($canAttach) {
+# 7. Send Request (Multipart if attaching Exe or Guides, JSON otherwise)
+$canAttachExe = (-not $SkipFileUpload) -and (Test-Path $ExePath)
+if ($canAttachExe) {
     $fileInfo = Get-Item $ExePath
     # Discord file upload limit check (25MB)
     if ($fileInfo.Length -gt 25MB) {
         Write-Host "File size ($([math]::Round($fileInfo.Length / 1MB, 2)) MB) exceeds Discord limit (25 MB). Skipping direct attachment."
-        $canAttach = $false
+        $canAttachExe = $false
     }
 }
 
+$hasAttachments = $canAttachExe -or ($hasGuides)
+
 $response = $null
-if ($canAttach) {
-    Write-Host "Uploading CloudRedirect.exe ($([math]::Round($fileInfo.Length / 1MB, 2)) MB) and changelog to Discord via Webhook..."
+if ($hasAttachments) {
     $multipart = [System.Net.Http.MultipartFormDataContent]::new()
+    $fileIndex = 0
 
     # Part 1: payload_json
     $jsonContent = [System.Net.Http.StringContent]::new($payloadJson, [System.Text.Encoding]::UTF8, "application/json")
     $multipart.Add($jsonContent, "payload_json")
 
-    # Part 2: file
-    $fileBytes = [System.IO.File]::ReadAllBytes($ExePath)
-    $fileContent = [System.Net.Http.ByteArrayContent]::new($fileBytes)
-    $fileContent.Headers.ContentType = [System.Net.Http.Headers.MediaTypeHeaderValue]::Parse("application/octet-stream")
-    $multipart.Add($fileContent, "files[0]", "CloudRedirect.exe")
+    # Part 2: CloudRedirect.exe
+    if ($canAttachExe) {
+        Write-Host "Attaching CloudRedirect.exe ($([math]::Round((Get-Item $ExePath).Length / 1MB, 2)) MB)..."
+        $fileBytes = [System.IO.File]::ReadAllBytes($ExePath)
+        $fileContent = [System.Net.Http.ByteArrayContent]::new($fileBytes)
+        $fileContent.Headers.ContentType = [System.Net.Http.Headers.MediaTypeHeaderValue]::Parse("application/octet-stream")
+        $multipart.Add($fileContent, "files[$fileIndex]", "CloudRedirect.exe")
+        $fileIndex++
+    }
 
+    # Part 3: guide.gif (Content-Type: image/gif for native Discord autoplay)
+    if (-not $SkipGuides -and $GuideGifPath -and (Test-Path $GuideGifPath)) {
+        Write-Host "Attaching guide.gif ($([math]::Round((Get-Item $GuideGifPath).Length / 1KB, 1)) KB)..."
+        $guideBytes = [System.IO.File]::ReadAllBytes($GuideGifPath)
+        $guideContent = [System.Net.Http.ByteArrayContent]::new($guideBytes)
+        $guideContent.Headers.ContentType = [System.Net.Http.Headers.MediaTypeHeaderValue]::Parse("image/gif")
+        $multipart.Add($guideContent, "files[$fileIndex]", "guide.gif")
+        $fileIndex++
+    }
+
+    # Part 4: setup_wizard_phone_copy_paste_guide.gif (Content-Type: image/gif for native Discord autoplay)
+    if (-not $SkipGuides -and $PhoneGuideGifPath -and (Test-Path $PhoneGuideGifPath)) {
+        Write-Host "Attaching setup_wizard_phone_copy_paste_guide.gif ($([math]::Round((Get-Item $PhoneGuideGifPath).Length / 1KB, 1)) KB)..."
+        $phoneBytes = [System.IO.File]::ReadAllBytes($PhoneGuideGifPath)
+        $phoneContent = [System.Net.Http.ByteArrayContent]::new($phoneBytes)
+        $phoneContent.Headers.ContentType = [System.Net.Http.Headers.MediaTypeHeaderValue]::Parse("image/gif")
+        $multipart.Add($phoneContent, "files[$fileIndex]", "setup_wizard_phone_copy_paste_guide.gif")
+        $fileIndex++
+    }
+
+    Write-Host "Uploading announcement with $fileIndex file attachment(s) to Discord via Webhook..."
     $response = $httpClient.PostAsync($postUrl, $multipart).GetAwaiter().GetResult()
 } else {
     Write-Host "Posting announcement to Discord via Webhook..."

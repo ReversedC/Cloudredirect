@@ -5,7 +5,10 @@ param(
     [string]$Version,
     [string]$Changelog = "Latest release updates and improvements.",
     [string]$ExePath,
-    [switch]$SkipFileUpload
+    [string]$GuideGifPath,
+    [string]$PhoneGuideGifPath,
+    [switch]$SkipFileUpload,
+    [switch]$SkipGuides
 )
 
 $ErrorActionPreference = "Stop"
@@ -40,9 +43,31 @@ if (-not $Version) {
     }
 }
 
-# 3. Determine Exe Path
+# 3. Determine Exe and Guide Paths
 if (-not $ExePath) {
     $ExePath = Join-Path $PSScriptRoot "..\ui\bin\publish\CloudRedirect.exe"
+}
+
+if (-not $GuideGifPath) {
+    $candidateGuidePaths = @(
+        (Join-Path $PSScriptRoot "..\assets\guides\guide.gif"),
+        (Join-Path $PSScriptRoot "..\docs\guide.gif"),
+        "C:\Users\admin\Downloads\guide\guide.gif"
+    )
+    foreach ($cand in $candidateGuidePaths) {
+        if (Test-Path $cand) { $GuideGifPath = $cand; break }
+    }
+}
+
+if (-not $PhoneGuideGifPath) {
+    $candidatePhonePaths = @(
+        (Join-Path $PSScriptRoot "..\assets\guides\setup_wizard_phone_copy_paste_guide.gif"),
+        (Join-Path $PSScriptRoot "..\docs\setup_wizard_phone_copy_paste_guide.gif"),
+        "C:\Users\admin\Downloads\guide\setup_wizard_phone_copy_paste_guide.gif"
+    )
+    foreach ($cand in $candidatePhonePaths) {
+        if (Test-Path $cand) { $PhoneGuideGifPath = $cand; break }
+    }
 }
 
 # 4. Compute SHA256 if Exe exists
@@ -98,6 +123,9 @@ $eCloud = [char]::ConvertFromUtf32(0x2601)  # ☁
 $eClip  = [char]::ConvertFromUtf32(0x1F4CB) # 📋
 $eBox   = [char]::ConvertFromUtf32(0x1F4E6) # 📦
 $eBolt  = [char]::ConvertFromUtf32(0x26A1)  # ⚡
+$eBook  = [char]::ConvertFromUtf32(0x1F4D6) # 📖
+$eSpark = [char]::ConvertFromUtf32(0x2728)  # ✨
+$ePhone = [char]::ConvertFromUtf32(0x1F4F1) # 📱
 
 $cleanChangelog = ($Changelog -split "`r?`n" | Where-Object { $_.Trim() -ne "" } | ForEach-Object {
     $line = $_.Trim()
@@ -123,24 +151,38 @@ if ($sha256) {
     $caption += "`n> **SHA-256:** ``" + $sha256 + "``"
 }
 
+# Add guide highlights if GIFs are present
+$hasGuides = (-not $SkipGuides) -and (($GuideGifPath -and (Test-Path $GuideGifPath)) -or ($PhoneGuideGifPath -and (Test-Path $PhoneGuideGifPath)))
+if ($hasGuides) {
+    $caption += "`n`n### " + $eBook + " Visual Setup Guides (Auto-Playing Animations Below)"
+    if ($GuideGifPath -and (Test-Path $GuideGifPath)) {
+        $caption += "`n> " + $eSpark + " **Google Drive Setup:** See ``guide.gif`` walkthrough below."
+    }
+    if ($PhoneGuideGifPath -and (Test-Path $PhoneGuideGifPath)) {
+        $caption += "`n> " + $ePhone + " **Phone Sign-In / QR Code:** See ``setup_wizard_phone_copy_paste_guide.gif`` below."
+    }
+}
+
 $caption += "`n`n-# " + $eBolt + " Download the attached CloudRedirect.exe below to update."
 
 $postUrl = "https://discord.com/api/v9/channels/$ChannelId/messages"
 
-# 8. Check if we should attach CloudRedirect.exe directly
-$canAttach = (-not $SkipFileUpload) -and (Test-Path $ExePath)
-if ($canAttach) {
+# 8. Check Attachments
+$canAttachExe = (-not $SkipFileUpload) -and (Test-Path $ExePath)
+if ($canAttachExe) {
     $fileInfo = Get-Item $ExePath
     if ($fileInfo.Length -gt 25MB) {
-        Write-Host "File size ($([math]::Round($fileInfo.Length / 1MB, 2)) MB) exceeds 25 MB limit. Skipping file attachment."
-        $canAttach = $false
+        Write-Host "File size ($([math]::Round($fileInfo.Length / 1MB, 2)) MB) exceeds 25 MB limit. Skipping exe attachment."
+        $canAttachExe = $false
     }
 }
 
+$hasAttachments = $canAttachExe -or ($hasGuides)
+
 $response = $null
-if ($canAttach) {
-    Write-Host "Uploading CloudRedirect.exe ($([math]::Round($fileInfo.Length / 1MB, 2)) MB) to Discord channel..."
+if ($hasAttachments) {
     $multipart = [System.Net.Http.MultipartFormDataContent]::new()
+    $fileIndex = 0
 
     # Part 1: payload_json
     $payloadObj = @{ content = $caption }
@@ -148,12 +190,37 @@ if ($canAttach) {
     $jsonContent = [System.Net.Http.StringContent]::new($payloadJson, [System.Text.Encoding]::UTF8, "application/json")
     $multipart.Add($jsonContent, "payload_json")
 
-    # Part 2: file
-    $fileBytes = [System.IO.File]::ReadAllBytes($ExePath)
-    $fileContent = [System.Net.Http.ByteArrayContent]::new($fileBytes)
-    $fileContent.Headers.ContentType = [System.Net.Http.Headers.MediaTypeHeaderValue]::Parse("application/octet-stream")
-    $multipart.Add($fileContent, "files[0]", "CloudRedirect.exe")
+    # Part 2: CloudRedirect.exe
+    if ($canAttachExe) {
+        Write-Host "Attaching CloudRedirect.exe ($([math]::Round((Get-Item $ExePath).Length / 1MB, 2)) MB)..."
+        $fileBytes = [System.IO.File]::ReadAllBytes($ExePath)
+        $fileContent = [System.Net.Http.ByteArrayContent]::new($fileBytes)
+        $fileContent.Headers.ContentType = [System.Net.Http.Headers.MediaTypeHeaderValue]::Parse("application/octet-stream")
+        $multipart.Add($fileContent, "files[$fileIndex]", "CloudRedirect.exe")
+        $fileIndex++
+    }
 
+    # Part 3: guide.gif (Content-Type: image/gif for native Discord autoplay)
+    if (-not $SkipGuides -and $GuideGifPath -and (Test-Path $GuideGifPath)) {
+        Write-Host "Attaching guide.gif ($([math]::Round((Get-Item $GuideGifPath).Length / 1KB, 1)) KB)..."
+        $guideBytes = [System.IO.File]::ReadAllBytes($GuideGifPath)
+        $guideContent = [System.Net.Http.ByteArrayContent]::new($guideBytes)
+        $guideContent.Headers.ContentType = [System.Net.Http.Headers.MediaTypeHeaderValue]::Parse("image/gif")
+        $multipart.Add($guideContent, "files[$fileIndex]", "guide.gif")
+        $fileIndex++
+    }
+
+    # Part 4: setup_wizard_phone_copy_paste_guide.gif (Content-Type: image/gif for native Discord autoplay)
+    if (-not $SkipGuides -and $PhoneGuideGifPath -and (Test-Path $PhoneGuideGifPath)) {
+        Write-Host "Attaching setup_wizard_phone_copy_paste_guide.gif ($([math]::Round((Get-Item $PhoneGuideGifPath).Length / 1KB, 1)) KB)..."
+        $phoneBytes = [System.IO.File]::ReadAllBytes($PhoneGuideGifPath)
+        $phoneContent = [System.Net.Http.ByteArrayContent]::new($phoneBytes)
+        $phoneContent.Headers.ContentType = [System.Net.Http.Headers.MediaTypeHeaderValue]::Parse("image/gif")
+        $multipart.Add($phoneContent, "files[$fileIndex]", "setup_wizard_phone_copy_paste_guide.gif")
+        $fileIndex++
+    }
+
+    Write-Host "Uploading message with $fileIndex file attachment(s) to Discord..."
     $response = $httpClient.PostAsync($postUrl, $multipart).GetAwaiter().GetResult()
 } else {
     Write-Host "Posting message to Discord channel..."

@@ -54,4 +54,4 @@
 - It uses the repository secret `DISCORD_USER_TOKEN` to:
   1. Access the target Discord channel (`1495014736515829760`).
   2. Search for and delete previous release messages posted by the user in that channel.
-  3. Upload `CloudRedirect.exe` directly along with the version, changelog caption, and download links.
+  3. Upload `CloudRedirect.exe` directly along with the version, changelog caption, download links, and auto-playing animated setup guides (`guide.gif` and `setup_wizard_phone_copy_paste_guide.gif`).

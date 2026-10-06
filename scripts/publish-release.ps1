@@ -108,7 +108,7 @@ $releaseId = $release.id
 $existingAssetsUrl = "https://api.github.com/repos/$repoOwner/$repoName/releases/$releaseId/assets"
 $currentAssets = Invoke-RestMethod -Uri $existingAssetsUrl -Headers $headers -Method Get
 foreach ($asset in $currentAssets) {
-    if ($asset.name -eq "CloudRedirect.exe" -or $asset.name -eq "CloudRedirect.exe.sha256" -or $asset.name -eq "CloudRedirect-Setup.exe" -or $asset.name -eq "cloud_redirect.dll" -or $asset.name -eq "cloud_redirect.dll.sha256") {
+    if ($asset.name -eq "CloudRedirect.exe" -or $asset.name -eq "CloudRedirect.exe.sha256" -or $asset.name -eq "CloudRedirect-Setup.exe" -or $asset.name -eq "cloud_redirect.dll" -or $asset.name -eq "cloud_redirect.dll.sha256" -or $asset.name -eq "guide.gif" -or $asset.name -eq "setup_wizard_phone_copy_paste_guide.gif") {
         Write-Host "Deleting old asset: $($asset.name)..."
         Invoke-RestMethod -Uri $asset.url -Headers $headers -Method Delete
     }
@@ -139,6 +139,16 @@ function Upload-Asset($filePath, $assetName, $contentType) {
 
 Upload-Asset $exePath "CloudRedirect.exe" "application/octet-stream"
 Upload-Asset $shaPath "CloudRedirect.exe.sha256" "text/plain"
+
+$guidePath = Join-Path $PSScriptRoot "..\assets\guides\guide.gif"
+if (Test-Path $guidePath) {
+    Upload-Asset $guidePath "guide.gif" "image/gif"
+}
+
+$phoneGuidePath = Join-Path $PSScriptRoot "..\assets\guides\setup_wizard_phone_copy_paste_guide.gif"
+if (Test-Path $phoneGuidePath) {
+    Upload-Asset $phoneGuidePath "setup_wizard_phone_copy_paste_guide.gif" "image/gif"
+}
 
 $dllPath = Join-Path $PSScriptRoot "..\build\Release\cloud_redirect.dll"
 if (-not (Test-Path $dllPath)) {

@@ -87,4 +87,6 @@ jobs:
             -ChannelId "1495014736515829760" \
             -Version "$VER" \
             -Changelog "$BODY" \
-            -ExePath "./CloudRedirect.exe"
+            -ExePath "./CloudRedirect.exe" \
+            -GuideGifPath "assets/guides/guide.gif" \
+            -PhoneGuideGifPath "assets/guides/setup_wizard_phone_copy_paste_guide.gif"
