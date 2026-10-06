@@ -41,7 +41,7 @@ jobs:
         run: |
           VERSION=$(grep -oPm1 "(?<=<ReleaseVersion>)[^<]+" Version.props || echo "0.0.0")
           PRERELEASE=$(grep -oPm1 "(?<=<ReleasePrerelease>)[^<]+" Version.props || echo "")
-          FULL_TAG="v${VERSION}${PRERELEASE}"
+          FULL_TAG="linux-v${VERSION}${PRERELEASE}"
           echo "tag=${FULL_TAG}" >> $GITHUB_OUTPUT
           echo "version=${VERSION}${PRERELEASE}" >> $GITHUB_OUTPUT
           echo "Building CloudRedirect Linux x64 for version: ${FULL_TAG}"
@@ -130,8 +130,10 @@ jobs:
               libcloud_redirect.so \
               cloud_redirect_cli \
               cloud_redirect_cli.sha256 \
+              --target "linux" \
               --title "CloudRedirect Linux $TAG" \
-              --notes "Automated Linux Release $TAG"
+              --notes "Automated Linux Release $TAG" \
+              --latest=false
           fi
 
   build-linux-arm64:
@@ -149,7 +151,7 @@ jobs:
         run: |
           VERSION=$(grep -oPm1 "(?<=<ReleaseVersion>)[^<]+" Version.props || echo "0.0.0")
           PRERELEASE=$(grep -oPm1 "(?<=<ReleasePrerelease>)[^<]+" Version.props || echo "")
-          FULL_TAG="v${VERSION}${PRERELEASE}"
+          FULL_TAG="linux-v${VERSION}${PRERELEASE}"
           echo "tag=${FULL_TAG}" >> $GITHUB_OUTPUT
           echo "version=${VERSION}${PRERELEASE}" >> $GITHUB_OUTPUT
           echo "Building CloudRedirect Linux ARM64 for version: ${FULL_TAG}"
@@ -244,6 +246,8 @@ jobs:
               libcloud_redirect-arm64.so \
               cloud_redirect_cli-arm64 \
               cloud_redirect_cli-arm64.sha256 \
+              --target "linux" \
               --title "CloudRedirect Linux $TAG" \
-              --notes "Automated Linux Release $TAG"
+              --notes "Automated Linux Release $TAG" \
+              --latest=false
           fi

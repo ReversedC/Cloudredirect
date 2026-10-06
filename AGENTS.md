@@ -15,10 +15,11 @@
     & "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /target:winexe /platform:x64 /win32icon:ui\steam_logo3.ico /res:ui\bin\publish\CloudRedirect.Core.exe,MainAppPayload /out:ui\bin\publish\CloudRedirect.exe /r:System.dll,System.Windows.Forms.dll,System.Drawing.dll,System.Core.dll src\launcher\CloudRedirectLauncher.cs
     ```
 
-- **Branch Separation Directive (CRITICAL)**:
-  - **`master` branch**: Dedicated exclusively to the Windows companion application and Windows releases. **NEVER touch or push to `master` for Linux or DroidDeck changes**.
-  - **`linux` branch**: Dedicated to Linux native core, multiarch Linux builds (x64 and ARM64), and DroidDeck integration. All Linux development, fixes, workflows (`.github/workflows/build-linux.yml`), and Linux releases MUST be done on the `linux` branch.
-  - **DroidDeck Integration**: DroidDeck must ALWAYS consume CloudRedirect binaries from the `linux` branch releases, never from `master`.
+- **Branch & Release Separation Directive (CRITICAL)**:
+  - **Completely Different Projects**: `master` branch and `linux` branch represent two entirely independent projects that must never interfere with each other. Releases strictly follow their respective branch without touching each other.
+  - **`master` branch**: Dedicated exclusively to the Windows companion application and Windows releases (`vX.Y.Z`). **NEVER touch or push to `master` for Linux or DroidDeck changes**. Never upload Linux artifacts to Windows releases on master.
+  - **`linux` branch**: Dedicated exclusively to Linux native core, multiarch Linux builds (ARM64 and x64), and DroidDeck integration. All Linux development, workflows (`.github/workflows/build-linux.yml`), and Linux releases (`linux-vX.Y.Z`) MUST be done on the `linux` branch.
+  - **DroidDeck Integration**: DroidDeck is an Android/Linux client that must ALWAYS consume CloudRedirect binaries exclusively from the `linux` branch releases (`linux-v*`), never from `master`.
 
 - **Mandatory Version Increment Rule**:
   - **ALWAYS increase the version number when pushing to GitHub** (`<ReleaseVersion>` in `Version.props`). Never push commits to GitHub without bumping `<ReleaseVersion>`.
