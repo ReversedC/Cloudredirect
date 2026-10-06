@@ -15,9 +15,14 @@
     & "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /target:winexe /platform:x64 /win32icon:ui\steam_logo3.ico /res:ui\bin\publish\CloudRedirect.Core.exe,MainAppPayload /out:ui\bin\publish\CloudRedirect.exe /r:System.dll,System.Windows.Forms.dll,System.Drawing.dll,System.Core.dll src\launcher\CloudRedirectLauncher.cs
     ```
 
+- **Mandatory Version Increment Rule**:
+  - **ALWAYS increase the version number when pushing to GitHub**.
+  - Every single push to GitHub (`git push`) MUST be accompanied by incrementing `<ReleaseVersion>` in `Version.props` (e.g. `2.9.115` -> `2.9.116`).
+  - Never push commits to GitHub without bumping `<ReleaseVersion>`.
+
 - **Production Build & Release Directive (ONLY WHEN USER EXPLICITLY INSTRUCTS TO PUSH)**:
   - Once the user explicitly instructs to publish/push to GitHub:
-    1. Clear `<ReleasePrerelease>` in `Version.props` and bump `<ReleaseVersion>` (e.g. `2.9.111` -> `2.9.112`).
+    1. **MANDATORY**: Bump `<ReleaseVersion>` in `Version.props` (e.g. `2.9.115` -> `2.9.116`) and clear `<ReleasePrerelease>`.
     2. Build and publish the Windows Executable (`.exe`):
        ```powershell
        dotnet publish ui/CloudRedirect.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o ui/bin/publish
