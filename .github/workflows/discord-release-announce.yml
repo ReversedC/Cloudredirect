@@ -1,0 +1,90 @@
+name: Discord Release Announce
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to announce (e.g. v2.9.118)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  announce:
+    name: Post Release to Discord
+    # Only run for Windows companion releases (tags starting with vX.Y.Z, never linux-vX.Y.Z)
+    if: |
+      (github.event_name == 'release' && startsWith(github.event.release.tag_name, 'v') && !startsWith(github.event.release.tag_name, 'linux')) ||
+      (github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify Discord User Token Secret
+        run: |
+          if [ -z "${{ secrets.DISCORD_USER_TOKEN }}" ]; then
+            echo "::error::DISCORD_USER_TOKEN secret is not set in repository secrets."
+            echo "Please go to Settings -> Secrets and variables -> Actions -> New repository secret"
+            echo "and add DISCORD_USER_TOKEN with your Discord user token."
+            exit 1
+          fi
+
+      - name: Determine Release Information
+        id: info
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.tag }}" ]; then
+            TAG="${{ inputs.tag }}"
+          elif [ "${{ github.event_name }}" = "release" ]; then
+            TAG="${{ github.event.release.tag_name }}"
+          else
+            # Default to latest release
+            TAG=$(gh release view --json tagName -q .tagName)
+          fi
+
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          CLEAN_VER="${TAG#v}"
+          echo "version=$CLEAN_VER" >> $GITHUB_OUTPUT
+
+          echo "Selected release tag: $TAG (version: $CLEAN_VER)"
+
+      - name: Download CloudRedirect.exe Asset
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.info.outputs.tag }}"
+          echo "Downloading CloudRedirect.exe from release $TAG..."
+          gh release download "$TAG" --pattern "CloudRedirect.exe" --clobber
+          ls -lh CloudRedirect.exe
+
+      - name: Post Announcement & Executable to Discord
+        env:
+          DISCORD_TOKEN: ${{ secrets.DISCORD_USER_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.info.outputs.tag }}"
+          VER="${{ steps.info.outputs.version }}"
+
+          # Fetch release body/changelog if not in event payload
+          BODY="${{ github.event.release.body }}"
+          if [ -z "$BODY" ]; then
+            BODY=$(gh release view "$TAG" --json body -q .body)
+          fi
+
+          if [ -z "$BODY" ]; then
+            BODY="Release CloudRedirect $TAG with new updates and fixes."
+          fi
+
+          pwsh scripts/post-to-discord-user.ps1 \
+            -UserToken "$DISCORD_TOKEN" \
+            -ChannelId "1495014736515829760" \
+            -Version "$VER" \
+            -Changelog "$BODY" \
+            -ExePath "./CloudRedirect.exe"
