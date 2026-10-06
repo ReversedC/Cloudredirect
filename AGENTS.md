@@ -48,3 +48,10 @@
 - **Styling Guidelines**:
   - The UI is styled to match the modern Steam desktop client aesthetic (dark navy/charcoal backgrounds, Steam cyan/blue highlights, and iconic Steam "Play" green action buttons).
   - Do not introduce OS Light Mode watchers; the app should consistently maintain its Steam dark theme.
+
+## Discord Release Announcements
+- When a Windows release is published (`vX.Y.Z`), the `.github/workflows/discord-release-announce.yml` workflow automatically triggers.
+- It uses the repository secret `DISCORD_USER_TOKEN` to:
+  1. Access the target Discord channel (`1495014736515829760`).
+  2. Search for and delete previous release messages posted by the user in that channel.
+  3. Upload `CloudRedirect.exe` directly along with the version, changelog caption, and download links.

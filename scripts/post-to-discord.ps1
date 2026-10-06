@@ -79,12 +79,8 @@ if (Test-Path $lastMsgFile) {
 }
 
 # 6. Build Discord Message Payload
-$releaseUrl = "https://github.com/mirzaarsyad74-cmyk/Cloudredirect/releases/tag/v$Version"
-$downloadUrl = "https://github.com/mirzaarsyad74-cmyk/Cloudredirect/releases/download/v$Version/CloudRedirect.exe"
-
 $embed = @{
     title       = "CloudRedirect v$Version is now available!"
-    url         = $releaseUrl
     description = "**Changelog:**`n$Changelog"
     color       = 1752220 # Steam cyan/teal accent
     fields      = @(
@@ -114,7 +110,7 @@ if ($sha256) {
 }
 
 $payloadObj = @{
-    content = "🚀 **New CloudRedirect Update: v$Version**`nDownload: $downloadUrl"
+    content = "🚀 **CloudRedirect v$Version is now available!**"
     embeds  = @($embed)
 }
 

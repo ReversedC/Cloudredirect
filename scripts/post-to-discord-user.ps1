@@ -93,23 +93,37 @@ if ($msgsResp.IsSuccessStatusCode) {
     Write-Host "Could not list messages (Status: $($msgsResp.StatusCode)). Skipping deletion."
 }
 
-# 7. Build Message Content
-$releaseUrl = "https://github.com/mirzaarsyad74-cmyk/Cloudredirect/releases/tag/v$Version"
-$downloadUrl = "https://github.com/mirzaarsyad74-cmyk/Cloudredirect/releases/download/v$Version/CloudRedirect.exe"
+# 7. Build Pretty Discord Content (NO GitHub links or repo mentions)
+$eCloud = [char]::ConvertFromUtf32(0x2601)  # ☁
+$eClip  = [char]::ConvertFromUtf32(0x1F4CB) # 📋
+$eBox   = [char]::ConvertFromUtf32(0x1F4E6) # 📦
+$eBolt  = [char]::ConvertFromUtf32(0x26A1)  # ⚡
 
-$caption = @"
-🚀 **CloudRedirect v$Version is now available!**
+$cleanChangelog = ($Changelog -split "`r?`n" | Where-Object { $_.Trim() -ne "" } | ForEach-Object {
+    $line = $_.Trim()
+    if (-not $line.StartsWith("-") -and -not $line.StartsWith("*") -and -not $line.StartsWith(">") -and -not $line.StartsWith([char]0x2022)) {
+        ([char]0x2022) + " " + $line
+    } else {
+        $line
+    }
+}) -join "`n"
 
-📋 **Changelog:**
-$Changelog
+if (-not $cleanChangelog) {
+    $cleanChangelog = ([char]0x2022) + " General performance enhancements and stability improvements."
+}
 
-🔗 **GitHub Release:** $releaseUrl
-📥 **Direct Download:** $downloadUrl
-"@
+$titleLine = "# " + $eCloud + " CloudRedirect Companion ``v" + $Version + "``"
+$caption = $titleLine + "`n*Steam Cloud save redirection & companion app*`n`n" + `
+"### " + $eClip + " What's New`n>>> " + $cleanChangelog + "`n`n" + `
+"### " + $eBox + " Package Details`n" + `
+"> **Platform:** Windows x64`n" + `
+"> **Distribution:** Standalone Single-File Executable"
 
 if ($sha256) {
-    $caption += "`n" + "**SHA-256:** " + $sha256
+    $caption += "`n> **SHA-256:** ``" + $sha256 + "``"
 }
+
+$caption += "`n`n-# " + $eBolt + " Download the attached CloudRedirect.exe below to update."
 
 $postUrl = "https://discord.com/api/v9/channels/$ChannelId/messages"
 
