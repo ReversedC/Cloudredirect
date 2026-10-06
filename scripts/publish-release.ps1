@@ -84,6 +84,7 @@ if (-not $release) {
         body             = "$ReleaseBody ($tagName)"
         draft            = $false
         prerelease       = $isPrerelease
+        make_latest      = "true"
     } | ConvertTo-Json
 
     $release = Invoke-RestMethod -Uri $createUrl -Headers $headers -Method Post -Body $payload -ContentType "application/json"
@@ -94,6 +95,7 @@ if (-not $release) {
         name             = "CloudRedirect $tagName"
         body             = "$ReleaseBody ($tagName)"
         prerelease       = $isPrerelease
+        make_latest      = "true"
     } | ConvertTo-Json
     $release = Invoke-RestMethod -Uri $updateUrl -Headers $headers -Method Patch -Body $payload -ContentType "application/json"
     Write-Host "Updated release $tagName (ID: $($release.id), Prerelease: $isPrerelease)"
@@ -153,30 +155,6 @@ if (Test-Path $dllPath) {
 
     Upload-Asset $dllPath "cloud_redirect.dll" "application/octet-stream"
     Upload-Asset $dllShaPath "cloud_redirect.dll.sha256" "text/plain"
-}
-
-# Upload Linux release assets if present
-$linuxTar = Join-Path $PSScriptRoot "..\cloudredirect-linux-x64.tar.gz"
-if (-not (Test-Path $linuxTar)) {
-    $linuxTar = Join-Path $PSScriptRoot "..\dist\cloudredirect-linux-x64.tar.gz"
-}
-if (Test-Path $linuxTar) {
-    Upload-Asset $linuxTar "cloudredirect-linux-x64.tar.gz" "application/gzip"
-    $tarSha = "$linuxTar.sha256"
-    if (Test-Path $tarSha) {
-        Upload-Asset $tarSha "cloudredirect-linux-x64.tar.gz.sha256" "text/plain"
-    }
-}
-
-$soPath = Join-Path $PSScriptRoot "..\build\cloud_redirect.so"
-if (Test-Path $soPath) {
-    Upload-Asset $soPath "cloud_redirect.so" "application/octet-stream"
-    Upload-Asset $soPath "libcloud_redirect.so" "application/octet-stream"
-}
-
-$cliPath = Join-Path $PSScriptRoot "..\build\cloud_redirect_cli"
-if (Test-Path $cliPath) {
-    Upload-Asset $cliPath "cloud_redirect_cli" "application/octet-stream"
 }
 
 Write-Host "Release $tagName published successfully with assets!"
