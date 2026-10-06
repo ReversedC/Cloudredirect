@@ -425,6 +425,16 @@ public partial class MainWindow : FluentWindow
 
         try
         {
+            if (pageType == typeof(Pages.SuoRemotePage))
+            {
+                // Remove ScaleTransform completely so WebView2 (HwndHost) receives 100% full bounds
+                RootFrame.LayoutTransform = null;
+            }
+            else if (RootFrame.LayoutTransform == null)
+            {
+                RootFrame.LayoutTransform = GuiScaleTransform;
+            }
+
             var page = Activator.CreateInstance(pageType);
             RootFrame.Navigate(page);
 

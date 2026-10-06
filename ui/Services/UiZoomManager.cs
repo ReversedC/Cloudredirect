@@ -105,9 +105,16 @@ public class UiZoomManager
                 if (_rootFrame.Content is Pages.SuoRemotePage)
                 {
                     // WebView2 (HwndHost) in WPF does not support LayoutTransform;
-                    // Any ScaleTransform != 1.0 causes WebView2 to render blank/black.
-                    ApplyScale(1.0, false);
+                    // Any ScaleTransform causes WebView2 HWND bounds to be clipped/shrunken.
+                    _rootFrame.LayoutTransform = null;
+                    CurrentScale = 1.0;
+                    OnZoomChanged?.Invoke(1.0, false);
                     return;
+                }
+
+                if (_rootFrame.LayoutTransform == null)
+                {
+                    _rootFrame.LayoutTransform = _scaleTransform;
                 }
 
                 if (IsAutoFit)

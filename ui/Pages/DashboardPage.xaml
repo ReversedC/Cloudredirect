@@ -603,13 +603,6 @@
                                    Cursor="Hand"
                                    Click="StatsAction_Click" />
 
-                        <ui:Button Content="{res:Loc Nav_SetupWizard}"
-                                   Icon="{ui:SymbolIcon Sparkle24}"
-                                   Padding="14,6"
-                                   Margin="0,0,8,6"
-                                   Cursor="Hand"
-                                   Click="SetupWizardCard_Click" />
-
                         <ui:Button Content="{res:Loc Nav_Changelog}"
                                    Icon="{ui:SymbolIcon History24}"
                                    Padding="14,6"

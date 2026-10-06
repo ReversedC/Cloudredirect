@@ -19,6 +19,15 @@ public partial class SuoRemotePage : Page
     {
         InitializeComponent();
         Loaded += async (_, _) => await InitializePageAsync();
+        SizeChanged += (_, _) =>
+        {
+            if (_isWebViewInitialized && DashboardWebView != null)
+            {
+                DashboardWebView.InvalidateMeasure();
+                DashboardWebView.InvalidateArrange();
+                DashboardWebView.UpdateLayout();
+            }
+        };
     }
 
     private async Task InitializePageAsync()
@@ -134,6 +143,8 @@ public partial class SuoRemotePage : Page
             {
                 LoadingOverlay.Visibility = Visibility.Collapsed;
                 UpdateNavButtons();
+                DashboardWebView.InvalidateArrange();
+                DashboardWebView.UpdateLayout();
                 if (!args.IsSuccess)
                 {
                     ShowError($"Could not connect to SUO Remote Dashboard ({args.WebErrorStatus}). Please check your connection or click 'Open in Browser'.");
