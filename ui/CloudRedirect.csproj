@@ -57,6 +57,13 @@
     <EmbeddedResource Include="Resources\MillenniumPlugin\**\*" />
   </ItemGroup>
 
+  <!-- Automatically package Millennium plugin into CloudRedirect.star before build -->
+  <Target Name="BuildStarPlugin" BeforeTargets="BeforeBuild">
+    <Exec Command="python &quot;$(MSBuildProjectDirectory)\..\scripts\build_star_plugin.py&quot;"
+          ContinueOnError="true"
+          StandardOutputImportance="low" />
+  </Target>
+
   <!-- Copy the C++ DLL into Resources/ and add it as an embedded resource after the
        copy, because SDK-style item evaluation happens before BeforeBuild on a clean
        checkout. -->

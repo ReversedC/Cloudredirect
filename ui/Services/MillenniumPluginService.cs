@@ -171,6 +171,33 @@ public static class MillenniumPluginService
         return fallback;
     }
 
+    private static byte[]? GetResourceBytes(string exactResourceSuffix)
+    {
+        try
+        {
+            var asm = typeof(MillenniumPluginService).Assembly;
+            var resourceName = asm.GetManifestResourceNames()
+                .FirstOrDefault(n => n.EndsWith(exactResourceSuffix, StringComparison.OrdinalIgnoreCase));
+
+            if (resourceName != null)
+            {
+                using var stream = asm.GetManifestResourceStream(resourceName);
+                if (stream != null)
+                {
+                    using var ms = new MemoryStream();
+                    stream.CopyTo(ms);
+                    return ms.ToArray();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[MillenniumPluginService] GetResourceBytes failed for {exactResourceSuffix}: {ex}");
+        }
+
+        return null;
+    }
+
     /// <summary>
     /// Deploys or updates the CloudRedirect Millennium plugin into Steam's millennium directory.
     /// </summary>
@@ -204,10 +231,22 @@ public static class MillenniumPluginService
             File.WriteAllText(Path.Combine(pluginDir, "index.js"), rootJs);
             File.WriteAllText(Path.Combine(distDir, "index.js"), distJs);
 
-            // 5. Update millennium/config/config.json enabledPlugins
+            // 5. Deploy CloudRedirect.star single-binary archive package
+            var millDir = GetMillenniumDir();
+            if (!string.IsNullOrEmpty(millDir))
+            {
+                var starBytes = GetResourceBytes("CloudRedirect.star");
+                if (starBytes != null && starBytes.Length > 0)
+                {
+                    var starPath = Path.Combine(millDir, "plugins", "CloudRedirect.star");
+                    File.WriteAllBytes(starPath, starBytes);
+                }
+            }
+
+            // 6. Update millennium/config/config.json enabledPlugins
             EnableInMillenniumConfig();
 
-            // 6. Register URL scheme and write initial status
+            // 7. Register URL scheme and write initial status
             RegisterUrlProtocol();
             UpdatePluginStatus(true);
 
@@ -231,6 +270,16 @@ public static class MillenniumPluginService
             if (!string.IsNullOrEmpty(pluginDir) && Directory.Exists(pluginDir))
             {
                 Directory.Delete(pluginDir, true);
+            }
+
+            var millDir = GetMillenniumDir();
+            if (!string.IsNullOrEmpty(millDir))
+            {
+                var starPath = Path.Combine(millDir, "plugins", "CloudRedirect.star");
+                if (File.Exists(starPath))
+                {
+                    File.Delete(starPath);
+                }
             }
 
             DisableInMillenniumConfig();

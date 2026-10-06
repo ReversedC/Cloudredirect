@@ -45,9 +45,16 @@
   - Companion Application: C# / WPF on .NET 8 (`ui/CloudRedirect.csproj`).
   - Native Redirection Core: C++20 (`src/`).
   - UI Library: Lepoco `WPF-UI` (4.2.0) with an authentic **Steam Theme** defined in `ui/Themes/SteamTheme.xaml`.
+  - Steam Plugin: Millennium framework integration packaged as a `.star` binary archive (`CloudRedirect.star`).
 - **Styling Guidelines**:
   - The UI is styled to match the modern Steam desktop client aesthetic (dark navy/charcoal backgrounds, Steam cyan/blue highlights, and iconic Steam "Play" green action buttons).
   - Do not introduce OS Light Mode watchers; the app should consistently maintain its Steam dark theme.
+
+## Steam Millennium Plugin (.star Package)
+- The native Steam integration plugin is maintained under `ui/Resources/MillenniumPlugin/`.
+- It is packaged as a standard Millennium `.star` container (`CloudRedirect.star`) via `scripts/build_star_plugin.py`.
+- **Automated Build**: `ui/CloudRedirect.csproj` automatically runs `BuildStarPlugin` prior to compilation, ensuring `CloudRedirect.star` is always regenerated from the latest Lua/JavaScript sources and embedded into the application.
+- **Deployment**: `MillenniumPluginService.cs` automatically deploys `CloudRedirect.star` and extracted files into `C:\Program Files (x86)\Steam\millennium\plugins\` when enabled in Settings.
 
 ## Discord Release Announcements
 - When a Windows release is published (`vX.Y.Z`), the `.github/workflows/discord-release-announce.yml` workflow automatically triggers.
