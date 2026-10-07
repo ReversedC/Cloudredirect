@@ -339,6 +339,8 @@ def create_star_package(src_dir, output_star_path):
     frontend_bundle_js = frontend_js_path.read_bytes() if frontend_js_path.exists() else b''
     
     webkit_js_path = src_dir / '.millennium' / 'Dist' / 'webkit.js'
+    if not webkit_js_path.exists():
+        webkit_js_path = src_dir / 'webkit.js'
     webkit_bundle_js = webkit_js_path.read_bytes() if webkit_js_path.exists() else b''
 
     shim_bytes = STAR_SHIM_LUA.replace('\r\n', '\n').replace('\n', '\r\n').encode('utf-8')
@@ -348,12 +350,19 @@ def create_star_package(src_dir, output_star_path):
         ('name', 'CloudRedirect'),
         ('version', '1.0.0'),
         ('author', 'CloudRedirect'),
-        ('description', 'Native Steam integration for CloudRedirect cloud save backup, sync, and status.'),
+        ('description', 'Native Steam integration for CloudRedirect cloud saves, taskbar progress, and SteamDB.'),
         ('starlight_version', '1.1.4'),
         ('entry', 'backend/main.lua'),
     ]
     sec1_raw = msgpack_encode_map(meta_pairs)
-    sec2_raw = build_sub_entries([('backend/main.lua', backend_main_lua)])
+
+    backend_entries = []
+    backend_dir = src_dir / 'backend'
+    if backend_dir.exists():
+        for p in sorted(backend_dir.glob('*.lua')):
+            rel = 'backend/' + p.name
+            backend_entries.append((rel, p.read_bytes()))
+    sec2_raw = build_sub_entries(backend_entries)
     sec3_raw = build_sub_entries([('bundle.js', frontend_bundle_js)])
     sec4_raw = build_sub_entries([('bundle.js', webkit_bundle_js)])
     

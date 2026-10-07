@@ -388,17 +388,28 @@ public static class MillenniumPluginService
             // 1. Write plugin.json
             File.WriteAllText(Path.Combine(pluginDir, "plugin.json"), GetResourceContent("plugin.json", PluginJsonContent));
 
-            // 2. Write backend/main.lua
+            // 2. Write backend/main.lua and additional backend modules
             File.WriteAllText(Path.Combine(backendDir, "main.lua"), GetResourceContent("backend.main.lua", BackendLuaContent));
+            var taskbarLua = GetResourceContent("backend.taskbar.lua", "");
+            if (!string.IsNullOrEmpty(taskbarLua))
+                File.WriteAllText(Path.Combine(backendDir, "taskbar.lua"), taskbarLua);
+            var ffiDefsLua = GetResourceContent("backend.ffi_defs.lua", "");
+            if (!string.IsNullOrEmpty(ffiDefsLua))
+                File.WriteAllText(Path.Combine(backendDir, "ffi_defs.lua"), ffiDefsLua);
 
             // 3. Write style.css
             File.WriteAllText(Path.Combine(pluginDir, "style.css"), GetResourceContent("style.css", StyleCssContent));
 
-            // 4. Write index.js (root and .millennium/Dist)
+            // 4. Write index.js (root and .millennium/Dist) and webkit.js
             string rootJs = GetResourceContent("MillenniumPlugin.index.js", FrontendJsContent);
             string distJs = GetResourceContent("Dist.index.js", rootJs);
             File.WriteAllText(Path.Combine(pluginDir, "index.js"), rootJs);
             File.WriteAllText(Path.Combine(distDir, "index.js"), distJs);
+            var webkitJs = GetResourceContent("Dist.webkit.js", "");
+            if (string.IsNullOrEmpty(webkitJs))
+                webkitJs = GetResourceContent("MillenniumPlugin.webkit.js", "");
+            if (!string.IsNullOrEmpty(webkitJs))
+                File.WriteAllText(Path.Combine(distDir, "webkit.js"), webkitJs);
 
             // 5. Deploy CloudRedirect.star single-binary archive package
             var millDir = GetMillenniumDir();
