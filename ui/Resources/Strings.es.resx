@@ -376,6 +376,18 @@ Si omites esto, las partidas se almacenarán localmente en tu carpeta de Steam.<
   <data name="Dashboard_RestoreToolTip" xml:space="preserve">
     <value>Restaurar scripts Lua desde la nube manualmente</value>
   </data>
+  <data name="Dashboard_Fetch" xml:space="preserve">
+    <value>Obtener</value>
+  </data>
+  <data name="Dashboard_FetchToolTip" xml:space="preserve">
+    <value>Obtener y detectar copias de seguridad de scripts Lua desde el almacenamiento en la nube</value>
+  </data>
+  <data name="Dashboard_TerminalLog" xml:space="preserve">
+    <value>Registro de terminal ▾</value>
+  </data>
+  <data name="Dashboard_HideLog" xml:space="preserve">
+    <value>Ocultar registro ▴</value>
+  </data>
   <data name="Dashboard_DllHooked" xml:space="preserve">
     <value>Núcleo de redirección nativo C++20 conectado a Steam</value>
   </data>

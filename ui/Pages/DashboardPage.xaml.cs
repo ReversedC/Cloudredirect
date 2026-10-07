@@ -699,63 +699,141 @@ public partial class DashboardPage : Page
         }
     }
 
-    private async void LuaBackupManual_Click(object sender, RoutedEventArgs e)
+    private void LogLuaTerminal(string message, int? percent = null)
     {
-        if (_steamPath == null) return;
-        var btn = sender as Wpf.Ui.Controls.Button;
-        if (btn != null) btn.IsEnabled = false;
-
-        try
+        Dispatcher.Invoke(() =>
         {
-            var result = await Task.Run(() => Services.LuaSyncHelper.ManualBackup(_steamPath));
-            if (result.Success)
+            LuaSyncProgressGrid.Visibility = Visibility.Visible;
+            LuaMiniTerminalBorder.Visibility = Visibility.Visible;
+            LuaToggleLogBtn.Content = S.Get("Dashboard_HideLog");
+
+            var timeStamp = DateTime.Now.ToString("HH:mm:ss");
+            LuaTerminalLogText.Text += $"[{timeStamp}] {message}\n";
+            LuaTerminalScrollViewer.ScrollToEnd();
+
+            LuaSyncStatusText.Text = message;
+            if (percent.HasValue)
             {
-                await Services.Dialog.ShowInfoAsync("Lua Backup Successful",
-                    $"Successfully backed up {result.FileCount} Lua script(s) to cloud storage.\nTimestamp: {DateTime.Now:t}");
+                LuaSyncProgressBar.IsIndeterminate = false;
+                LuaSyncProgressBar.Value = Math.Clamp(percent.Value, 0, 100);
+                LuaSyncPercentText.Text = $"{LuaSyncProgressBar.Value}%";
             }
             else
             {
-                await Services.Dialog.ShowWarningAsync("Lua Backup", result.Message);
+                LuaSyncProgressBar.IsIndeterminate = true;
+                LuaSyncPercentText.Text = "";
+            }
+        });
+    }
+
+    private void SetLuaSyncButtonsEnabled(bool enabled)
+    {
+        LuaBackupBtn.IsEnabled = enabled;
+        LuaFetchBtn.IsEnabled = enabled;
+        LuaRestoreBtn.IsEnabled = enabled;
+    }
+
+    private void LuaToggleLog_Click(object sender, RoutedEventArgs e)
+    {
+        if (LuaMiniTerminalBorder.Visibility == Visibility.Visible)
+        {
+            LuaMiniTerminalBorder.Visibility = Visibility.Collapsed;
+            LuaToggleLogBtn.Content = S.Get("Dashboard_TerminalLog");
+        }
+        else
+        {
+            LuaMiniTerminalBorder.Visibility = Visibility.Visible;
+            LuaToggleLogBtn.Content = S.Get("Dashboard_HideLog");
+        }
+    }
+
+    private async void LuaBackupManual_Click(object sender, RoutedEventArgs e)
+    {
+        if (_steamPath == null) return;
+        SetLuaSyncButtonsEnabled(false);
+        LuaTerminalLogText.Text = "";
+        LogLuaTerminal("Starting manual Lua backup...", 0);
+
+        try
+        {
+            var result = await Services.LuaSyncHelper.ManualBackupAsync(_steamPath, (msg, pct) => LogLuaTerminal(msg, pct));
+            if (result.Success)
+            {
+                LogLuaTerminal($"Backup finished: {result.FileCount} script(s) saved.", 100);
+            }
+            else
+            {
+                LogLuaTerminal($"Backup warning: {result.Message}", 100);
             }
             await LoadStatusAsync();
         }
         catch (Exception ex)
         {
-            await Services.Dialog.ShowErrorAsync("Lua Backup Failed", ex.Message);
+            LogLuaTerminal($"Backup error: {ex.Message}", 100);
         }
         finally
         {
-            if (btn != null) btn.IsEnabled = true;
+            SetLuaSyncButtonsEnabled(true);
+        }
+    }
+
+    private async void LuaFetchManual_Click(object sender, RoutedEventArgs e)
+    {
+        if (_steamPath == null) return;
+        SetLuaSyncButtonsEnabled(false);
+        LuaTerminalLogText.Text = "";
+        LogLuaTerminal("Starting cloud fetch...", 0);
+
+        try
+        {
+            var result = await Services.LuaSyncHelper.ManualFetchAsync(_steamPath, (msg, pct) => LogLuaTerminal(msg, pct));
+            if (result.Success)
+            {
+                LogLuaTerminal($"Cloud fetch finished: {result.FileCount} script(s) available in cloud.", 100);
+            }
+            else
+            {
+                LogLuaTerminal($"Cloud fetch: {result.Message}", 100);
+            }
+            await LoadStatusAsync();
+        }
+        catch (Exception ex)
+        {
+            LogLuaTerminal($"Cloud fetch error: {ex.Message}", 100);
+        }
+        finally
+        {
+            SetLuaSyncButtonsEnabled(true);
         }
     }
 
     private async void LuaRestoreManual_Click(object sender, RoutedEventArgs e)
     {
         if (_steamPath == null) return;
-        var btn = sender as Wpf.Ui.Controls.Button;
-        if (btn != null) btn.IsEnabled = false;
+        SetLuaSyncButtonsEnabled(false);
+        LuaTerminalLogText.Text = "";
+        LogLuaTerminal("Starting manual Lua restore...", 0);
 
         try
         {
-            var result = await Task.Run(() => Services.LuaSyncHelper.ManualRestore(_steamPath));
+            var result = await Services.LuaSyncHelper.ManualRestoreAsync(_steamPath, (msg, pct) => LogLuaTerminal(msg, pct));
             if (result.Success)
             {
-                await Services.Dialog.ShowInfoAsync("Lua Restore Successful",
-                    $"Successfully restored {result.FileCount} Lua script(s) to config/stplug-in.\nTimestamp: {DateTime.Now:t}");
+                LogLuaTerminal($"Restore finished: {result.FileCount} script(s) placed into stplug-in.", 100);
             }
             else
             {
-                await Services.Dialog.ShowWarningAsync("Lua Restore", result.Message);
+                LogLuaTerminal($"Restore warning: {result.Message}", 100);
             }
             await LoadStatusAsync();
         }
         catch (Exception ex)
         {
-            await Services.Dialog.ShowErrorAsync("Lua Restore Failed", ex.Message);
+            LogLuaTerminal($"Restore error: {ex.Message}", 100);
         }
         finally
         {
-            if (btn != null) btn.IsEnabled = true;
+            SetLuaSyncButtonsEnabled(true);
         }
     }
 

@@ -376,6 +376,18 @@ Se pular esta etapa, os saves serão armazenados localmente na sua pasta do Stea
   <data name="Dashboard_RestoreToolTip" xml:space="preserve">
     <value>Restaurar scripts Lua da Nuvem manualmente agora</value>
   </data>
+  <data name="Dashboard_Fetch" xml:space="preserve">
+    <value>Buscar</value>
+  </data>
+  <data name="Dashboard_FetchToolTip" xml:space="preserve">
+    <value>Buscar e detectar backups de scripts Lua no armazenamento na nuvem</value>
+  </data>
+  <data name="Dashboard_TerminalLog" xml:space="preserve">
+    <value>Log do Terminal ▾</value>
+  </data>
+  <data name="Dashboard_HideLog" xml:space="preserve">
+    <value>Ocultar Log ▴</value>
+  </data>
   <data name="Dashboard_DllHooked" xml:space="preserve">
     <value>Núcleo de redirecionamento nativo C++20 conectado ao Steam</value>
   </data>

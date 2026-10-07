@@ -485,6 +485,18 @@ Steam이 실행 중인 경우 자동으로 종료됩니다.
   <data name="Dashboard_RestoreToolTip" xml:space="preserve">
     <value>지금 클라우드에서 Lua 스크립트를 수동 복원</value>
   </data>
+  <data name="Dashboard_Fetch" xml:space="preserve">
+    <value>가져오기</value>
+  </data>
+  <data name="Dashboard_FetchToolTip" xml:space="preserve">
+    <value>클라우드 저장소에서 Lua 스크립트 백업 가져오기 및 검색</value>
+  </data>
+  <data name="Dashboard_TerminalLog" xml:space="preserve">
+    <value>터미널 로그 ▾</value>
+  </data>
+  <data name="Dashboard_HideLog" xml:space="preserve">
+    <value>로그 숨기기 ▴</value>
+  </data>
   <data name="Dashboard_DllHooked" xml:space="preserve">
     <value>Steam에 후킹된 네이티브 C++20 리디렉션 코어</value>
   </data>

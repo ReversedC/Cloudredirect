@@ -13,7 +13,12 @@
     ```powershell
     dotnet publish ui/CloudRedirect.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o ui/bin/publish
     & "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /target:winexe /platform:x64 /win32icon:ui\steam_logo3.ico /res:ui\bin\publish\CloudRedirect.Core.exe,MainAppPayload /out:ui\bin\publish\CloudRedirect.exe /r:System.dll,System.Windows.Forms.dll,System.Drawing.dll,System.Core.dll src\launcher\CloudRedirectLauncher.cs
+    Remove-Item ui\bin\publish\CloudRedirect.Core.exe, ui\bin\publish\*.pdb, ui\bin\publish\*.xml, ui\bin\publish\*Debug* -Force -ErrorAction SilentlyContinue
     ```
+
+- **Mandatory Single Executable Rule for Publish**:
+  - The `ui/bin/publish` folder MUST contain only **ONE** truly working standalone executable: `CloudRedirect.exe`.
+  - Never leave intermediate files (`CloudRedirect.Core.exe`, `.pdb`, `*.xml`) or legacy/debug binaries in `ui/bin/publish`. They must always be cleaned up immediately following compilation.
 
 - **Mandatory Version Increment Rule**:
   - **ALWAYS increase the version number when pushing to GitHub**.
@@ -23,10 +28,11 @@
 - **Production Build & Release Directive (ONLY WHEN USER EXPLICITLY INSTRUCTS TO PUSH)**:
   - Once the user explicitly instructs to publish/push to GitHub:
     1. **MANDATORY**: Bump `<ReleaseVersion>` in `Version.props` (e.g. `2.9.115` -> `2.9.116`) and clear `<ReleasePrerelease>`.
-    2. Build and publish the Windows Executable (`.exe`):
+    2. Build and publish the Windows Executable (`.exe`) with auto-cleanup:
        ```powershell
        dotnet publish ui/CloudRedirect.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o ui/bin/publish
        & "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /target:winexe /platform:x64 /win32icon:ui\steam_logo3.ico /res:ui\bin\publish\CloudRedirect.Core.exe,MainAppPayload /out:ui\bin\publish\CloudRedirect.exe /r:System.dll,System.Windows.Forms.dll,System.Drawing.dll,System.Core.dll src\launcher\CloudRedirectLauncher.cs
+       Remove-Item ui\bin\publish\CloudRedirect.Core.exe, ui\bin\publish\*.pdb, ui\bin\publish\*.xml, ui\bin\publish\*Debug* -Force -ErrorAction SilentlyContinue
        ```
     3. Commit & Push Code:
        ```powershell

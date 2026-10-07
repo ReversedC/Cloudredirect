@@ -133,6 +133,20 @@ public static class LuaCloudSyncService
 {
     private const string CloudFolderName = "EncryptedLua";
 
+    public static int CachedCloudGamesCount { get; set; }
+
+    internal static string ResolveTokenPath(CloudConfig config)
+    {
+        if (!string.IsNullOrEmpty(config.TokenPath) && File.Exists(config.TokenPath))
+            return config.TokenPath;
+        var configDir = SteamDetector.GetConfigDir();
+        var p1 = Path.Combine(configDir, "google_tokens.json");
+        if (File.Exists(p1)) return p1;
+        var p2 = Path.Combine(configDir, "gdrive_tokens.json");
+        if (File.Exists(p2)) return p2;
+        return config.TokenPath ?? p1;
+    }
+
     public static string? GetStPluginDir()
     {
         var steam = SteamDetector.FindSteamPath();
@@ -356,7 +370,9 @@ public static class LuaCloudSyncService
             }
         }
 
-        return list.OrderBy(x => x.GameName).ToList();
+        var sorted = list.OrderBy(x => x.GameName).ToList();
+        CachedCloudGamesCount = sorted.Count(x => x.IsCloud);
+        return sorted;
     }
 
     private static async Task<Dictionary<uint, CloudFileInfo>> ListCloudFilesAsync(CancellationToken ct)
@@ -365,57 +381,224 @@ public static class LuaCloudSyncService
         var config = SteamDetector.ReadConfig();
         if (config == null) return dict;
 
+        // 1. Google Drive Cloud Storage Detection
         if (config.Provider == "gdrive")
         {
-            var tokenPath = config.TokenPath ?? Path.Combine(SteamDetector.GetConfigDir(), "google_tokens.json");
+            var tokenPath = ResolveTokenPath(config);
             var accessToken = await OAuthService.GetValidAccessTokenAsync("gdrive", tokenPath);
-            if (string.IsNullOrEmpty(accessToken)) return dict;
-
-            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
-            http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-
-            var rootId = await EnsureDriveFolderAsync(http, "CloudRedirect", null);
-            if (string.IsNullOrEmpty(rootId)) return dict;
-
-            var luaFolderId = await EnsureDriveFolderAsync(http, CloudFolderName, rootId);
-            if (string.IsNullOrEmpty(luaFolderId)) return dict;
-
-            var q = Uri.EscapeDataString($"'{luaFolderId}' in parents and mimeType!='application/vnd.google-apps.folder' and trashed=false");
-            var url = $"https://www.googleapis.com/drive/v3/files?q={q}&fields=files(id,name,size,modifiedTime)&pageSize=1000";
-
-            var resp = await http.GetAsync(url, ct);
-            if (resp.IsSuccessStatusCode)
+            if (!string.IsNullOrEmpty(accessToken))
             {
-                var json = await resp.Content.ReadAsStringAsync(ct);
-                using var doc = JsonDocument.Parse(json);
-                if (doc.RootElement.TryGetProperty("files", out var files))
+                using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+                http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+                // A. Check EncryptedLua folder for {AppId}.crlua
+                try
                 {
-                    foreach (var f in files.EnumerateArray())
+                    var rootId = await EnsureDriveFolderAsync(http, "CloudRedirect", null);
+                    string? luaFolderId = null;
+                    if (!string.IsNullOrEmpty(rootId))
                     {
-                        var name = f.GetProperty("name").GetString() ?? "";
-                        var id = f.GetProperty("id").GetString() ?? "";
-                        long size = 0;
-                        if (f.TryGetProperty("size", out var sProp))
-                        {
-                            long.TryParse(sProp.GetString(), out size);
-                        }
+                        luaFolderId = await EnsureDriveFolderAsync(http, CloudFolderName, rootId);
+                    }
 
-                        DateTime? modUtc = null;
-                        if (f.TryGetProperty("modifiedTime", out var mProp) &&
-                            DateTime.TryParse(mProp.GetString(), out var parsedDate))
-                        {
-                            modUtc = parsedDate.ToUniversalTime();
-                        }
+                    if (!string.IsNullOrEmpty(luaFolderId))
+                    {
+                        var q = Uri.EscapeDataString($"'{luaFolderId}' in parents and mimeType!='application/vnd.google-apps.folder' and trashed=false");
+                        var url = $"https://www.googleapis.com/drive/v3/files?q={q}&fields=files(id,name,size,modifiedTime)&pageSize=1000";
 
-                        // Files named {AppId}.crlua
-                        var baseName = Path.GetFileNameWithoutExtension(name);
-                        if (uint.TryParse(baseName, out var appId))
+                        var resp = await http.GetAsync(url, ct);
+                        if (resp.IsSuccessStatusCode)
                         {
-                            dict[appId] = new CloudFileInfo(id, name, size, modUtc);
+                            var json = await resp.Content.ReadAsStringAsync(ct);
+                            using var doc = JsonDocument.Parse(json);
+                            if (doc.RootElement.TryGetProperty("files", out var files))
+                            {
+                                foreach (var f in files.EnumerateArray())
+                                {
+                                    var name = f.GetProperty("name").GetString() ?? "";
+                                    var id = f.GetProperty("id").GetString() ?? "";
+                                    long size = 0;
+                                    if (f.TryGetProperty("size", out var sProp))
+                                        long.TryParse(sProp.GetString(), out size);
+
+                                    DateTime? modUtc = null;
+                                    if (f.TryGetProperty("modifiedTime", out var mProp) &&
+                                        DateTime.TryParse(mProp.GetString(), out var parsedDate))
+                                        modUtc = parsedDate.ToUniversalTime();
+
+                                    var baseName = Path.GetFileNameWithoutExtension(name);
+                                    if (uint.TryParse(baseName, out var appId))
+                                    {
+                                        dict[appId] = new CloudFileInfo(id, name, size, modUtc);
+                                    }
+                                }
+                            }
                         }
                     }
                 }
+                catch { }
+
+                // B. Check for LuaManifest.json and LuaArchive.zip anywhere on Google Drive
+                try
+                {
+                    string? zipFileId = null;
+                    DateTime? zipModUtc = null;
+                    long zipSize = 0;
+
+                    // Query for LuaArchive.zip
+                    var qZip = Uri.EscapeDataString("name='LuaArchive.zip' and trashed=false");
+                    var zipUrl = $"https://www.googleapis.com/drive/v3/files?q={qZip}&fields=files(id,name,size,modifiedTime)&pageSize=10";
+                    var zipResp = await http.GetAsync(zipUrl, ct);
+                    if (zipResp.IsSuccessStatusCode)
+                    {
+                        var zipJson = await zipResp.Content.ReadAsStringAsync(ct);
+                        using var zipDoc = JsonDocument.Parse(zipJson);
+                        if (zipDoc.RootElement.TryGetProperty("files", out var zFiles) && zFiles.GetArrayLength() > 0)
+                        {
+                            var firstZip = zFiles[0];
+                            zipFileId = firstZip.GetProperty("id").GetString();
+                            if (firstZip.TryGetProperty("size", out var zs)) long.TryParse(zs.GetString(), out zipSize);
+                            if (firstZip.TryGetProperty("modifiedTime", out var zm) && DateTime.TryParse(zm.GetString(), out var zParsed))
+                                zipModUtc = zParsed.ToUniversalTime();
+                        }
+                    }
+
+                    // Query for LuaManifest.json
+                    var qManifest = Uri.EscapeDataString("name='LuaManifest.json' and trashed=false");
+                    var mUrl = $"https://www.googleapis.com/drive/v3/files?q={qManifest}&fields=files(id,name,size,modifiedTime)&pageSize=10";
+                    var mResp = await http.GetAsync(mUrl, ct);
+                    bool manifestFound = false;
+                    if (mResp.IsSuccessStatusCode)
+                    {
+                        var mJson = await mResp.Content.ReadAsStringAsync(ct);
+                        using var mDoc = JsonDocument.Parse(mJson);
+                        if (mDoc.RootElement.TryGetProperty("files", out var mFiles))
+                        {
+                            foreach (var mf in mFiles.EnumerateArray())
+                            {
+                                var manifestId = mf.GetProperty("id").GetString();
+                                if (string.IsNullOrEmpty(manifestId)) continue;
+
+                                var contentResp = await http.GetAsync($"https://www.googleapis.com/drive/v3/files/{manifestId}?alt=media", ct);
+                                if (contentResp.IsSuccessStatusCode)
+                                {
+                                    var contentJson = await contentResp.Content.ReadAsStringAsync(ct);
+                                    using var manifestDoc = JsonDocument.Parse(contentJson);
+                                    foreach (var prop in manifestDoc.RootElement.EnumerateObject())
+                                    {
+                                        bool isDel = prop.Value.TryGetProperty("del", out var d) && d.GetInt64() > 0;
+                                        if (isDel) continue;
+
+                                        var fname = prop.Name;
+                                        if (uint.TryParse(Path.GetFileNameWithoutExtension(fname), out var appId))
+                                        {
+                                            long size = prop.Value.TryGetProperty("size", out var s) ? s.GetInt64() : 0;
+                                            long mod = prop.Value.TryGetProperty("mod", out var m) ? m.GetInt64() : 0;
+                                            var modUtc = mod > 0 ? DateTimeOffset.FromUnixTimeSeconds(mod).UtcDateTime : (DateTime?)null;
+
+                                            string fileId = !string.IsNullOrEmpty(zipFileId)
+                                                ? $"gdrive_archive:{zipFileId}:{fname}"
+                                                : $"gdrive_manifest:{manifestId}:{fname}";
+
+                                            if (!dict.ContainsKey(appId))
+                                            {
+                                                dict[appId] = new CloudFileInfo(fileId, fname, size, modUtc);
+                                                manifestFound = true;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // If we found LuaArchive.zip on Google Drive but no manifest entries were discovered
+                    if (!manifestFound && !string.IsNullOrEmpty(zipFileId))
+                    {
+                        var steam = SteamDetector.FindSteamPath();
+                        var cacheDir = Path.Combine(steam ?? Path.GetTempPath(), "cloud_redirect", "storage", "default", "0");
+                        Directory.CreateDirectory(cacheDir);
+                        var cacheZip = Path.Combine(cacheDir, "LuaArchive.zip");
+
+                        if (!File.Exists(cacheZip) || new FileInfo(cacheZip).Length == 0)
+                        {
+                            var bytes = await http.GetByteArrayAsync($"https://www.googleapis.com/drive/v3/files/{zipFileId}?alt=media", ct);
+                            await File.WriteAllBytesAsync(cacheZip, bytes, ct);
+                        }
+
+                        if (File.Exists(cacheZip))
+                        {
+                            using var zip = ZipFile.OpenRead(cacheZip);
+                            foreach (var entry in zip.Entries)
+                            {
+                                if (uint.TryParse(Path.GetFileNameWithoutExtension(entry.Name), out var appId))
+                                {
+                                    if (!dict.ContainsKey(appId))
+                                    {
+                                        dict[appId] = new CloudFileInfo(
+                                            $"gdrive_archive:{zipFileId}:{entry.Name}",
+                                            entry.Name,
+                                            entry.Length,
+                                            entry.LastWriteTime.UtcDateTime);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                catch { }
             }
+        }
+
+        // 2. Local Sync Folder / Syncthing / OneDrive Detection
+        if (!string.IsNullOrEmpty(config.SyncPath) && Directory.Exists(config.SyncPath))
+        {
+            try
+            {
+                // A. Check EncryptedLua/*.crlua in sync folder
+                var syncLuaDir = Path.Combine(config.SyncPath, CloudFolderName);
+                if (Directory.Exists(syncLuaDir))
+                {
+                    foreach (var crlua in Directory.GetFiles(syncLuaDir, "*.crlua"))
+                    {
+                        var baseName = Path.GetFileNameWithoutExtension(crlua);
+                        if (uint.TryParse(baseName, out var appId))
+                        {
+                            var fi = new FileInfo(crlua);
+                            if (!dict.ContainsKey(appId))
+                            {
+                                dict[appId] = new CloudFileInfo(crlua, Path.GetFileName(crlua), fi.Length, fi.LastWriteTimeUtc);
+                            }
+                        }
+                    }
+                }
+
+                // B. Check LuaArchive.zip in sync folder
+                var syncZips = Directory.GetFiles(config.SyncPath, "LuaArchive.zip", SearchOption.AllDirectories);
+                foreach (var zPath in syncZips)
+                {
+                    try
+                    {
+                        using var zip = ZipFile.OpenRead(zPath);
+                        foreach (var entry in zip.Entries)
+                        {
+                            if (uint.TryParse(Path.GetFileNameWithoutExtension(entry.Name), out var appId))
+                            {
+                                if (!dict.ContainsKey(appId))
+                                {
+                                    dict[appId] = new CloudFileInfo(
+                                        $"archive:{zPath}:{entry.Name}",
+                                        entry.Name,
+                                        entry.Length,
+                                        entry.LastWriteTime.UtcDateTime);
+                                }
+                            }
+                        }
+                    }
+                    catch { }
+                }
+            }
+            catch { }
         }
 
         return dict;
@@ -489,6 +672,36 @@ public static class LuaCloudSyncService
             }
         }
 
+        // Also save to Sync Folder if configured
+        if (!string.IsNullOrEmpty(config?.SyncPath) && Directory.Exists(config.SyncPath))
+        {
+            try
+            {
+                var syncLuaDir = Path.Combine(config.SyncPath, CloudFolderName);
+                Directory.CreateDirectory(syncLuaDir);
+
+                for (int i = 0; i < total; i++)
+                {
+                    var item = itemList[i];
+                    var localPath = Path.Combine(localDir, $"{item.AppId}.lua");
+                    if (!File.Exists(localPath)) continue;
+
+                    byte[] plainBytes = await File.ReadAllBytesAsync(localPath, ct);
+                    byte[] encryptedBytes = LuaCrypto.Encrypt(plainBytes);
+                    var dest = Path.Combine(syncLuaDir, $"{item.AppId}.crlua");
+                    await File.WriteAllBytesAsync(dest, encryptedBytes, ct);
+
+                    item.IsCloud = true;
+                    item.IsEncrypted = true;
+                    item.CloudSizeBytes = encryptedBytes.Length;
+                    item.CloudModifiedUtc = DateTime.UtcNow;
+                    item.CloudFileId ??= dest;
+                    if (config.Provider != "gdrive") succeeded++;
+                }
+            }
+            catch { }
+        }
+
         // Also update local LuaArchive.zip and LuaManifest.json so C++ core & Dashboard sync stays up-to-date
         var steam = SteamDetector.FindSteamPath();
         if (!string.IsNullOrEmpty(steam) && Directory.Exists(steam))
@@ -526,7 +739,7 @@ public static class LuaCloudSyncService
         HttpClient? http = null;
         if (config?.Provider == "gdrive")
         {
-            var tokenPath = config.TokenPath ?? Path.Combine(SteamDetector.GetConfigDir(), "google_tokens.json");
+            var tokenPath = ResolveTokenPath(config);
             var accessToken = await OAuthService.GetValidAccessTokenAsync("gdrive", tokenPath);
             if (!string.IsNullOrEmpty(accessToken))
             {
@@ -570,8 +783,98 @@ public static class LuaCloudSyncService
                     }
                 }
 
+                // Case 1b: Item is in a Google Drive zip archive (gdrive_archive:zipFileId:entryName)
+                if (!restored && http != null && !string.IsNullOrEmpty(item.CloudFileId) && item.CloudFileId.StartsWith("gdrive_archive:"))
+                {
+                    var raw = item.CloudFileId.Substring("gdrive_archive:".Length);
+                    var splitIdx = raw.LastIndexOf(':');
+                    string zipFileId = splitIdx > 0 ? raw.Substring(0, splitIdx) : raw;
+                    string entryName = splitIdx > 0 ? raw.Substring(splitIdx + 1) : $"{item.AppId}.lua";
+
+                    string cachedZipDir = Path.Combine(steam ?? SteamDetector.FindSteamPath() ?? Path.GetTempPath(), "cloud_redirect", "storage", "default", "0");
+                    Directory.CreateDirectory(cachedZipDir);
+                    string cachedZipPath = Path.Combine(cachedZipDir, "LuaArchive.zip");
+
+                    if (!File.Exists(cachedZipPath) || new FileInfo(cachedZipPath).Length == 0)
+                    {
+                        try
+                        {
+                            var zipBytes = await http.GetByteArrayAsync($"https://www.googleapis.com/drive/v3/files/{zipFileId}?alt=media", ct);
+                            await File.WriteAllBytesAsync(cachedZipPath, zipBytes, ct);
+                        }
+                        catch { }
+                    }
+
+                    if (File.Exists(cachedZipPath))
+                    {
+                        try
+                        {
+                            using var zip = ZipFile.OpenRead(cachedZipPath);
+                            var entry = zip.GetEntry(entryName) ?? zip.GetEntry($"{item.AppId}.lua");
+                            if (entry != null)
+                            {
+                                entry.ExtractToFile(localPath, overwrite: true);
+                                restored = true;
+                            }
+                        }
+                        catch { }
+                    }
+                }
+
+                // Case 1c: Item is from Google Drive manifest without direct zip id (gdrive_manifest:manifestId:entryName)
+                if (!restored && http != null && !string.IsNullOrEmpty(item.CloudFileId) && item.CloudFileId.StartsWith("gdrive_manifest:"))
+                {
+                    var raw = item.CloudFileId.Substring("gdrive_manifest:".Length);
+                    var splitIdx = raw.LastIndexOf(':');
+                    string entryName = splitIdx > 0 ? raw.Substring(splitIdx + 1) : $"{item.AppId}.lua";
+
+                    string cachedZipDir = Path.Combine(steam ?? SteamDetector.FindSteamPath() ?? Path.GetTempPath(), "cloud_redirect", "storage", "default", "0");
+                    Directory.CreateDirectory(cachedZipDir);
+                    string cachedZipPath = Path.Combine(cachedZipDir, "LuaArchive.zip");
+
+                    if (!File.Exists(cachedZipPath) || new FileInfo(cachedZipPath).Length == 0)
+                    {
+                        try
+                        {
+                            var qZip = Uri.EscapeDataString("name='LuaArchive.zip' and trashed=false");
+                            var zipUrl = $"https://www.googleapis.com/drive/v3/files?q={qZip}&fields=files(id)&pageSize=1";
+                            var zResp = await http.GetAsync(zipUrl, ct);
+                            if (zResp.IsSuccessStatusCode)
+                            {
+                                var zJson = await zResp.Content.ReadAsStringAsync(ct);
+                                using var zDoc = JsonDocument.Parse(zJson);
+                                if (zDoc.RootElement.TryGetProperty("files", out var zf) && zf.GetArrayLength() > 0)
+                                {
+                                    var zId = zf[0].GetProperty("id").GetString();
+                                    if (!string.IsNullOrEmpty(zId))
+                                    {
+                                        var zipBytes = await http.GetByteArrayAsync($"https://www.googleapis.com/drive/v3/files/{zId}?alt=media", ct);
+                                        await File.WriteAllBytesAsync(cachedZipPath, zipBytes, ct);
+                                    }
+                                }
+                            }
+                        }
+                        catch { }
+                    }
+
+                    if (File.Exists(cachedZipPath))
+                    {
+                        try
+                        {
+                            using var zip = ZipFile.OpenRead(cachedZipPath);
+                            var entry = zip.GetEntry(entryName) ?? zip.GetEntry($"{item.AppId}.lua");
+                            if (entry != null)
+                            {
+                                entry.ExtractToFile(localPath, overwrite: true);
+                                restored = true;
+                            }
+                        }
+                        catch { }
+                    }
+                }
+
                 // Case 2: Item has a Google Drive File ID for encrypted .crlua
-                if (!restored && http != null && !string.IsNullOrEmpty(item.CloudFileId) && !item.CloudFileId.Contains(Path.DirectorySeparatorChar) && !item.CloudFileId.StartsWith("archive:"))
+                if (!restored && http != null && !string.IsNullOrEmpty(item.CloudFileId) && !item.CloudFileId.Contains(Path.DirectorySeparatorChar) && !item.CloudFileId.StartsWith("archive:") && !item.CloudFileId.StartsWith("gdrive_"))
                 {
                     try
                     {
@@ -601,13 +904,17 @@ public static class LuaCloudSyncService
                     catch { }
                 }
 
-                // Case 4: Fallback to searching any LuaArchive.zip in storage
-                if (!restored && !string.IsNullOrEmpty(steam))
+                // Case 4: Fallback to searching any LuaArchive.zip in storage or sync folder
+                if (!restored)
                 {
-                    var storageBase = Path.Combine(steam, "cloud_redirect", "storage");
-                    if (Directory.Exists(storageBase))
+                    var searchDirs = new List<string>();
+                    if (!string.IsNullOrEmpty(steam)) searchDirs.Add(Path.Combine(steam, "cloud_redirect", "storage"));
+                    if (!string.IsNullOrEmpty(config?.SyncPath) && Directory.Exists(config.SyncPath)) searchDirs.Add(config.SyncPath);
+
+                    foreach (var sDir in searchDirs)
                     {
-                        var zips = Directory.GetFiles(storageBase, "LuaArchive.zip", SearchOption.AllDirectories);
+                        if (!Directory.Exists(sDir)) continue;
+                        var zips = Directory.GetFiles(sDir, "LuaArchive.zip", SearchOption.AllDirectories);
                         foreach (var z in zips)
                         {
                             try
@@ -623,6 +930,7 @@ public static class LuaCloudSyncService
                             }
                             catch { }
                         }
+                        if (restored) break;
                     }
                 }
 
@@ -634,6 +942,20 @@ public static class LuaCloudSyncService
                     item.LocalModifiedUtc = fi.Exists ? fi.LastWriteTimeUtc : DateTime.UtcNow;
                     succeeded++;
                 }
+            }
+
+            // Keep .sync_state in sync after restoring
+            if (succeeded > 0 && !string.IsNullOrEmpty(localDir) && Directory.Exists(localDir))
+            {
+                try
+                {
+                    var syncStatePath = Path.Combine(localDir, ".sync_state");
+                    var currentLuas = Directory.GetFiles(localDir, "*.lua").Select(Path.GetFileName).Where(f => !string.IsNullOrEmpty(f)).ToList();
+                    var lines = new List<string> { DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString() };
+                    lines.AddRange(currentLuas!);
+                    File.WriteAllLines(syncStatePath, lines);
+                }
+                catch { }
             }
         }
         finally
@@ -663,7 +985,7 @@ public static class LuaCloudSyncService
         HttpClient? http = null;
         if (config?.Provider == "gdrive")
         {
-            var tokenPath = config.TokenPath ?? Path.Combine(SteamDetector.GetConfigDir(), "google_tokens.json");
+            var tokenPath = ResolveTokenPath(config);
             var accessToken = await OAuthService.GetValidAccessTokenAsync("gdrive", tokenPath);
             if (!string.IsNullOrEmpty(accessToken))
             {
