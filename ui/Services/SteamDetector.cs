@@ -535,6 +535,38 @@ public static class SteamDetector
                     }
                 }
             }
+
+            // If still 0, check sync folder if configured
+            if (cloudCount == 0)
+            {
+                var config = ReadConfig();
+                if (!string.IsNullOrEmpty(config?.SyncPath) && Directory.Exists(config.SyncPath))
+                {
+                    var syncManifests = Directory.GetFiles(config.SyncPath, "LuaManifest.json", SearchOption.AllDirectories);
+                    foreach (var sm in syncManifests)
+                    {
+                        try
+                        {
+                            var json = File.ReadAllText(sm);
+                            using var doc = System.Text.Json.JsonDocument.Parse(json);
+                            int active = 0;
+                            foreach (var prop in doc.RootElement.EnumerateObject())
+                            {
+                                bool isDel = prop.Value.TryGetProperty("del", out var d) && d.GetInt64() > 0;
+                                if (!isDel) active++;
+                            }
+                            if (active > cloudCount) cloudCount = active;
+                        }
+                        catch { }
+                    }
+                }
+            }
+
+            // Fallback to memory-cached cloud count if available
+            if (cloudCount == 0 && LuaCloudSyncService.CachedCloudGamesCount > 0)
+            {
+                cloudCount = LuaCloudSyncService.CachedCloudGamesCount;
+            }
         }
         catch { }
 
@@ -1234,12 +1266,12 @@ public static class SteamDetector
             var root = doc.RootElement;
             bool syncLuas = !root.TryGetProperty("sync_luas", out var sl) || sl.ValueKind != System.Text.Json.JsonValueKind.False;
             bool backup = !root.TryGetProperty("sync_luas_backup", out var b) || b.ValueKind != System.Text.Json.JsonValueKind.False;
-            bool restore = root.TryGetProperty("sync_luas_restore", out var r) && r.ValueKind == System.Text.Json.JsonValueKind.True;
+            bool restore = !root.TryGetProperty("sync_luas_restore", out var r) || r.ValueKind != System.Text.Json.JsonValueKind.False;
             return (syncLuas, backup, restore);
         }
         catch
         {
-            return (true, true, false);
+            return (true, true, true);
         }
     }
 

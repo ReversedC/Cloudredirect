@@ -1,9 +1,12 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Threading.Tasks;
 using Microsoft.Win32;
 
 namespace CloudRedirect.Services;
@@ -35,7 +38,13 @@ public static class MillenniumPluginService
 
     public static bool IsMillenniumInstalled()
     {
-        return GetMillenniumDir() != null;
+        var steam = GetSteamPath();
+        if (string.IsNullOrEmpty(steam) || !Directory.Exists(steam))
+            return false;
+
+        var millDll = Path.Combine(steam, "millennium", "lib", "millennium.dll");
+        var wsockDll = Path.Combine(steam, "wsock32.dll");
+        return File.Exists(millDll) && File.Exists(wsockDll);
     }
 
     public static string? GetPluginDir()
@@ -117,20 +126,175 @@ public static class MillenniumPluginService
     }
 
     /// <summary>
-    /// Synchronizes the Millennium plugin state with user preference in AppSettings.
+    /// Resolves the latest official Millennium Windows release ZIP download URL from GitHub.
+    /// Falls back to the latest verified stable release URL if GitHub API is unreachable.
     /// </summary>
-    public static void SyncWithSettings()
+    public static async Task<string> ResolveLatestMillenniumDownloadUrlAsync()
+    {
+        const string fallbackUrl = "https://github.com/SteamClientHomebrew/Millennium/releases/download/v3.5.0/millennium-v3.5.0-windows-x86_64.zip";
+        try
+        {
+            using var http = new HttpClient();
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("CloudRedirect/2.9");
+            http.Timeout = TimeSpan.FromSeconds(8);
+            var json = await http.GetStringAsync("https://api.github.com/repos/SteamClientHomebrew/Millennium/releases/latest");
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty("assets", out var assets) && assets.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var asset in assets.EnumerateArray())
+                {
+                    if (asset.TryGetProperty("name", out var nameProp))
+                    {
+                        var name = nameProp.GetString() ?? "";
+                        if (name.Contains("windows", StringComparison.OrdinalIgnoreCase) && name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (asset.TryGetProperty("browser_download_url", out var urlProp) && urlProp.GetString() is string url && !string.IsNullOrWhiteSpace(url))
+                            {
+                                return url;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[MillenniumPluginService] ResolveLatestMillenniumDownloadUrlAsync: {ex.Message}");
+        }
+
+        return fallbackUrl;
+    }
+
+    /// <summary>
+    /// Automatically downloads and applies the Millennium framework to Steam if not already installed.
+    /// Extracts wsock32.dll and the millennium/ directory directly into Steam root,
+    /// then automatically deploys the CloudRedirect plugin.
+    /// </summary>
+    public static async Task<bool> EnsureMillenniumInstalledAsync(Action<string>? statusCallback = null)
     {
         try
         {
-            if (!IsMillenniumInstalled())
+            var steamPath = GetSteamPath();
+            if (string.IsNullOrEmpty(steamPath) || !Directory.Exists(steamPath))
             {
-                return;
+                statusCallback?.Invoke("Steam installation path not found.");
+                return false;
             }
 
-            if (AppSettings.EnableMillenniumPlugin)
+            if (IsMillenniumInstalled())
             {
                 DeployPlugin();
+                return true;
+            }
+
+            statusCallback?.Invoke("Resolving latest Millennium release...");
+            string downloadUrl = await ResolveLatestMillenniumDownloadUrlAsync();
+
+            statusCallback?.Invoke("Downloading Millennium framework (~4MB)...");
+            var tempZip = Path.Combine(Path.GetTempPath(), $"millennium_{Guid.NewGuid():N}.zip");
+            try
+            {
+                using (var http = new HttpClient())
+                {
+                    http.DefaultRequestHeaders.UserAgent.ParseAdd("CloudRedirect/2.9");
+                    http.Timeout = TimeSpan.FromMinutes(3);
+                    using var response = await http.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead);
+                    response.EnsureSuccessStatusCode();
+
+                    await using (var fs = new FileStream(tempZip, FileMode.Create, FileAccess.Write, FileShare.None))
+                    {
+                        await response.Content.CopyToAsync(fs);
+                    }
+                }
+
+                statusCallback?.Invoke("Applying Millennium to Steam directory...");
+                using (var archive = ZipFile.OpenRead(tempZip))
+                {
+                    foreach (var entry in archive.Entries)
+                    {
+                        if (string.IsNullOrEmpty(entry.Name)) // Directory entry
+                        {
+                            var dirPath = Path.Combine(steamPath, entry.FullName);
+                            Directory.CreateDirectory(dirPath);
+                            continue;
+                        }
+
+                        var destPath = Path.Combine(steamPath, entry.FullName);
+                        var destDir = Path.GetDirectoryName(destPath);
+                        if (!string.IsNullOrEmpty(destDir))
+                        {
+                            Directory.CreateDirectory(destDir);
+                        }
+
+                        try
+                        {
+                            entry.ExtractToFile(destPath, overwrite: true);
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"[MillenniumPluginService] ExtractToFile '{entry.FullName}' warning: {ex.Message}");
+                        }
+                    }
+                }
+
+                statusCallback?.Invoke("Deploying CloudRedirect plugin...");
+                DeployPlugin();
+
+                bool success = IsMillenniumInstalled();
+                if (success)
+                {
+                    statusCallback?.Invoke("Millennium successfully applied to Steam!");
+                }
+                else
+                {
+                    statusCallback?.Invoke("Millennium applied, verifying installation...");
+                }
+                return success;
+            }
+            finally
+            {
+                try { if (File.Exists(tempZip)) File.Delete(tempZip); } catch { }
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[MillenniumPluginService] EnsureMillenniumInstalledAsync failed: {ex}");
+            statusCallback?.Invoke($"Installation error: {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Synchronizes the Millennium plugin state with user preference in AppSettings.
+    /// If enabled and Millennium is not found, automatically downloads and applies Millennium to Steam!
+    /// </summary>
+    public static async Task SyncWithSettingsAsync(Action<string>? statusCallback = null)
+    {
+        try
+        {
+            if (AppSettings.EnableMillenniumPlugin)
+            {
+                if (!IsMillenniumInstalled())
+                {
+                    Debug.WriteLine("[MillenniumPluginService] Millennium not found. Auto-downloading and applying to Steam...");
+                    bool installed = await EnsureMillenniumInstalledAsync(statusCallback);
+                    if (installed)
+                    {
+                        DeployPlugin();
+                        if (SteamDetector.IsSteamRunning() && !ActiveGameTrackerService.IsAnyGameActive())
+                        {
+                            SteamToastService.ShowAuto(
+                                "CloudRedirect",
+                                "Millennium framework auto-installed. Restarting Steam to load plugins..."
+                            );
+                            await SteamDetector.RestartSteamAsync();
+                        }
+                    }
+                }
+                else
+                {
+                    DeployPlugin();
+                }
             }
             else
             {
@@ -141,6 +305,11 @@ public static class MillenniumPluginService
         {
             Debug.WriteLine($"[MillenniumPluginService] SyncWithSettings error: {ex}");
         }
+    }
+
+    public static void SyncWithSettings()
+    {
+        _ = Task.Run(() => SyncWithSettingsAsync());
     }
 
     private static string GetResourceContent(string exactResourceSuffix, string fallback)
@@ -219,17 +388,28 @@ public static class MillenniumPluginService
             // 1. Write plugin.json
             File.WriteAllText(Path.Combine(pluginDir, "plugin.json"), GetResourceContent("plugin.json", PluginJsonContent));
 
-            // 2. Write backend/main.lua
+            // 2. Write backend/main.lua and additional backend modules
             File.WriteAllText(Path.Combine(backendDir, "main.lua"), GetResourceContent("backend.main.lua", BackendLuaContent));
+            var taskbarLua = GetResourceContent("backend.taskbar.lua", "");
+            if (!string.IsNullOrEmpty(taskbarLua))
+                File.WriteAllText(Path.Combine(backendDir, "taskbar.lua"), taskbarLua);
+            var ffiDefsLua = GetResourceContent("backend.ffi_defs.lua", "");
+            if (!string.IsNullOrEmpty(ffiDefsLua))
+                File.WriteAllText(Path.Combine(backendDir, "ffi_defs.lua"), ffiDefsLua);
 
             // 3. Write style.css
             File.WriteAllText(Path.Combine(pluginDir, "style.css"), GetResourceContent("style.css", StyleCssContent));
 
-            // 4. Write index.js (root and .millennium/Dist)
+            // 4. Write index.js (root and .millennium/Dist) and webkit.js
             string rootJs = GetResourceContent("MillenniumPlugin.index.js", FrontendJsContent);
             string distJs = GetResourceContent("Dist.index.js", rootJs);
             File.WriteAllText(Path.Combine(pluginDir, "index.js"), rootJs);
             File.WriteAllText(Path.Combine(distDir, "index.js"), distJs);
+            var webkitJs = GetResourceContent("Dist.webkit.js", "");
+            if (string.IsNullOrEmpty(webkitJs))
+                webkitJs = GetResourceContent("MillenniumPlugin.webkit.js", "");
+            if (!string.IsNullOrEmpty(webkitJs))
+                File.WriteAllText(Path.Combine(distDir, "webkit.js"), webkitJs);
 
             // 5. Deploy CloudRedirect.star single-binary archive package
             var millDir = GetMillenniumDir();
@@ -297,13 +477,27 @@ public static class MillenniumPluginService
         try
         {
             var configPath = GetMillenniumConfigPath();
-            if (string.IsNullOrEmpty(configPath) || !File.Exists(configPath))
+            if (string.IsNullOrEmpty(configPath))
                 return;
 
-            var text = File.ReadAllText(configPath);
-            var node = JsonNode.Parse(text);
-            if (node == null) return;
+            var configDir = Path.GetDirectoryName(configPath);
+            if (!string.IsNullOrEmpty(configDir) && !Directory.Exists(configDir))
+            {
+                Directory.CreateDirectory(configDir);
+            }
 
+            JsonNode? node = null;
+            if (File.Exists(configPath))
+            {
+                try
+                {
+                    var text = File.ReadAllText(configPath);
+                    node = JsonNode.Parse(text);
+                }
+                catch { }
+            }
+
+            node ??= new JsonObject();
             var pluginsObj = node["plugins"] as JsonObject;
             if (pluginsObj == null)
             {
@@ -331,10 +525,20 @@ public static class MillenniumPluginService
             if (!exists)
             {
                 enabledArray.Add(PluginName);
-                using var stream = File.Create(configPath);
-                using var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true });
-                node.WriteTo(writer);
             }
+
+            // Suppress the "Welcome to Millennium" first-launch popup dialog permanently
+            var miscObj = node["misc"] as JsonObject;
+            if (miscObj == null)
+            {
+                miscObj = new JsonObject();
+                node["misc"] = miscObj;
+            }
+            miscObj["hasShownWelcomeModal"] = true;
+
+            using var stream = File.Create(configPath);
+            using var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true });
+            node.WriteTo(writer);
         }
         catch (Exception ex)
         {

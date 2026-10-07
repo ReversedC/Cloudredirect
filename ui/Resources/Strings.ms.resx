@@ -471,6 +471,18 @@ If you skip this, saves will be stored locally in your Steam Folder.</value>
   <data name="Dashboard_RestoreToolTip" xml:space="preserve">
     <value>Pulihkan skrip Lua daripada Awan secara manual sekarang</value>
   </data>
+  <data name="Dashboard_Fetch" xml:space="preserve">
+    <value>Ambil</value>
+  </data>
+  <data name="Dashboard_FetchToolTip" xml:space="preserve">
+    <value>Ambil dan kesan sandaran skrip Lua daripada storan awan</value>
+  </data>
+  <data name="Dashboard_TerminalLog" xml:space="preserve">
+    <value>Log Terminal ▾</value>
+  </data>
+  <data name="Dashboard_HideLog" xml:space="preserve">
+    <value>Sembunyi Log ▴</value>
+  </data>
   <data name="Dashboard_DllHooked" xml:space="preserve">
     <value>Teras Pelepasan Asli C++20 dipasang ke dalam Steam</value>
   </data>

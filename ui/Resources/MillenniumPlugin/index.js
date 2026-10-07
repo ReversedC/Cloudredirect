@@ -69,6 +69,8 @@ var PluginEntryPointMain = function () {
         'use strict';
 
         const cloudSvg = `<svg class="cr-cloud-icon-svg" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>`;
+        const reloadSvg = `<svg class="cr-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>`;
+        const restartSvg = `<svg class="cr-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10"/></svg>`;
 
         function launchApp(doc) {
             __call_server_method__("launch_cloudredirect", {});
@@ -152,32 +154,57 @@ var PluginEntryPointMain = function () {
                     line-height: normal !important;
                 }
 
-                /* Bottom Bar Button (Next to Add Game / Steam Unlock) */
-                .cr-bottom-bar-btn {
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 6px;
-                    height: 28px;
-                    padding: 0 12px;
-                    background: #142230;
-                    border: 1px solid #274563;
-                    border-radius: 4px;
-                    color: #c6d4df;
-                    font-family: "Motiva Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-                    font-size: 12px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    user-select: none;
-                    transition: all 0.2s ease;
-                    margin: 0 6px;
-                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-                    z-index: 1000;
+                /* Bottom Bar Actions Group (Next to Add Game / Steam Unlock) */
+                .cr-bottom-group {
+                    display: inline-flex !important;
+                    align-items: center !important;
+                    gap: 6px !important;
+                    margin-left: 8px !important;
+                    flex: 0 0 auto !important;
+                    z-index: 1000 !important;
                 }
-                .cr-bottom-bar-btn:hover {
-                    background: #1c3247;
-                    border-color: #66c0f4;
-                    color: #ffffff;
-                    box-shadow: 0 0 10px rgba(102, 192, 244, 0.35);
+
+                .cr-bottom-action-btn {
+                    display: inline-flex !important;
+                    align-items: center !important;
+                    gap: 6px !important;
+                    height: 26px !important;
+                    padding: 0 10px !important;
+                    background: rgba(24, 38, 54, 0.75) !important;
+                    border: 1px solid rgba(102, 192, 244, 0.25) !important;
+                    border-radius: 3px !important;
+                    color: #c6d4df !important;
+                    font-family: "Motiva Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+                    font-size: 12px !important;
+                    font-weight: 600 !important;
+                    cursor: pointer !important;
+                    user-select: none !important;
+                    white-space: nowrap !important;
+                    transition: all 0.15s ease !important;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+                }
+                .cr-bottom-action-btn:hover {
+                    background: rgba(42, 71, 94, 0.95) !important;
+                    border-color: #66c0f4 !important;
+                    color: #ffffff !important;
+                    box-shadow: 0 0 8px rgba(102, 192, 244, 0.4) !important;
+                }
+                .cr-bottom-action-btn:active {
+                    background: #142230 !important;
+                    transform: translateY(1px) !important;
+                }
+
+                .cr-bottom-cr-btn {
+                    background: rgba(20, 34, 48, 0.85) !important;
+                    border-color: #274563 !important;
+                }
+
+                .cr-icon-svg {
+                    width: 13px !important;
+                    height: 13px !important;
+                    stroke: currentColor !important;
+                    flex-shrink: 0 !important;
+                    vertical-align: middle !important;
                 }
 
                 .cr-status-dot {
@@ -335,20 +362,34 @@ var PluginEntryPointMain = function () {
                 {
                     label: '🔃 Fast Reload Steam UI',
                     action: () => {
-                        if (doc.defaultView) doc.defaultView.location.reload();
-                        else window.location.reload();
+                        try {
+                            const win = doc.defaultView || window;
+                            if (win.SteamClient?.Browser?.RestartJSContext) {
+                                win.SteamClient.Browser.RestartJSContext();
+                                return;
+                            }
+                            if (window.SteamClient?.Browser?.RestartJSContext) {
+                                window.SteamClient.Browser.RestartJSContext();
+                                return;
+                            }
+                        } catch (err) { }
                     }
                 },
                 {
                     label: '🔄 Quick Restart Steam',
                     action: () => {
                         try {
+                            const win = doc.defaultView || window;
+                            if (win.SteamClient?.User?.StartRestart) {
+                                win.SteamClient.User.StartRestart(false);
+                                return;
+                            }
                             if (window.SteamClient?.User?.StartRestart) {
-                                window.SteamClient.User.StartRestart(true);
+                                window.SteamClient.User.StartRestart(false);
                                 return;
                             }
                         } catch (err) { }
-                        window.location.reload();
+                        __call_server_method__("restart_steam", {});
                     }
                 }
             ];
@@ -475,78 +516,120 @@ var PluginEntryPointMain = function () {
             }
         }
 
-        // 1. Inject Button in Bottom Bar (next to Add Game / Steam Unlock)
-        function injectBottomBarButton(doc) {
+        // Find anchor button in bottom bar (prefers after Steam Unlock, falls back to after Add a Game)
+        function findBottomBarAnchor(doc) {
+            const unlockBtn = doc.getElementById('onegamers-activate-btn');
+            if (unlockBtn && unlockBtn.parentElement) return unlockBtn;
+
+            const allButtons = doc.querySelectorAll('button, a, [role="button"], div, span');
+            for (const el of allButtons) {
+                const t = (el.textContent || '').trim().toLowerCase();
+                if (t.includes('steam unlock') && (t.includes('✓') || t.includes('✔') || el.dataset?.activated)) {
+                    const btn = el.closest('button, [role="button"], div');
+                    if (btn && btn.parentElement) return btn;
+                }
+            }
+
+            for (const el of allButtons) {
+                const t = (el.textContent || '').trim().toLowerCase();
+                if ((t === 'add a game' || t === '+ add a game') && el.children.length <= 2) {
+                    const btn = el.closest('button, a, [role="button"]') || el;
+                    if (btn && btn.parentElement) return btn;
+                }
+            }
+
+            const addGameCandidates = doc.querySelectorAll('button[class*="addgamebutton_"], div[class*="addgamebutton_"], [class*="AddGameButton"]');
+            for (const el of addGameCandidates) {
+                if (el.parentElement) return el;
+            }
+
+            return null;
+        }
+
+        // 1. Inject Buttons in Bottom Bar (Reload UI, Restart Steam, CloudRedirect)
+        function injectBottomBarButtons(doc) {
             if (!doc || !doc.body) return;
-            if (doc.getElementById('cloudredirect-bottom-btn')) return;
+            if (doc.getElementById('cr-bottom-bar-group')) return;
 
-            let targetSibling = null;
-            let parentContainer = null;
+            const anchor = findBottomBarAnchor(doc);
+            if (!anchor || !anchor.parentElement) return;
 
-            // Strategy 1: Find existing mod buttons like "Steam Unlock"
-            const allElements = doc.querySelectorAll('button, div, a');
-            for (const el of allElements) {
-                const text = el.textContent || '';
-                if (text.includes('Steam Unlock') || (el.className && typeof el.className === 'string' && el.className.includes('activation'))) {
-                    targetSibling = el;
-                    parentContainer = el.parentNode;
-                    break;
-                }
-            }
+            const group = doc.createElement('div');
+            group.id = 'cr-bottom-bar-group';
+            group.className = 'cr-bottom-group';
 
-            // Strategy 2: Find "+ Add a Game" button
-            if (!targetSibling) {
-                for (const el of allElements) {
-                    const text = el.textContent || '';
-                    if (text.includes('Add a Game') || text.includes('Add Game')) {
-                        targetSibling = el;
-                        parentContainer = el.parentNode;
-                        break;
-                    }
-                }
-            }
-
-            // Strategy 3: Try standard selectors for Add a Game
-            if (!targetSibling) {
-                const addGameCandidates = doc.querySelectorAll('button[class*="addgamebutton_"], div[class*="addgamebutton_"], [class*="AddGameButton"]');
-                for (const el of addGameCandidates) {
-                    if (el.offsetParent !== null || el.offsetWidth > 0) {
-                        targetSibling = el;
-                        parentContainer = el.parentNode;
-                        break;
-                    }
-                }
-            }
-
-            // Strategy 4: Fallback to bottom bar container
-            if (!parentContainer) {
-                parentContainer = doc.querySelector('div[class*="bottombar_"], div[class*="bottombarcontrols_"], footer, .bottom_bar');
-            }
-
-            if (!parentContainer) return;
-
-            const btn = doc.createElement('div');
-            btn.id = 'cloudredirect-bottom-btn';
-            btn.className = 'cr-bottom-bar-btn';
-            btn.title = 'CloudRedirect (Save Protection Active - Click to Open App)';
-            btn.innerHTML = `
-                ${cloudSvg}
-                <span>CloudRedirect</span>
-                <span class="cr-status-dot"></span>
+            // 1. Reload UI button (uses native SteamClient.Browser.RestartJSContext to prevent blank screen)
+            const reloadBtn = doc.createElement('button');
+            reloadBtn.id = 'cr-reload-ui-btn';
+            reloadBtn.className = 'cr-bottom-action-btn';
+            reloadBtn.title = 'Fast Reload Steam Web UI';
+            reloadBtn.innerHTML = `
+                ${reloadSvg}
+                <span>Reload UI</span>
             `;
-
-            btn.onclick = (e) => {
+            reloadBtn.onclick = (e) => {
                 e.stopPropagation();
                 e.preventDefault();
-                launchApp(doc);
+                try {
+                    const win = doc.defaultView || window;
+                    if (win.SteamClient?.Browser?.RestartJSContext) {
+                        win.SteamClient.Browser.RestartJSContext();
+                        return;
+                    }
+                    if (window.SteamClient?.Browser?.RestartJSContext) {
+                        window.SteamClient.Browser.RestartJSContext();
+                        return;
+                    }
+                    if (win.SteamClient?.User?.StartRestart) {
+                        win.SteamClient.User.StartRestart(false);
+                        return;
+                    }
+                    if (window.SteamClient?.User?.StartRestart) {
+                        window.SteamClient.User.StartRestart(false);
+                        return;
+                    }
+                } catch (err) {
+                    console.warn('[CloudRedirect] RestartJSContext error:', err);
+                }
             };
 
-            if (targetSibling && targetSibling.parentNode === parentContainer) {
-                targetSibling.parentNode.insertBefore(btn, targetSibling.nextSibling);
-            } else if (parentContainer.firstChild) {
-                parentContainer.insertBefore(btn, parentContainer.firstChild);
+            // 2. Restart Steam button
+            const restartBtn = doc.createElement('button');
+            restartBtn.id = 'cr-restart-steam-btn';
+            restartBtn.className = 'cr-bottom-action-btn';
+            restartBtn.title = 'Quick Restart Steam Client';
+            restartBtn.innerHTML = `
+                ${restartSvg}
+                <span>Restart Steam</span>
+            `;
+            restartBtn.onclick = (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                try {
+                    const win = doc.defaultView || window;
+                    if (win.SteamClient?.User?.StartRestart) {
+                        win.SteamClient.User.StartRestart(false);
+                        return;
+                    }
+                    if (window.SteamClient?.User?.StartRestart) {
+                        window.SteamClient.User.StartRestart(false);
+                        return;
+                    }
+                } catch (err) { }
+                __call_server_method__("restart_steam", {});
+            };
+
+            // Clean up any old bottom bar CloudRedirect button
+            const oldCrBtn = doc.getElementById('cloudredirect-bottom-btn');
+            if (oldCrBtn) oldCrBtn.remove();
+
+            group.appendChild(reloadBtn);
+            group.appendChild(restartBtn);
+
+            if (anchor.nextSibling) {
+                anchor.parentElement.insertBefore(group, anchor.nextSibling);
             } else {
-                parentContainer.appendChild(btn);
+                anchor.parentElement.appendChild(group);
             }
         }
 
@@ -595,7 +678,7 @@ var PluginEntryPointMain = function () {
 
             ensureStyles(doc);
             injectSuperNavTab(doc);
-            injectBottomBarButton(doc);
+            injectBottomBarButtons(doc);
             injectGameBadge(doc);
         }
 
@@ -709,6 +792,8 @@ var PluginEntryPointMain = function () {
                             const topBtn = d.getElementById('cloudredirect-header-btn');
                             if (topBtn) topBtn.remove();
                             d.querySelectorAll('.cr-nav-btn, [id*="cloudredirect-header"], .cr-dropdown-menu').forEach(el => el.remove());
+                            const btmGroup = d.getElementById('cr-bottom-bar-group');
+                            if (btmGroup) btmGroup.remove();
                             const btmBtn = d.getElementById('cloudredirect-bottom-btn');
                             if (btmBtn) btmBtn.remove();
                             const style = d.getElementById('cr-millennium-styles');
@@ -759,3 +844,50 @@ async function ExecutePluginModule() {
     }
 }
 ExecutePluginModule();
+
+// ============================================================================
+// TASKBAR DOWNLOAD PROGRESS LISTENER
+// ============================================================================
+(function initTaskbarProgress() {
+    try {
+        if (typeof SteamClient !== 'undefined' && SteamClient.Downloads) {
+            console.log('[CloudRedirect] Registering Taskbar Download Progress listeners...');
+
+            const setTaskbar = async (pct) => {
+                try {
+                    await Millennium.callServerMethod("CloudRedirect", "set_progress_percent", { percent: pct });
+                } catch (err) { }
+            };
+
+            let currentAppId = 0;
+
+            SteamClient.Downloads.RegisterForDownloadOverview(async (event) => {
+                if (!event || event.update_appid === 0) return;
+                if (event.paused) {
+                    await setTaskbar(-2);
+                    return;
+                }
+                const state = event.update_state;
+                if (state === "Downloading" || state === "Updating" || state === "Patching" || state === "Installing") {
+                    const pct = Math.round(event.overall_percent_complete || 0);
+                    currentAppId = event.update_appid;
+                    await setTaskbar(pct);
+                    return;
+                }
+                await setTaskbar(-1);
+            });
+
+            SteamClient.Downloads.RegisterForDownloadItems(async (isDownloading, downloadItems) => {
+                if (!Array.isArray(downloadItems)) return;
+                const item = downloadItems.find(el => el.item_data && el.item_data[0] && el.item_data[0].appid === currentAppId);
+                if (item && item.item_data[0] && item.item_data[0].completed) {
+                    await setTaskbar(100);
+                    currentAppId = 0;
+                }
+            });
+        }
+    } catch (e) {
+        console.warn('[CloudRedirect] Taskbar progress init warning:', e);
+    }
+})();
+

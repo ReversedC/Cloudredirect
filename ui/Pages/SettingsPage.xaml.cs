@@ -273,7 +273,14 @@ public partial class SettingsPage : Page
             AppSettings.EnableMillenniumPlugin = newMillennium;
             if (prevMillennium != newMillennium)
             {
-                Task.Run(() => MillenniumPluginService.SyncWithSettings());
+                if (newMillennium && !MillenniumPluginService.IsMillenniumInstalled())
+                {
+                    _ = TriggerMillenniumInstallAsync();
+                }
+                else
+                {
+                    Task.Run(() => MillenniumPluginService.SyncWithSettings());
+                }
             }
         }
 
@@ -489,7 +496,7 @@ public partial class SettingsPage : Page
                 writer.WriteBoolean("sync_playtime", SyncPlaytimeToggle.IsChecked == true);
                 writer.WriteBoolean("sync_luas", true);
                 writer.WriteBoolean("sync_luas_backup", true);
-                writer.WriteBoolean("sync_luas_restore", false);
+                writer.WriteBoolean("sync_luas_restore", true);
                 writer.WriteBoolean("auto_update_dll", AutoUpdateDllToggle.IsChecked == true);
                 writer.WriteBoolean("show_non_steam_game", ShowNonSteamGameToggle.IsChecked == true);
             });
@@ -671,5 +678,82 @@ public partial class SettingsPage : Page
             Owner = win
         };
         dialog.ShowDialog();
+    }
+
+    private bool _isInstallingMillennium;
+
+    private void UpdateMillenniumStatusDisplay(string? customText = null, bool? isSuccess = null)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            if (MillenniumStatusText == null || MillenniumStatusBorder == null) return;
+
+            bool millInstalled = isSuccess ?? MillenniumPluginService.IsMillenniumInstalled();
+            if (!string.IsNullOrEmpty(customText))
+            {
+                MillenniumStatusText.Text = customText;
+            }
+            else
+            {
+                MillenniumStatusText.Text = millInstalled ? S.Get("Settings_MillenniumInstalled") : S.Get("Settings_MillenniumNotFound");
+            }
+
+            MillenniumStatusText.Foreground = new System.Windows.Media.SolidColorBrush(
+                millInstalled ? System.Windows.Media.Color.FromRgb(0x66, 0xC0, 0xF4) : System.Windows.Media.Color.FromRgb(0x8F, 0x98, 0xA0));
+            MillenniumStatusBorder.BorderBrush = new System.Windows.Media.SolidColorBrush(
+                millInstalled ? System.Windows.Media.Color.FromRgb(0x25, 0x42, 0x5F) : System.Windows.Media.Color.FromRgb(0x36, 0x3E, 0x45));
+        });
+    }
+
+    private async void MillenniumStatus_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (_isInstallingMillennium) return;
+        await TriggerMillenniumInstallAsync();
+    }
+
+    private async Task TriggerMillenniumInstallAsync()
+    {
+        if (_isInstallingMillennium) return;
+        _isInstallingMillennium = true;
+
+        try
+        {
+            UpdateMillenniumStatusDisplay("Downloading Millennium...", false);
+            bool success = await MillenniumPluginService.EnsureMillenniumInstalledAsync(status =>
+            {
+                UpdateMillenniumStatusDisplay(status, null);
+            });
+
+            if (success)
+            {
+                UpdateMillenniumStatusDisplay(S.Get("Settings_MillenniumInstalled"), true);
+                if (MillenniumPluginToggle != null)
+                {
+                    MillenniumPluginToggle.IsChecked = true;
+                }
+                SteamToastService.ShowAuto(
+                    "CloudRedirect",
+                    "Millennium framework installed successfully! Applied to Steam."
+                );
+
+                if (SteamDetector.IsSteamRunning() && !ActiveGameTrackerService.IsAnyGameActive())
+                {
+                    await SteamDetector.RestartSteamAsync();
+                }
+            }
+            else
+            {
+                UpdateMillenniumStatusDisplay(S.Get("Settings_MillenniumNotFound"), false);
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[SettingsPage] TriggerMillenniumInstallAsync error: {ex}");
+            UpdateMillenniumStatusDisplay("Install Failed", false);
+        }
+        finally
+        {
+            _isInstallingMillennium = false;
+        }
     }
 }

@@ -485,6 +485,18 @@ If you skip this, saves will be stored locally in your Steam folder.</value>
   <data name="Dashboard_RestoreToolTip" xml:space="preserve">
     <value>Manually restore Lua scripts from Cloud now</value>
   </data>
+  <data name="Dashboard_Fetch" xml:space="preserve">
+    <value>Fetch</value>
+  </data>
+  <data name="Dashboard_FetchToolTip" xml:space="preserve">
+    <value>Fetch and detect Lua script backups from cloud storage</value>
+  </data>
+  <data name="Dashboard_TerminalLog" xml:space="preserve">
+    <value>Terminal Log ▾</value>
+  </data>
+  <data name="Dashboard_HideLog" xml:space="preserve">
+    <value>Hide Log ▴</value>
+  </data>
   <data name="Dashboard_DllHooked" xml:space="preserve">
     <value>Native C++20 Redirection Core hooked into Steam</value>
   </data>

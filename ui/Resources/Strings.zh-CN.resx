@@ -485,6 +485,18 @@
   <data name="Dashboard_RestoreToolTip" xml:space="preserve">
     <value>立即手动从云端恢复 Lua 脚本</value>
   </data>
+  <data name="Dashboard_Fetch" xml:space="preserve">
+    <value>获取</value>
+  </data>
+  <data name="Dashboard_FetchToolTip" xml:space="preserve">
+    <value>从云端存储检索并检测 Lua 备份</value>
+  </data>
+  <data name="Dashboard_TerminalLog" xml:space="preserve">
+    <value>终端日志 ▾</value>
+  </data>
+  <data name="Dashboard_HideLog" xml:space="preserve">
+    <value>隐藏日志 ▴</value>
+  </data>
   <data name="Dashboard_DllHooked" xml:space="preserve">
     <value>原生 C++20 重定向核心已挂钩到 Steam</value>
   </data>
